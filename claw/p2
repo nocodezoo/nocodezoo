@@ -1,0 +1,75 @@
+Here’s the exact list of files you need to create for the **4-Agent OpenClaw Quartet (OCQ-4)** system, based on the standard OpenClaw multi-agent setup (SOUL.md + AGENTS.md per agent, shared config, and supporting files).
+
+### Step 1: Create the Main Project Directory
+Create a dedicated folder for the entire 4-agent system (e.g., `~/openclaw-quartet` or wherever you want the shared state).
+
+Inside this folder, you will have:
+- One `openclaw.json` at the project root (shared config)
+- A `shared/` subfolder for Kanban board and memory namespaces
+- Four agent workspaces (created automatically by OpenClaw, but you will edit files inside them)
+
+### Step 2: Files to Create / Edit
+
+#### 1. Project Root Files (1 file)
+- **`openclaw.json`**  
+  This is the main project-level configuration. It defines models, tool permissions, shared memory paths, agent bindings, and global settings.  
+  (OpenClaw uses “nearest-first” override: this file overrides global `~/.config/openclaw/config.json`.)
+
+#### 2. Shared System Files (create inside a `shared/` folder)
+- **`shared/kanban.json`** (or `kanban.md` if you prefer human-readable)  
+  The central task board. Structure as a JSON array of tasks with fields: id, title, status, owner (agent id), dependencies, deadline, output_schema, artifacts.
+- **`shared/memory/`** folder (create this directory)  
+  Subfolders or files for tiered memory:  
+  - `global/` → durable knowledge base  
+  - `project/` → current mission artifacts  
+  - `session/` → temporary working data (auto-pruned)  
+  The Memory Curator agent will manage files here.
+
+#### 3. Per-Agent Workspace Files (4 agents × 3 core files each)
+After running `openclaw agents add <agent-id>` for each (see commands below), each agent gets its own isolated workspace directory (usually under `~/.openclaw/agents/` or your project workspaces).
+
+Inside **each** agent’s workspace folder, create/edit these three files:
+
+**For every agent:**
+- **`SOUL.md`** → Personality, identity, vibe, boundaries, core values. (This is who the agent *is*.)
+- **`AGENTS.md`** → Operational rules, SOP, startup instructions, memory management, safety rules, when to hand off, tools usage guidelines, output format enforcement. (This is how the agent *behaves* and operates.)
+- **`USER.md`** → Your personal context (name, timezone, preferences, communication style). Same file can be copied to all agents or customized slightly.
+
+**Recommended agent IDs (lowercase, no spaces):**
+1. `orchestrator`
+2. `research-worker`
+3. `reviewer`
+4. `memory-curator`
+
+Run these commands to create the workspaces (OpenClaw will generate the folders and basic files):
+```bash
+openclaw agents add orchestrator
+openclaw agents add research-worker
+openclaw agents add reviewer
+openclaw agents add memory-curator
+```
+
+Then go into each workspace (e.g., `~/.openclaw/agents/orchestrator/` or wherever your setup places them) and fill in the three .md files.
+
+### Optional but Highly Recommended Extra Files (per agent or shared)
+- **`IDENTITY.md`** or **`Agent.md`** (some setups use this instead of or in addition to SOUL.md)
+- **`Tools.md`** or skill bindings (list of allowed tools for that agent)
+- **`conventions.md`** (shared style/coding/output conventions, referenced from AGENTS.md)
+- Per-agent cron/schedule definitions (can live inside AGENTS.md or in openclaw.json)
+
+### Quick Setup Order
+1. Create project folder + `openclaw.json` + `shared/` structure.
+2. Run the four `openclaw agents add ...` commands.
+3. Edit the three core files in each of the four workspaces.
+4. Populate `shared/kanban.json` with an initial empty board.
+5. Restart the OpenClaw gateway.
+6. Test by messaging the Orchestrator.
+
+I can now give you the **exact content** to paste into every file.
+
+Just tell me:
+- Do you want the full ready-to-copy content for **all files** right now? (I’ll provide SOUL.md, AGENTS.md, USER.md for each of the 4 agents + openclaw.json template + kanban example)
+- Or do you want them one agent at a time / one file at a time?
+- Any specific use case (e.g., coding team, research team, content creation) so I can tailor the prompts?
+
+Let me know and I’ll drop the complete file contents immediately. Ready when you are! 🚀
