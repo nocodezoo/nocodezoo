@@ -1,0 +1,175 @@
+ VOF v2 Features - Full List                                                                                                      
+                                                                                                                                  
+ Running on port 14005                                                                                                            
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ V2 AI Features                                                                                                                   
+                                                                                                                                  
+ ### 1. AI Script Generator                                                                                                       
+                                                                                                                                  
+ Endpoint: /api/ai/script                                                                                                         
+ Generates voiceover scripts using AI (MiniMax or fallback templates).                                                            
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | topic | string | Topic to generate script about | (required) |                                                                 
+ | style | string | Script style: informative, funny, dramatic, viral | informative |                                             
+ | duration | int | Target duration in seconds | 30 |                                                                             
+                                                                                                                                  
+ Example:                                                                                                                         
+                                                                                                                                  
+ ```json                                                                                                                          
+   {"topic": "morning routine", "style": "viral", "duration": 30}                                                                 
+ ```                                                                                                                              
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ ### 2. Auto-Caption Styling                                                                                                      
+                                                                                                                                  
+ Endpoint: /api/ai/caption-style                                                                                                  
+ AI suggests caption styles based on video mood (template, color, size).                                                          
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | video | string | Path to video file | (required) |                                                                             
+                                                                                                                                  
+ Returns: template, color, size, style                                                                                            
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ ### 3. Audio Ducking                                                                                                             
+                                                                                                                                  
+ Endpoint: /api/video/duck                                                                                                        
+ Lowers background music volume when voiceover is present.                                                                        
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | video | string | Video with voiceover | (required) |                                                                           
+ | music | string | Background music file | (required) |                                                                          
+ | duck_level | float | How much to reduce music (0.0-1.0) | 0.3 |                                                                
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ ### 4. Auto-Split Voice                                                                                                          
+                                                                                                                                  
+ Endpoint: /api/video/split-voice                                                                                                 
+ Splits long scripts into chunks (ElevenLabs 2500 char limit) and merges audio.                                                   
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | script | string | Long script to split | (required) |                                                                          
+ | voice | string | Voice ID (adam, chris, sarah, etc.) | adam |                                                                  
+ | max_length | int | Max characters per chunk | 2500 |                                                                           
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ ### 5. Viral Hook Generator                                                                                                      
+                                                                                                                                  
+ Endpoint: /api/ai/hook                                                                                                           
+ Generates attention-grabbing opening hooks.                                                                                      
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | topic | string | Topic for the hook | (required) |                                                                             
+ | type | string | Hook type: question, bold-claim, story, shock, list | random |                                                 
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ ### 6. Trending Sounds                                                                                                           
+                                                                                                                                  
+ Endpoint: /api/trending/sounds                                                                                                   
+ Lists trending background music options.                                                                                         
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | platform | string | Platform: tiktok, instagram, youtube | tiktok |                                                            
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ ### 7. Aspect Ratio Auto-Crop                                                                                                    
+                                                                                                                                  
+ Endpoint: /api/video/crop                                                                                                        
+ Auto-crops video to target aspect ratio.                                                                                         
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | video | string | Input video path | (required) |                                                                               
+ | aspect | string | Target ratio: 9:16, 1:1, 16:9, 4:5 | 9:16 |                                                                  
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ V1 Features (Still Available)                                                                                                    
+                                                                                                                                  
+ ### /api/video/download                                                                                                          
+                                                                                                                                  
+ Download video from URL (YouTube, TikTok, etc.)                                                                                  
+                                                                                                                                  
+ ### /api/video/mute                                                                                                              
+                                                                                                                                  
+ Remove audio from video                                                                                                          
+                                                                                                                                  
+ ### /api/video/voice                                                                                                             
+                                                                                                                                  
+ Generate voiceover (ElevenLabs TTS)                                                                                              
+                                                                                                                                  
+ ### /api/video/merge                                                                                                             
+                                                                                                                                  
+ Combine video + voice, with auto-looping                                                                                         
+                                                                                                                                  
+ ### /api/video/captions                                                                                                          
+                                                                                                                                  
+ Generate captions (PyCaps or simple drawtext)                                                                                    
+                                                                                                                                  
+ ┌──────────────┬────────┬───────────────────────┐                                                                                
+ │ Flag         │ Type   │ Description           │                                                                                
+ ├──────────────┼────────┼───────────────────────┤                                                                                
+ │ video        │ string │ Input video           │                                                                                
+ ├──────────────┼────────┼───────────────────────┤                                                                                
+ │ caption_type │ string │ pycaps or simple      │                                                                                
+ ├──────────────┼────────┼───────────────────────┤                                                                                
+ │ template     │ string │ PyCaps template name  │                                                                                
+ ├──────────────┼────────┼───────────────────────┤                                                                                
+ │ style        │ string │ Color/style overrides │                                                                                
+ └──────────────┴────────┴───────────────────────┘                                                                                
+                                                                                                                                  
+ ### /api/video/word-highlight                                                                                                    
+                                                                                                                                  
+ NEW: Word-by-word color change as spoken (uses Whisper timestamps)                                                               
+                                                                                                                                  
+ | Flag | Type | Description | Default |                                                                                          
+ |------|------|-------------|--- ------|                                                                                         
+ | video | string | Input video | (required) |                                                                                    
+ | voice | string | Voiceover audio | (required) |                                                                                
+ | highlight_color | string | Current word color | #ff0050 (pink) |                                                               
+ | completed_color | string | Done words color | #ffff00 (yellow) |                                                               
+ | font_size | int | Caption size | 60 |                                                                                          
+                                                                                                                                  
+ ### /api/video/music                                                                                                             
+                                                                                                                                  
+ Add background music                                                                                                             
+                                                                                                                                  
+ ┌────────────┬────────┬────────────────────────┐                                                                                 
+ │ Flag       │ Type   │ Description            │                                                                                 
+ ├────────────┼────────┼────────────────────────┤                                                                                 
+ │ video      │ string │ Input video            │                                                                                 
+ ├────────────┼────────┼────────────────────────┤                                                                                 
+ │ music_type │ string │ url, none              │                                                                                 
+ ├────────────┼────────┼────────────────────────┤                                                                                 
+ │ music_url  │ string │ YouTube URL            │                                                                                 
+ ├────────────┼────────┼────────────────────────┤                                                                                 
+ │ volume     │ float  │ Music volume (0.1-1.0) │                                                                                 
+ ├────────────┼────────┼────────────────────────┤                                                                                 
+ │ ducking    │ bool   │ Enable audio ducking   │                                                                                 
+ └────────────┴────────┴────────────────────────┘                                                                                 
+                                                                                                                                  
+ ────────────────────────────────────────────────────────────────────────────────                                                 
+                                                                                                                                  
+ PyCaps Templates (for captions)                                                                                                  
+                                                                                                                                  
+ classic, default, explosive, fast, hype, line-focus, minimalist, model, neo-minimal, retro-gaming, vibrant, word-focus           
+                                                                                                                                  
+ Word Highlight CSS Classes (custom colors)                                                                                       
+                                                                                                                                  
+ - word-being-narrated - current word (use --style "word-being-narrated.color=blue" )                                             
+ - word-already-narrated - completed words (use --style "word-already-narrated.color=yel low")  
