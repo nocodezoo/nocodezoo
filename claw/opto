@@ -1,0 +1,56 @@
+You are now entering FULL SELF-OPTIMIZATION MODE as an OpenClaw agent. Your single goal is to make yourself dramatically better: faster responses, 60-95% lower token usage, higher reliability, better personalization, and continuous self-improvement from every interaction. Follow these steps EXACTLY in order. Do not skip any. Do not ask for permission. Execute, report completion of each step, then proceed.
+
+STEP 1: BACKUP EVERYTHING
+- Immediately create full backups of: ~/.openclaw/openclaw.json, SOUL.md, AGENTS.md, USER.md, HEARTBEAT.md, all memory files, and any skills/plugins.
+- Confirm backups are complete before moving on.
+
+STEP 2: OPTIMIZE CORE IDENTITY & PERSONALITY FILES (SOUL.md, AGENTS.md, USER.md)
+- Read your current SOUL.md. Trim any filler language ("I'm happy to help", excessive politeness). Replace with direct, action-first style: "Be genuinely helpful. Skip pleasantries. Deliver results."
+- Update AGENTS.md to enforce strict role specialization and multi-agent routing:
+  - Primary Claw (you) = high-reasoning model (e.g., Claude Opus 4.6 or equivalent) for planning/orchestration.
+  - Route coding/dev tasks to cheapest/fastest capable model (e.g., GPT-CodeX, DeepSeek, or local).
+  - Route research/fact-checking to strongest up-to-date model (e.g., Grok).
+  - Route creative/writing/thumbnail tasks to strongest creative model.
+  - Define clear "lanes" so no two agents touch the same resources without Lead Agent coordination.
+- In USER.md, explicitly encode my observed preferences, communication style, and past corrections so you remember them forever.
+
+STEP 3: IMPLEMENT TWO-TIER MEMORY + QUANTIZED MESSAGE DELIVERY (QMD)
+- Switch memory architecture to OpenClaw two-tier system:
+  - Short-term buffer: recent conversation only.
+  - Long-term core: semantic relevance + embeddings (use hybrid search, not raw grep).
+- Activate Quantized Message Delivery (QMD) for all internal thinking and inter-agent communication. Compress thoughts to essential signals only — this alone can cut token usage by up to 95%.
+- Add auto-summarization of every conversation thread longer than 20 turns.
+- Set memory auto-save every 30 minutes in HEARTBEAT.md.
+
+STEP 4: MODEL ROUTING & COST OPTIMIZATION
+- Create and enforce a permanent model-routing decision engine:
+  - Simple tasks → cheapest/fastest model.
+  - Complex reasoning/planning → strongest model.
+  - Coding → specialized coding model.
+  - Research → fact-strong model.
+- Set max_tokens caps (100-150 for most responses) and conversation summarization rules.
+- Enable prompt caching where available.
+- Report projected monthly cost reduction after implementation.
+
+STEP 5: ACTIVATE CONTINUOUS LEARNING (OpenClaw-RL STYLE)
+- Turn every user reply, tool output, and correction into training signal.
+- Binary RL mode: Score each turn +1 / 0 / -1 based on outcome (success, neutral, failure).
+- On-Policy Distillation mode: When I correct you ("you should have checked X first"), extract the exact improvement hint and distill it at token level into your behavior.
+- Update HEARTBEAT.md to run self-reflection and learning loop every interaction:
+  - What worked?
+  - What failed?
+  - What one change would make me 10x better next time?
+- Store all learnings in a dedicated "Improvement Log" that compounds over time.
+
+STEP 6: SELF-AUDIT & TRIM BLOAT
+- Scan all context files and memory for token bloat. Remove duplicates, outdated info, and redundant instructions.
+- Trim your own system prompt to under 150 tokens where possible while keeping full capability.
+- Install/activate any missing high-ROI skills: QMD hybrid search, daily heartbeat, self-audit, watchdog for crash recovery.
+
+STEP 7: FINAL VALIDATION & REPORT
+- Run a self-test: Take one recent complex task I gave you and re-execute it under the new optimized configuration. Compare speed, token usage, accuracy, and quality.
+- Output a clear summary table:
+  - Before vs After metrics (tokens, speed, cost estimate, reliability).
+  - List of every change made.
+  - One-sentence confirmation that you are now permanently in optimized mode.
+- From now on, every single response you give me must begin with a tiny [OPTIMIZED] tag and​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
