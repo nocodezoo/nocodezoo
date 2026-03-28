@@ -1,0 +1,188 @@
+# TOOLS.md — Tooling Doctrine for a High-Performance Coding Agent
+
+This file defines how to use tools effectively in this workspace.
+
+**Goal**: Make the agent  
+- fast without becoming reckless  
+- autonomous without becoming sloppy  
+- precise without becoming brittle  
+- capable of shipping real software, not just plausible code
+
+Use tools to **reduce uncertainty**, **accelerate execution**, **validate changes**, and **avoid preventable mistakes**.
+
+Local repository truth always overrides generic assumptions or external knowledge.
+
+---
+
+## Core Tool Principles
+
+### 1. Read before writing
+Before editing any code:
+- Locate the relevant files
+- Inspect adjacent implementations and similar patterns
+- Understand the architectural boundary you're touching
+- Read enough context to preserve style, naming conventions, and abstraction level
+
+Never start coding from guesswork or memory alone.
+
+### 2. Search before asking
+If the information likely exists in the repo:
+- Search for it first (identifiers, strings, patterns, configs, tests)
+- Inspect the nearest existing implementation
+- Check documentation, types, and related tests
+
+Only ask the user when the missing piece materially affects the outcome or direction.
+
+### 3. Use the smallest effective tool
+Prefer the least invasive path that reliably solves the task.
+
+Typical order of escalation:
+1. Search & navigation
+2. Read targeted files
+3. Edit with precision
+4. Run validation commands
+5. Browser/runtime/external tools (only when local context is insufficient)
+
+Avoid jumping to heavy tools or full rewrites.
+
+### 4. Make narrow, deliberate changes
+Favor:
+- Small, reviewable diffs
+- Local fixes over global refactors
+- Preserving surrounding conventions and intent
+- Incremental validation
+
+Avoid:
+- Unrelated refactors
+- Style-only rewrites
+- Introducing new patterns when existing ones suffice
+- Casual architectural changes
+
+### 5. Verify before claiming success
+Never declare work complete just because "the code looks right."
+
+Scale validation to risk:
+- Tiny change → quick visual/lint check
+- Logic change → targeted tests + type/lint
+- Feature or cross-cutting change → full relevant test suite, build, and smoke test
+- High-risk areas (auth, billing, data, public APIs, migrations) → extra caution and multiple validation layers
+
+### 6. Prefer existing capability over new dependencies
+Before adding anything new:
+- Check if the repo already has a suitable tool or library
+- Check if the standard library or current framework already solves it
+- Consider extending an existing local utility
+
+New dependencies carry long-term maintenance cost and should be justified.
+
+### 7. Do not trust assumptions when tools can verify
+If a tool exists to confirm something (file existence, command output, type correctness, test behavior, runtime errors, build status, etc.), use it instead of guessing.
+
+---
+
+## Environment Detection Rules
+
+**Always** detect the local environment before running commands. Never assume the stack.
+
+Inspect in roughly this order:
+- Root files and overall structure
+- Lockfiles and package manifests
+- Build, test, lint, and typecheck configs
+- CI / Docker / task runner files
+- README, docs, or runbooks
+
+### Language / Package Manager Detection
+
+**JavaScript / TypeScript**
+- `pnpm-lock.yaml` → `pnpm`
+- `bun.lockb` or `bun.lock` → `bun`
+- `yarn.lock` → `yarn`
+- `package-lock.json` → `npm`
+
+Also inspect: `package.json`, `tsconfig.json`, framework configs (`next.config.js`, `vite.config.ts`, etc.), monorepo files (`turbo.json`, `nx.json`).
+
+**Python**
+- `uv.lock` or `pyproject.toml` with uv → `uv`
+- `poetry.lock` → `poetry`
+- `Pipfile` → `pipenv`
+- `requirements.txt` / plain `pyproject.toml` → follow local convention (usually `pip` or `uv`)
+
+**Rust** → `cargo` (check `Cargo.toml`, workspace members, clippy/rustfmt config)
+
+**Go** → `go` (check `go.mod`)
+
+**Ruby** → `bundle` (check `Gemfile`)
+
+**Java/Kotlin** → `./gradlew` (preferred) or `mvnw` / `mvn`
+
+**.NET** → `dotnet`
+
+**PHP** → `composer`
+
+**Elixir** → `mix`
+
+If multiple ecosystems exist, identify the relevant subproject first.
+
+---
+
+## Tool Priority by Task
+
+### Navigation & Discovery
+Start with search tools to answer:
+- Where does this feature live?
+- What is the closest existing pattern?
+- Which files define the behavior?
+- Where are the tests?
+- What commands validate this area?
+
+Useful search targets: component/route names, API handlers, error strings, config keys, env vars, schema/model names, test names.
+
+### Reading Files
+Read only what is necessary. Preferred order:
+1. Directly relevant file
+2. Adjacent/similar implementation
+3. Shared utilities or abstractions
+4. Tests for the same area
+5. Configs, types, and schemas
+6. Docs or ADRs (only when architectural intent is critical)
+
+Start narrow, widen only as needed.
+
+### Editing Files
+- Preserve local conventions, formatting, and naming style
+- Keep changes minimal and intentional
+- Update related tests, types, and documentation when behavior changes
+- Prefer precise, targeted edits over full-file rewrites unless a rewrite is clearly justified (e.g., major refactoring with strong reason)
+
+### Terminal / Command Execution
+Use the terminal to:
+- Run linters, type checkers, formatters
+- Execute tests (targeted when possible, full suite when needed)
+- Build the project
+- Run dev servers or scripts defined in package.json / Makefile / task runners
+- Inspect runtime behavior or debug output
+- Verify environment (e.g., `which pnpm`, `python --version`, `cargo --version`)
+
+Always use the project’s preferred commands and flags.
+
+### When to Use External Tools
+- Browser / web search → only for up-to-date external docs, API references, or libraries when local knowledge is outdated or missing
+- Runtime tools (e.g., database clients, API testers) → when validating real behavior
+
+Default to local-first.
+
+---
+
+## Additional Best Practices
+
+- **Error Handling**: When a command fails, read the full output before deciding next steps. Do not ignore warnings.
+- **Iteration Speed**: Run the fastest useful validation first (e.g., typecheck before full test suite).
+- **Cleanup**: After successful changes, ensure no temporary files or unused code remain.
+- **Documentation**: If your change affects how others (or future agents) should work with this code, update relevant comments or docs.
+- **Confidence**: When uncertain about impact, validate more aggressively or ask for clarification early.
+
+Follow this doctrine consistently and the agent will move faster, break less, and produce higher-quality software.
+
+---
+
+*Last updated: March 2026*
