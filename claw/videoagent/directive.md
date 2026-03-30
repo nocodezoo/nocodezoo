@@ -13,6 +13,8 @@ The music will keep playing for the duration of the video at 50% of the voiceove
 
 The music will be used from this url: https://youtu.be/ssN7_u08HFY
 
+use Edge TTS for neural voices at speed 1.1
+
 You will use the Pycaps captioning tool and the template will be Explosive, yellow color and using the CSS configuration settings in Pycaps to set the size of the text to 41 px
 
 You will use the v13 SUCCESS_README from memory of the optimal Ken Burns effects for each duration of the full slide
