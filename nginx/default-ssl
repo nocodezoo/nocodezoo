@@ -1,0 +1,66 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+
+    ssl_certificate /etc/ssl/certs/95.111.236.104.crt;
+    ssl_certificate_key /etc/ssl/private/95.111.236.104.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    root /var/www/html;
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # VPS pipeline API proxy (port 8000)
+    location /api/generate {
+        proxy_pass http://127.0.0.1:8000/generate;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+    }
+
+    location /api/status {
+        proxy_pass http://127.0.0.1:8000/status;
+        proxy_http_version 1.1;
+    }
+
+    # Review server UI (port 7073)
+    location /review {
+        proxy_pass http://127.0.0.1:7073/review;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+        proxy_read_timeout 60s;
+    }
+
+    location /review-img {
+        proxy_pass http://127.0.0.1:7073/review-img;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+    }
+
+    location /api {
+        proxy_pass http://127.0.0.1:7073/api;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+    }
+
+    location /rs-files/ {
+        alias /tmp/rs_uploads/;
+        autoindex off;
+    }
+}

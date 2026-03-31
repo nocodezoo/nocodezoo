@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Review Web Server — VPS version with full pipeline. Port 7073."""
-import http.server, socketserver, json, os, subprocess, shutil, re, uuid
+import http.server, socketserver, json, os, subprocess, shutil, re, uuid, time, time
 import asyncio, threading
 from urllib.parse import urlparse
 from pathlib import Path
-import json
+import sys
+from dotenv import load_dotenv
+
+# Load .env so we can share JWT_SECRET with main.py
+sys.path.insert(0, str(Path(__file__).parent))
+load_dotenv()
+
+from auth import decode_token, COOKIE_NAME
 
 PORT = 7073
 CURRENT_JOB_ID = [None]  # thread-safe mutable container
@@ -531,6 +538,29 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
 
+    def authenticate(self):
+        """Validate the vyb_token cookie. Returns (user_id, email) or (None, None)."""
+        cookie_header = self.headers.get('Cookie', '')
+        for part in cookie_header.split(';'):
+            key, _, val = part.strip().partition('=')
+            if key == COOKIE_NAME and val:
+                try:
+                    payload = decode_token(val)
+                    return payload.get('user_id'), payload.get('email')
+                except Exception:
+                    return None, None
+        return None, None
+
+
+    def require_auth(self):
+        """Send a 401 response if the request is not authenticated."""
+        self.send_response(401)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+        self.end_headers()
+        self.wfile.write(json.dumps({'error': 'Unauthorized', 'login_url': '/login.html'}).encode())
+
+
     def do_HEAD(self):
         # Delegate to do_GET logic for headers only
         p = urlparse(self.path).path
@@ -814,6 +844,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type')
                 self.end_headers()
+                return
+            user_id, email = self.authenticate()
+            if not user_id:
+                self.require_auth()
                 return
             length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(length).decode()
@@ -1228,16 +1262,27 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
                 self.end_headers()
                 self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
+            except ValueError as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error': str(e), 'success': False}).encode())
             except Exception as e:
                 log(f'Scrape error: {e}')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e), 'success': False}).encode())
             return
 
         elif p in ('/api/create', '/api/send.php', '/send.php'):
             # Endpoint for create.html - accepts {settings, userEmail, images, musicUrl}
+            user_id, email = self.authenticate()
+            if not user_id:
+                self.require_auth()
+                return
             try:
                 length = int(self.headers.get('Content-Length', 0))
                 body = self.rfile.read(length).decode()
@@ -1367,6 +1412,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({'status': 'unknown'}).encode())
 
         elif p.startswith('/api/upload-images/'):
+            user_id, email = self.authenticate()
+            if not user_id:
+                self.require_auth()
+                return
             # Upload images to an existing job
             job_id = p.replace('/api/upload-images/', '').split('/')[0]
             try:
@@ -1400,6 +1449,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
 
         elif p.startswith('/api/build/'):
+            user_id, email = self.authenticate()
+            if not user_id:
+                self.require_auth()
+                return
             # Trigger build for an existing job
             job_id = p.replace('/api/build/', '').split('/')[0]
             work = Path(f"/tmp/rs_uploads/{job_id}")
@@ -1440,8 +1493,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                             VOICE_MAP.get(voice, ('en-US-JennyNeural', 'hpp4J3VqNfWAUOO0d1Us'))[0]
                         ).save(str(voice_m4a)))
                         log(f'Voice generated: {voice_m4a.stat().st_size} bytes')
-                    sel = list(range(min(15, len(list(img_dir.iterdir())))))
-                    cfg['selectedIndices'] = sel
+                        sel = list(range(min(15, len(list(img_dir.iterdir())))))
+                        cfg['selectedIndices'] = sel
                     with open(cfg_file, 'w') as f:
                         json.dump(cfg, f, indent=2)
                     result = run([VENV, '/opt/video_pipeline/scripts/build_vps.py',
@@ -1499,8 +1552,8 @@ def cleanup_orphan_jobs(max_age_hours=24):
 
 
 if __name__ == '__main__':
-    import socketserver
     cleanup_orphan_jobs(max_age_hours=24)
+    import socketserver
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(('0.0.0.0', PORT), Handler) as httpd:
         print(f'Review server running on port {PORT}', flush=True)

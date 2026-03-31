@@ -534,6 +534,74 @@ async def browser_evaluate(script: str) -> dict:
     return {"error": "CDP evaluate not yet implemented"}
 
 
+
+# ===== PUPPETEER BROWSER AUTOMATION (mcp-server-puppeteer)
+
+@mcp.tool
+async def browser_navigate(url: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_navigate", {"url": url})
+
+@mcp.tool
+async def browser_screenshot(url: str = "", full_page: bool = False) -> dict:
+    if url:
+        _mcp_stdio_call("puppeteer", "puppeteer_navigate", {"url": url})
+    return _mcp_stdio_call("puppeteer", "puppeteer_screenshot", {"fullPage": full_page})
+
+@mcp.tool
+async def browser_click(selector: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_click", {"selector": selector})
+
+@mcp.tool
+async def browser_fill(selector: str, value: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_fill", {"selector": selector, "value": value})
+
+@mcp.tool
+async def browser_select(selector: str, value: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_select", {"selector": selector, "value": value})
+
+@mcp.tool
+async def browser_hover(selector: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_hover", {"selector": selector})
+
+@mcp.tool
+async def browser_evaluate(script: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_evaluate", {"script": script})
+
+
+
+# ===== PUPPETEER BROWSER AUTOMATION (mcp-server-puppeteer)
+
+@mcp.tool
+async def browser_navigate(url: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_navigate", {"url": url})
+
+@mcp.tool
+async def browser_screenshot(url: str = "", full_page: bool = False) -> dict:
+    if url:
+        _mcp_stdio_call("puppeteer", "puppeteer_navigate", {"url": url})
+    return _mcp_stdio_call("puppeteer", "puppeteer_screenshot", {"fullPage": full_page})
+
+@mcp.tool
+async def browser_click(selector: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_click", {"selector": selector})
+
+@mcp.tool
+async def browser_fill(selector: str, value: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_fill", {"selector": selector, "value": value})
+
+@mcp.tool
+async def browser_select(selector: str, value: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_select", {"selector": selector, "value": value})
+
+@mcp.tool
+async def browser_hover(selector: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_hover", {"selector": selector})
+
+@mcp.tool
+async def browser_evaluate(script: str) -> dict:
+    return _mcp_stdio_call("puppeteer", "puppeteer_evaluate", {"script": script})
+
+
 # FILESYSTEM MCP TOOLS (mcp-server-filesystem)
 # ════════════════════════════════════════════════════════════════════════════
 
