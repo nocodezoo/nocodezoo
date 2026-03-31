@@ -1410,6 +1410,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': 'job not found'}).encode())
                 return
+            # Idempotency: if already building, return current status
+            status_file = work / 'status.json'
+            if status_file.exists():
+                with open(status_file) as f:
+                    st = json.load(f)
+                if st.get('status', '').lower() in ('building...', 'done'):
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'status': st['status']}).encode())
+                    return
             with open(cfg_file) as f:
                 cfg = json.load(f)
             img_dir = work / 'images'
@@ -1464,8 +1476,31 @@ def write_job_status(work, text):
         json.dump({'status': text}, f)
 
 
+def cleanup_orphan_jobs(max_age_hours=24):
+    """Remove job dirs older than max_age_hours to prevent disk bloat."""
+    try:
+        rs_dir = Path('/tmp/rs_uploads')
+        cutoff = time.time() - (max_age_hours * 3600)
+        removed = 0
+        for job_dir in rs_dir.iterdir():
+            if job_dir.is_dir():
+                try:
+                    mtime = job_dir.stat().st_mtime
+                    if mtime < cutoff:
+                        import shutil
+                        shutil.rmtree(job_dir)
+                        removed += 1
+                except Exception:
+                    pass
+        if removed:
+            log(f'Cleaned up {removed} orphan job(s)')
+    except Exception as e:
+        log(f'Orphan cleanup error: {e}')
+
+
 if __name__ == '__main__':
     import socketserver
+    cleanup_orphan_jobs(max_age_hours=24)
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(('0.0.0.0', PORT), Handler) as httpd:
         print(f'Review server running on port {PORT}', flush=True)
