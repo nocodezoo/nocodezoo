@@ -546,7 +546,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if key == COOKIE_NAME and val:
                 try:
                     payload = decode_token(val)
-                    return payload.get('user_id'), payload.get('email')
+                    return int(payload.get('sub')), payload.get('email')
                 except Exception:
                     return None, None
         return None, None

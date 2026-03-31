@@ -1064,6 +1064,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
 
         fetch('https://vybord.com/lookup.php', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url })
         })
@@ -1192,6 +1193,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         try {
             const res = await fetch('https://app.vybord.com/api/send.php', {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(metaPayload),
             });
@@ -1231,6 +1233,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
 
             const resp = await fetch('https://app.vybord.com/api/upload-images/' + jobId, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     images: [{
@@ -1250,6 +1253,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         setStatus('🎬 Building video...', 'info');
         const buildResp = await fetch('https://app.vybord.com/api/build/' + jobId, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}),
         });
