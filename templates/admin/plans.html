@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plans — Vybord Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f1117; color: #e0e0e0; font-family: -apple-system, sans-serif; font-size: 14px; }
+    a { color: #6366f1; text-decoration: none; }
+    .wrap { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #13151f; border-right: 1px solid #1e2030; padding: 24px 16px; flex-shrink: 0; }
+    .sidebar h1 { color: #fff; font-size: 18px; margin-bottom: 32px; }
+    .sidebar h1 span { color: #6366f1; }
+    .nav { list-style: none; }
+    .nav li { margin-bottom: 4px; }
+    .nav a { display: block; padding: 8px 12px; border-radius: 6px; color: #888; font-size: 13px; }
+    .nav a:hover { background: #1e2030; color: #fff; text-decoration: none; }
+    .nav a.active { background: #1e2030; color: #fff; }
+    .main { flex: 1; padding: 32px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .header h2 { color: #fff; font-size: 20px; }
+    table { width: 100%; border-collapse: collapse; background: #1a1d27; border-radius: 8px; overflow: hidden; }
+    th { background: #13151f; color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 10px 12px; text-align: left; }
+    td { padding: 10px 12px; border-top: 1px solid #1e2030; font-size: 13px; }
+    tr:hover td { background: #1e2030; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+    .badge-green { background: #0d3320; color: #22c55e; }
+    .badge-red { background: #2d1010; color: #f87171; }
+    .note { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 20px; margin-top: 20px; font-size: 13px; color: #888; line-height: 1.6; }
+    .note strong { color: #eab308; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="sidebar">
+    <h1>Vybord <span>Admin</span></h1>
+    <ul class="nav">
+      <li><a href="/admin/dashboard">Dashboard</a></li>
+      <li><a href="/admin/users">Users</a></li>
+      <li><a href="/admin/plans" class="active">Plans</a></li>
+      <li><a href="/admin/payments">Payments</a></li>
+    </ul>
+  </nav>
+  <main class="main">
+    <div class="header">
+      <h2>Subscription Plans</h2>
+    </div>
+
+    <table>
+      <thead><tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Monthly Limit</th>
+        <th>Price (USD)</th>
+        <th>Stripe Price ID</th>
+        <th>Active</th>
+      </tr></thead>
+      <tbody>
+      {% for p in plans %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td style="color:#fff;font-weight:500">{{ p.name }}</td>
+        <td>{% if p.monthly_limit == -1 %}<span style="color:#22c55e">Unlimited</span>{% else %}{{ p.monthly_limit }}{% endif %}</td>
+        <td>{% if p.price_monthly_cents == 0 %}<span style="color:#888">Free</span>{% else %}${{ "%.2f"|format(p.price_monthly_cents / 100) }}{% endif %}</td>
+        <td><code style="font-size:11px;color:#888">{{ p.stripe_price_id or '—' }}</code></td>
+        <td>{% if p.is_active %}<span class="badge badge-green">Yes</span>{% else %}<span class="badge badge-red">No</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>Note:</strong> Stripe Price IDs must be created manually in the Stripe Dashboard.<br>
+      After creating a product and price in Stripe, set the Price ID in the <code>STRIPE_PRICE_IDS</code> environment variable on the VPS as a JSON object:<br>
+      <code style="color:#888">STRIPE_PRICE_IDS='{"Free": "price_xxx", "Pro": "price_yyy", "Enterprise": "price_zzz"}'</code><br><br>
+      Then restart the user_api service: <code style="color:#888">sudo systemctl restart vybord-user-api</code>
+    </div>
+  </main>
+</div>
+</body>
+</html>

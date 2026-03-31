@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""
+build_vps.py — VPS-compatible video builder
+Usage: python3 build_vps.py --work /opt/video_pipeline/work/JOBID --listing /path/to/images
+"""
+import subprocess, os, json, argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--work', required=True)
+parser.add_argument('--listing', required=True)
+parser.add_argument('--output', default=None)
+parser.add_argument('--config', default=None)
+parser.add_argument('--kb', default=None)
+args = parser.parse_args()
+
+WORK = args.work
+LISTING = args.listing
+OUT = args.output or (WORK + '/video.mp4')
+MUSIC_FILE = '/opt/video_pipeline/music.mp3'
+MUSIC_EXISTS = os.path.exists(MUSIC_FILE)
+VOICE = WORK + '/voice.m4a'
+TRANSCRIPT = WORK + '/voice_transcript.json'
+os.makedirs(WORK, exist_ok=True)
+
+kb_file = args.kb or '/opt/video_pipeline/kb_patterns.json'
+kb = json.load(open(kb_file)) if os.path.exists(kb_file) else {'patterns': [{}]*15}
+actual_imgs = [f for f in os.listdir(LISTING) if f.lower().endswith(('.jpg','.jpeg'))]
+N = min(15, len(actual_imgs)) if actual_imgs else min(15, kb.get('image_count', 15))
+SLIDE_DUR = kb.get('slide_duration', 4.0)
+LAST_DUR = kb.get('last_slide_duration', 7.5)
+PATTERNS = kb.get('patterns', [{}]*15)
+XFADE_DUR = 0.5
+
+def run(cmd):
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        print("FFMPEG:", r.stderr[-200:])
+    return r
+
+all_files = sorted([f for f in os.listdir(LISTING) if f.lower().endswith(('.jpg','.jpeg'))])
+print("[BUILD] %s images, %d slides" % (len(all_files), N))
+
+r = run(['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+         '-of', 'default=noprint_wrappers=1:nokey=1', VOICE])
+voice_dur = float(r.stdout.strip() or 0)
+print("[BUILD] Voice: %.1fs" % voice_dur)
+
+def build_slide(i, pat):
+    src = os.path.join(LISTING, all_files[i-1]) if i-1 < len(all_files) else os.path.join(LISTING, 'img%02d.jpg' % i)
+    dur = pat.get('duration', LAST_DUR if i == N else SLIDE_DUR)
+    fi = 0.3
+    fo_start = dur - 1.0
+    fo = max(0.3, fo_start)
+    zoom = pat.get('zoom', 1.1)
+    x_e = pat.get('x_expr', 'iw/2-(iw/zoom/2)')
+    y_e = pat.get('y_expr', 'ih/2-(ih/zoom/2)')
+    z_str = 'zoompan=z=%.1f:d=%d:x=%s:y=%s' % (zoom, int(dur*25), x_e, y_e)
+    fade_in = 'fade=t=in:st=0:d=%.1f:alpha=1' % fi
+    fade_out = 'fade=t=out:st=%.1f:d=%.1f:alpha=1' % (fo_start, fo)
+    scale_str = 'scale=3200:1800'
+    n_dur = int(dur * 25)
+    # Build zoompan filter directly using string concat (avoids {/} conflicts)
+    zp_filter = 'zoompan=z=' + str(zoom) + ':d=' + str(n_dur) + ':x=' + x_e + ':y=' + y_e + ''
+    trim_str = 'trim=duration=' + str(dur)
+    fi_str = 'fade=t=in:st=0:d=' + str(fi) + ':alpha=1'
+    vf = scale_str + ',' + zp_filter + ',' + trim_str + ',' + fi_str
+    if fo_start > 0:
+        vf += ',fade=t=out:st=' + str(fo_start) + ':d=' + str(fo) + ':alpha=1'
+    out = WORK + '/slide_%02d.mp4' % i
+    run(['ffmpeg', '-y', '-loop', '1', '-i', src, '-vf', vf,
+         '-t', '%.1f' % dur, '-r', '30', '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
+         '-pix_fmt', 'yuv420p', out])
+    print("  slide %02d (%.1fs)" % (i, dur), flush=True)
+    return out
+
+slides = [build_slide(i, PATTERNS[i-1] if i-1 < len(PATTERNS) else PATTERNS[-1]) for i in range(1, N+1)]
+
+offset = SLIDE_DUR - XFADE_DUR
+pair_files = []
+for i in range(0, N-1, 2):
+    p1 = WORK + '/pair_%02d.mp4' % (i//2+1)
+    txt = WORK + '/concat_%02d.txt' % (i//2+1)
+    run(['ffmpeg', '-y', '-i', slides[i], '-i', slides[i+1],
+        '-filter_complex', 'xfade=transition=smoothleft:duration=%.1f:offset=%.1f[v]' % (XFADE_DUR, offset),
+        '-map', '[v]', '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-pix_fmt', 'yuv420p', p1])
+    with open(txt, 'w') as f:
+        f.write("file '%s'\n" % p1)
+    pair_files.append(txt)
+    print("  pair %d: slides %d-%d" % (i//2+1, i+1, i+2), flush=True)
+
+if N % 2 == 1:
+    last = WORK + '/pair_%02d_single.mp4' % ((N-1)//2+1)
+    run(['ffmpeg', '-y', '-i', slides[-1], '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
+         '-pix_fmt', 'yuv420p', last])
+    with open(WORK + '/concat_%02d.txt' % ((N-1)//2+1), 'w') as f:
+        f.write("file '%s'\n" % last)
+    pair_files.append(WORK + '/concat_%02d.txt' % ((N-1)//2+1))
+    print("  single slide %d" % N, flush=True)
+
+concat_list = WORK + '/concat_all.txt'
+with open(concat_list, 'w') as f:
+    for pf in pair_files:
+        for line in open(pf):
+            if line.startswith('file '):
+                f.write(line)
+
+noaudio = WORK + '/video_noaudio.mp4'
+run(['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', concat_list,
+     '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-pix_fmt', 'yuv420p', noaudio])
+print("  concatenated", flush=True)
+
+TOTAL = 60.0
+ac = ['ffmpeg', '-y', '-i', noaudio, '-i', VOICE]
+mi = 2
+if MUSIC_EXISTS:
+    ac += ['-i', MUSIC_FILE]
+    mi = 3
+
+filter_str = '[1:a]atrim=0:%.1f,asetpts=PTS-STARTPTS,volume=1.5,apad=whole_dur=%.1f[vcmd];' % (TOTAL, TOTAL)
+if MUSIC_EXISTS:
+    filter_str += '[%d:a]atrim=0:%.1f,asetpts=PTS-STARTPTS,volume=0.4,afade=t=out:st=55:d=5[music];[vcmd][music]amix=inputs=2:duration=first:dropout_transition=2,dynaudnorm=f=200:g=15[audio]' % (mi, TOTAL)
+else:
+    filter_str += '[vcmd]anull[audio]'
+
+ac += ['-filter_complex', filter_str, '-map', '0:v', '-map', '[audio]',
+       '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', '%.1f' % TOTAL, OUT]
+run(ac)
+print("  audio mixed", flush=True)
+
+srt_path = WORK + '/voice.srt'
+if os.path.exists(srt_path):
+    r2 = run(['/opt/venv/bin/pycaps', 'render',
+             '--input', OUT,
+             '--output', OUT,
+             '--template', '/opt/video_pipeline/hype-yellow',
+             '--subtitle-data', srt_path,
+             '--video-quality', 'high'])
+    if r2.returncode == 0:
+        print('  captions added (pycaps)', flush=True)
+    else:
+        print('  caption warn: ' + r2.stderr[-300:], flush=True)
+r = run(['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+         '-of', 'default=noprint_wrappers=1:nokey=1', OUT])
+final_dur = float(r.stdout.strip() or 0)
+sz = os.path.getsize(OUT) // 1024 // 1024
+print("[BUILD] Done: %s — %.1fs, %dMB" % (OUT, final_dur, sz))

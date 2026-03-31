@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users — Vybord Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f1117; color: #e0e0e0; font-family: -apple-system, sans-serif; font-size: 14px; }
+    a { color: #6366f1; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #13151f; border-right: 1px solid #1e2030; padding: 24px 16px; flex-shrink: 0; }
+    .sidebar h1 { color: #fff; font-size: 18px; margin-bottom: 32px; }
+    .sidebar h1 span { color: #6366f1; }
+    .nav { list-style: none; }
+    .nav li { margin-bottom: 4px; }
+    .nav a { display: block; padding: 8px 12px; border-radius: 6px; color: #888; font-size: 13px; }
+    .nav a:hover { background: #1e2030; color: #fff; text-decoration: none; }
+    .nav a.active { background: #1e2030; color: #fff; }
+    .main { flex: 1; padding: 32px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .header h2 { color: #fff; font-size: 20px; }
+    .filters { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+    .filters input, .filters select {
+      padding: 8px 12px; background: #1a1d27; border: 1px solid #2a2d3a;
+      border-radius: 6px; color: #fff; font-size: 13px;
+    }
+    .filters input { width: 220px; }
+    .filters button { padding: 8px 16px; background: #6366f1; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; background: #1a1d27; border-radius: 8px; overflow: hidden; }
+    th { background: #13151f; color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 10px 12px; text-align: left; }
+    td { padding: 10px 12px; border-top: 1px solid #1e2030; font-size: 13px; }
+    tr:hover td { background: #1e2030; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+    .badge-green { background: #0d3320; color: #22c55e; }
+    .badge-red { background: #2d1010; color: #f87171; }
+    .badge-yellow { background: #2a2500; color: #eab308; }
+    .tag { display: inline-block; padding: 2px 6px; background: #1e2030; border-radius: 4px; font-size: 11px; }
+    .pagination { display: flex; gap: 8px; margin-top: 20px; align-items: center; }
+    .pagination a, .pagination span { padding: 6px 12px; border-radius: 6px; font-size: 13px; }
+    .pagination a { background: #1a1d27; color: #fff; }
+    .pagination a:hover { background: #2a2d3a; text-decoration: none; }
+    .pagination .current { background: #6366f1; color: #fff; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="sidebar">
+    <h1>Vybord <span>Admin</span></h1>
+    <ul class="nav">
+      <li><a href="/admin/dashboard">Dashboard</a></li>
+      <li><a href="/admin/users" class="active">Users</a></li>
+      <li><a href="/admin/plans">Plans</a></li>
+      <li><a href="/admin/payments">Payments</a></li>
+    </ul>
+  </nav>
+  <main class="main">
+    <div class="header">
+      <h2>Users ({{ total }})</h2>
+    </div>
+
+    <form class="filters" method="get">
+      <input type="text" name="search" placeholder="Search by email..." value="{{ search }}">
+      <select name="plan_filter">
+        <option value="">All Plans</option>
+        {% for p in plans %}
+          <option value="{{ p.id }}" {% if plan_filter == p.id|string %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="status_filter">
+        <option value="">All Status</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+        <option value="suspended" {% if status_filter == 'suspended' %}selected{% endif %}>Suspended</option>
+        <option value="unverified" {% if status_filter == 'unverified' %}selected{% endif %}>Unverified</option>
+      </select>
+      <button type="submit">Filter</button>
+      <a href="/admin/users" style="color:#888;font-size:13px">Clear</a>
+    </form>
+
+    <table>
+      <thead><tr>
+        <th>Email</th>
+        <th>Plan</th>
+        <th>Videos</th>
+        <th>Verified</th>
+        <th>Status</th>
+        <th>Joined</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.email }}</td>
+        <td><span class="tag">{{ u.plan_name }}</span></td>
+        <td>{{ u.videos_generated }}</td>
+        <td>
+          {% if u.email_verified %}<span class="badge badge-green">Yes</span>
+          {% else %}<span class="badge badge-yellow">No</span>{% endif %}
+        </td>
+        <td>
+          {% if u.is_active %}<span class="badge badge-green">Active</span>
+          {% else %}<span class="badge badge-red">Suspended</span>{% endif %}
+        </td>
+        <td>{{ u.created_at[:10] }}</td>
+        <td><a href="/admin/users/{{ u.id }}">View →</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="pagination">
+      {% if page > 1 %}
+        <a href="?page={{ page-1 }}&search={{ search }}&plan_filter={{ plan_filter }}&status_filter={{ status_filter }}">&laquo; Prev</a>
+      {% endif %}
+      <span class="current">Page {{ page }} of {{ pages }}</span>
+      {% if page < pages %}
+        <a href="?page={{ page+1 }}&search={{ search }}&plan_filter={{ plan_filter }}&status_filter={{ status_filter }}">Next &raquo;</a>
+      {% endif %}
+    </div>
+  </main>
+</div>
+</body>
+</html>
