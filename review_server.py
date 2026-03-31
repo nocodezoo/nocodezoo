@@ -534,6 +534,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "https://vybord.com")
+        self.send_header("Access-Control-Allow-Credentials", "true")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
@@ -557,6 +558,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(401)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+        self.send_header("Access-Control-Allow-Credentials", "true")
         self.end_headers()
         self.wfile.write(json.dumps({'error': 'Unauthorized', 'login_url': '/login.html'}).encode())
 
@@ -577,6 +579,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+        self.send_header("Access-Control-Allow-Credentials", "true")
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
@@ -633,6 +636,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+            self.send_header("Access-Control-Allow-Credentials", "true")
             self.end_headers()
             if status_file.exists():
                 self.wfile.write(status_file.read_text().encode())
@@ -763,6 +767,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type')
                 self.end_headers()
@@ -785,6 +790,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if self.command == 'OPTIONS':
                 self.send_response(200)
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type')
                 self.end_headers()
@@ -800,6 +806,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not target_url:
                 self.send_response(400)
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': 'url required'}).encode())
                 return
@@ -827,12 +834,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     html = str(soup)
                     self.send_response(200)
                     self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                    self.send_header("Access-Control-Allow-Credentials", "true")
                     self.send_header('Content-Type', 'text/plain; charset=utf-8')
                     self.end_headers()
                     self.wfile.write(html.encode('utf-8'))
             except Exception as e:
                 self.send_response(502)
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
             return
@@ -841,6 +850,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if self.command == 'OPTIONS':
                 self.send_response(200)
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type')
                 self.end_headers()
@@ -1260,12 +1270,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
             except ValueError as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e), 'success': False}).encode())
             except Exception as e:
@@ -1273,6 +1285,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e), 'success': False}).encode())
             return
@@ -1363,6 +1376,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 resp = {'job_id': job_id, 'status': f'Job created with {len(list(img_dir.iterdir()))} images, building...', 'done': False}
                 self.wfile.write(json.dumps(resp).encode())
@@ -1396,6 +1410,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
 
@@ -1438,6 +1453,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': None}).encode())
             except Exception as e:
@@ -1472,6 +1488,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                    self.send_header("Access-Control-Allow-Credentials", "true")
                     self.end_headers()
                     self.wfile.write(json.dumps({'status': st['status']}).encode())
                     return
@@ -1514,6 +1531,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+            self.send_header("Access-Control-Allow-Credentials", "true")
             self.end_headers()
             self.wfile.write(json.dumps({'status': 'Building...'}).encode())
             return
