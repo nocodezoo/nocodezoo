@@ -73,8 +73,11 @@
                     <div class="logo-icon">V</div>
                     <span class="logo-text gradient-text">Vybord</span>
                 </a>
-                <a href="/" class="text-sm text-[#666] hover:text-white transition-colors">← Back</a>
-                <span style="background:#1e1e2e;border:1px solid #333;color:#555;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;letter-spacing:0.05em">v1.042</span>
+                <div class="flex items-center gap-3">
+                    <span id="user-info" style="display:none;font-size:0.78rem;color:#888;"></span>
+                    <button id="logout-btn" type="button" onclick="handleLogout()" style="display:none;background:#1e1e2e;border:1px solid #333;color:#888;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;cursor:pointer;">Logout</button>
+                    <span style="background:#1e1e2e;border:1px solid #333;color:#555;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;letter-spacing:0.05em">v1.043</span>
+                </div>
             </div>
         </header>
 
@@ -1347,5 +1350,28 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
 </div>
 </div>
 
+
+<script>
+// Show logged-in user info
+async function loadUserInfo() {
+    try {
+        const r = await fetch('https://app.vybord.com/api/me', { credentials: 'include' });
+        if (r.ok) {
+            const d = await r.json();
+            document.getElementById('user-info').textContent = d.email;
+            document.getElementById('user-info').style.display = 'inline';
+            document.getElementById('logout-btn').style.display = 'inline';
+        }
+    } catch(e) {}
+}
+loadUserInfo();
+
+async function handleLogout() {
+    try {
+        await fetch('https://app.vybord.com/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch(e) {}
+    location.href = 'https://app.vybord.com/login.html';
+}
+</script>
 </body>
 </html>

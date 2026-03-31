@@ -533,7 +533,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
     def send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "https://vybord.com")
+        origin = self.headers.get("Origin", ""); allowed = ["https://vybord.com","https://app.vybord.com"]; self.send_header("Access-Control-Allow-Origin", origin if origin in allowed else "https://vybord.com")
         self.send_header("Access-Control-Allow-Credentials", "true")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -557,7 +557,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         """Send a 401 response if the request is not authenticated."""
         self.send_response(401)
         self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+        origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
         self.send_header("Access-Control-Allow-Credentials", "true")
         self.end_headers()
         self.wfile.write(json.dumps({'error': 'Unauthorized', 'login_url': '/login.html'}).encode())
@@ -578,7 +578,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+        origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
         self.send_header("Access-Control-Allow-Credentials", "true")
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
@@ -635,7 +635,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             status_file = work / 'status.json'
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+            origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
             self.send_header("Access-Control-Allow-Credentials", "true")
             self.end_headers()
             if status_file.exists():
@@ -766,7 +766,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 log(f"Build for {job_id}: exit={result.returncode} stdout={result.stdout[:200]}")
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type')
@@ -789,7 +789,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # Handle CORS preflight
             if self.command == 'OPTIONS':
                 self.send_response(200)
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type')
@@ -805,7 +805,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             target_url = payload.get('url', '')
             if not target_url:
                 self.send_response(400)
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': 'url required'}).encode())
@@ -833,14 +833,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         elem.decompose()
                     html = str(soup)
                     self.send_response(200)
-                    self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                    origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                     self.send_header("Access-Control-Allow-Credentials", "true")
                     self.send_header('Content-Type', 'text/plain; charset=utf-8')
                     self.end_headers()
                     self.wfile.write(html.encode('utf-8'))
             except Exception as e:
                 self.send_response(502)
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
@@ -849,7 +849,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # Handle CORS preflight
             if self.command == 'OPTIONS':
                 self.send_response(200)
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type')
@@ -1269,14 +1269,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 result = scrape_listing(url)
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
             except ValueError as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e), 'success': False}).encode())
@@ -1284,7 +1284,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 log(f'Scrape error: {e}')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e), 'success': False}).encode())
@@ -1375,7 +1375,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 resp = {'job_id': job_id, 'status': f'Job created with {len(list(img_dir.iterdir()))} images, building...', 'done': False}
@@ -1409,7 +1409,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 log(f'send.php error: {e}')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': str(e)}).encode())
@@ -1452,7 +1452,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                             log(f'Image write error: {e}')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                 self.send_header("Access-Control-Allow-Credentials", "true")
                 self.end_headers()
                 self.wfile.write(json.dumps({'error': None}).encode())
@@ -1487,7 +1487,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if st.get('status', '').lower() in ('building...', 'done'):
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
-                    self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+                    origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
                     self.send_header("Access-Control-Allow-Credentials", "true")
                     self.end_headers()
                     self.wfile.write(json.dumps({'status': st['status']}).encode())
@@ -1530,7 +1530,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             threading.Thread(target=do_build, daemon=True).start()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', 'https://vybord.com')
+            origin = self.headers.get('Origin', ''); allowed = ['https://vybord.com','https://app.vybord.com']; self.send_header('Access-Control-Allow-Origin', origin if origin in allowed else 'https://vybord.com')
             self.send_header("Access-Control-Allow-Credentials", "true")
             self.end_headers()
             self.wfile.write(json.dumps({'status': 'Building...'}).encode())
