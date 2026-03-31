@@ -97,6 +97,7 @@ COOKIE_OPTS = {
     "samesite": "lax",
     "path": "/",
     "max_age": JWT_EXPIRY_HOURS * 3600,
+    "domain": ".vybord.com",  # Shared across all vybord.com subdomains
 }
 
 
