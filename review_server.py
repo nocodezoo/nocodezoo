@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Review Web Server — VPS version with full pipeline. Port 7073."""
 import http.server, socketserver, json, os, subprocess, shutil, re, uuid, time
-from dotenv import load_dotenv; load_dotenv()
+from dotenv import load_dotenv; load_dotenv(override=True)
 import asyncio, threading
 from urllib.parse import urlparse
 from pathlib import Path
