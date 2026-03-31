@@ -1141,7 +1141,10 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         const addressEl = document.getElementById('address-display');
         const address = addressEl ? addressEl.textContent.trim() : '';
         const priceEl = document.getElementById('price-display');
-        const price = priceEl ? priceEl.textContent.trim() : '';
+        const priceRaw = priceEl ? priceEl.textContent.trim() : '';
+        // Strip $ and validate — only keep if it looks like a real number
+        const priceClean = priceRaw.replace(/[^0-9,]/g, '');
+        const price = /^\d/.test(priceClean) ? priceClean : '';
         const beds = (document.getElementById('m-beds') || {value:''}).value.trim();
         const baths = (document.getElementById('m-baths') || {value:''}).value.trim();
         const sqft = (document.getElementById('m-sqft') || {value:''}).value.trim();
@@ -1154,8 +1157,9 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
         }
 
+        const urlInputVal = (document.getElementById('listing-url') || {value:''}).value.trim();
         const metaPayload = {
-            url: '',
+            url: urlInputVal,
             settings: {
                 voice: s.voice,
                 template: s.template,
@@ -1186,11 +1190,16 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         let jobId = null;
 
         try {
-            const res = await fetch('https://vybord.com/api/send.php', {
+            const res = await fetch('https://app.vybord.com/api/send.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(metaPayload),
             });
+            if (!res.ok) {
+                const text = await res.text();
+                setStatus('⚠️ Server error ' + res.status + ': ' + (text.slice(0, 100)), 'err');
+                btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
+            }
             const result = await res.json();
             if (result.error) {
                 setStatus('⚠️ ' + result.error, 'err');
@@ -1198,7 +1207,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             }
             jobId = result.job_id;
             if (!jobId) {
-                setStatus('⚠️ No job_id returned', 'err');
+                setStatus('⚠️ No job_id from server (cf/Rate limit?)', 'err');
                 btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
             }
 
@@ -1246,11 +1255,10 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         });
         const buildResult = await buildResp.json();
 
+        // Redirect to review page
         const reviewUrl = 'https://app.vybord.com/review/' + jobId;
-        setStatus('✅ <a href="' + reviewUrl + '" target="_blank" style="color:#4f9;text-decoration:underline">Open Review</a>', 'info');
-
-        const btn = document.getElementById('gen-btn');
-        if (btn) { btn.disabled = false; btn.textContent = '🚀 Generate Video'; }
+        setStatus('🎬 Redirecting to review page...', 'info');
+        window.location.href = reviewUrl;
     }
 
     async function compressForUpload(dataUrl) {
