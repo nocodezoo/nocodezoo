@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Review Web Server — VPS version with full pipeline. Port 7073."""
 import http.server, socketserver, json, os, subprocess, shutil, re, uuid, time
+from dotenv import load_dotenv; load_dotenv()
 import asyncio, threading
 from urllib.parse import urlparse
 from pathlib import Path
@@ -542,13 +543,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def authenticate(self):
         """Validate the vyb_token cookie. Returns (user_id, email) or (None, None)."""
         cookie_header = self.headers.get('Cookie', '')
+        print(f"[DEBUG authenticate] Cookie: {repr(cookie_header[:80])}", flush=True)
         for part in cookie_header.split(';'):
             key, _, val = part.strip().partition('=')
             if key == COOKIE_NAME and val:
                 try:
                     payload = decode_token(val)
                     return int(payload.get('sub')), payload.get('email')
-                except Exception:
+                except Exception as e:
+                    print(f"[DEBUG authenticate] Token decode failed: {e}, token[:30]={val[:30]}", flush=True)
                     return None, None
         return None, None
 

@@ -1194,6 +1194,8 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         let jobId = null;
 
         try {
+            // Debug: log cookies being sent
+            console.log('Cookies before send.php:', document.cookie);
             const res = await fetch('https://app.vybord.com/api/send.php', {
                 method: 'POST',
                 credentials: 'include',
