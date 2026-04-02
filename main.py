@@ -58,7 +58,7 @@ def _render(template_name: str, context: dict) -> HTMLResponse:
     template = _jinja_env.get_template(template_name)
     return HTMLResponse(template.render(ctx))
 
-app = FastAPI(title="Vybord User API", version="1.0.0")
+app = FastAPI(title="Vybord User API", version="1.0.50")
 
 # ── Health ──────────────────────────────────────────────────────────────────
 

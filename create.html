@@ -4,54 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Create Video — Vybord v1.042</title>
+    <title>Create Video — Vybord v1.050</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
-        :root { --accent: #8309EE; --accent2: #146EF5; --green: #00ff88; }
+        :root { --accent: #B0E0E6; --accent2: #E6E6FA; --green: #00aa66; --text: #1a1a2e; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'DM Sans', sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
+        body { font-family: 'DM Sans', sans-serif; background: #FFFFFF; color: var(--text); min-height: 100vh; }
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
         .content { position: relative; z-index: 1; }
         .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .section-card { background: #14141e; border: 1px solid #1e1e2e; border-radius: 1.25rem; padding: 1.5rem; margin-bottom: 1.25rem; }
-        .step-badge { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
-        .step-title { font-size: 1.1rem; font-weight: 700; color: #fff; }
-        .form-input { background: #0d0d14; border: 1px solid #252535; border-radius: 0.75rem; padding: 0.8rem 1rem; color: #fff; width: 100%; font-size: 0.9rem; transition: border-color 0.2s; font-family: 'DM Sans', sans-serif; }
+        .section-card { background: #F5F7FA; border: 1px solid #DDE4ED; border-radius: 1.25rem; padding: 1.5rem; margin-bottom: 1.25rem; }
+        .step-badge { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; color: #1a1a2e; }
+        .step-title { font-size: 1.1rem; font-weight: 700; color: #1a1a2e; }
+        .form-input { background: #FFFFFF; border: 1px solid #DDE4ED; border-radius: 0.75rem; padding: 0.8rem 1rem; color: #1a1a2e; width: 100%; font-size: 0.9rem; transition: border-color 0.2s; font-family: 'DM Sans', sans-serif; }
         .form-input:focus { border-color: var(--accent); outline: none; }
-        .form-input::placeholder { color: #555; }
+        .form-input::placeholder { color: #778899; }
         .opt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-        .opt-btn { padding: 0.6rem 0.5rem; border: 1px solid #252535; border-radius: 0.6rem; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; color: #aaa; background: #0d0d14; }
-        .opt-btn:hover { border-color: var(--accent); color: #fff; }
-        .opt-btn.sel { border-color: var(--accent); background: rgba(131,9,238,0.15); color: #fff; }
+        .opt-btn { padding: 0.6rem 0.5rem; border: 1px solid #DDE4ED; border-radius: 0.6rem; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; color: #778899; background: #FFFFFF; }
+        .opt-btn:hover { border-color: var(--accent); color: #1a1a2e; }
+        .opt-btn.sel { border-color: var(--accent); background: rgba(176,224,230,0.2); color: #1a1a2e; }
         .color-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
         .swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; flex-shrink: 0; }
-        .swatch:hover { border-color: #555; }
-        .swatch.sel { border-color: #fff; }
-        .range-val { font-size: 0.8rem; color: #888; min-width: 2rem; text-align: right; }
-        input[type=range] { -webkit-appearance: none; height: 6px; background: #1e1e2e; border-radius: 3px; width: 100%; }
+        .swatch:hover { border-color: #778899; }
+        .swatch.sel { border-color: #1a1a2e; }
+        .range-val { font-size: 0.8rem; color: #778899; min-width: 2rem; text-align: right; }
+        input[type=range] { -webkit-appearance: none; height: 6px; background: #DDE4ED; border-radius: 3px; width: 100%; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; cursor: pointer; }
-        select.form-input { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.8rem center; padding-right: 2.2rem; }
-        .btn-fetch { white-space: nowrap; padding: 0.5rem 1rem; border-radius: 0.6rem; border: 1px solid #8309EE; background: rgba(131,9,238,0.15); color: #8309EE; cursor: pointer; font-size: 0.85rem; }
-    .btn-generate { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 1.1rem; font-weight: 700; border: none; border-radius: 1rem; cursor: pointer; transition: opacity 0.2s; font-family: 'DM Sans', sans-serif; }
-        .btn-fetch { white-space: nowrap; padding: 0.5rem 1rem; border-radius: 0.6rem; border: 1px solid #8309EE; background: rgba(131,9,238,0.15); color: #8309EE; cursor: pointer; font-size: 0.85rem; }
-    .btn-generate:hover { opacity: 0.85; }
-        .btn-fetch { white-space: nowrap; padding: 0.5rem 1rem; border-radius: 0.6rem; border: 1px solid #8309EE; background: rgba(131,9,238,0.15); color: #8309EE; cursor: pointer; font-size: 0.85rem; }
-    .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
-        .status-box { margin-top: 1rem; padding: 1rem; border-radius: 0.75rem; font-size: 0.88rem; display: none; background: #0d0d14; border: 1px solid #252535; }
-        .status-box.ok { border-color: #00ff88; color: #00ff88; }
-        .status-box.err { border-color: #ff4444; color: #ff6666; }
-        .status-box.info { border-color: var(--accent2); color: var(--accent2); }
-        .voice-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.8rem; border: 1px solid #252535; border-radius: 0.6rem; cursor: pointer; transition: all 0.2s; font-size: 0.82rem; color: #aaa; background: #0d0d14; }
-        .voice-btn:hover { border-color: var(--accent); color: #fff; }
-        .voice-btn.sel { border-color: var(--accent); background: rgba(131,9,238,0.15); color: #fff; }
-        .section-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #555; margin-bottom: 0.75rem; font-weight: 600; }
-        .divider { border-top: 1px solid #1e1e2e; margin: 1rem 0; }
+        select.form-input { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23778899' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.8rem center; padding-right: 2.2rem; }
+        .btn-fetch { white-space: nowrap; padding: 0.5rem 1rem; border-radius: 0.6rem; border: 1px solid #B0E0E6; background: rgba(176,224,230,0.15); color: #1a1a2e; cursor: pointer; font-size: 0.85rem; }
+        .btn-generate { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1a1a2e; font-size: 1.1rem; font-weight: 700; border: none; border-radius: 1rem; cursor: pointer; transition: opacity 0.2s; font-family: 'DM Sans', sans-serif; }
+        .btn-generate:hover { opacity: 0.85; }
+        .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+        .status-box { margin-top: 1rem; padding: 1rem; border-radius: 0.75rem; font-size: 0.88rem; display: none; background: #F5F7FA; border: 1px solid #DDE4ED; color: #1a1a2e; }
+        .status-box.ok { border-color: #00aa66; color: #00aa66; }
+        .status-box.err { border-color: #dc2626; color: #dc2626; }
+        .status-box.info { border-color: var(--accent2); color: #778899; }
+        .voice-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.8rem; border: 1px solid #DDE4ED; border-radius: 0.6rem; cursor: pointer; transition: all 0.2s; font-size: 0.82rem; color: #778899; background: #FFFFFF; }
+        .voice-btn:hover { border-color: var(--accent); color: #1a1a2e; }
+        .voice-btn.sel { border-color: var(--accent); background: rgba(176,224,230,0.2); color: #1a1a2e; }
+        .section-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #778899; margin-bottom: 0.75rem; font-weight: 600; }
+        .divider { border-top: 1px solid #DDE4ED; margin: 1rem 0; }
         .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
         .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; }
         .logo-text { font-weight: 700; font-size: 1.1rem; }
-        .floating-shape { position: fixed; border: 1px solid rgba(131,9,238,0.08); border-radius: 50%; pointer-events: none; z-index: 0; animation: float 20s ease-in-out infinite; }
+        .floating-shape { position: fixed; border: 1px solid rgba(176,224,230,0.15); border-radius: 50%; pointer-events: none; z-index: 0; animation: float 20s ease-in-out infinite; }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-30px)} }
         .accent-bar { width: 40px; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; margin-bottom: 0.75rem; }
     </style>
@@ -67,16 +65,16 @@
 
     <div class="content">
         <!-- Header -->
-        <header class="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-[#1e1e2e]">
+        <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#DDE4ED]">
             <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
                 <a href="/" class="logo">
                     <div class="logo-icon">V</div>
                     <span class="logo-text gradient-text">Vybord</span>
                 </a>
                 <div class="flex items-center gap-3">
-                    <span id="user-info" style="display:none;font-size:0.78rem;color:#888;"></span>
-                    <button id="logout-btn" type="button" onclick="handleLogout()" style="display:none;background:#1e1e2e;border:1px solid #333;color:#888;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;cursor:pointer;">Logout</button>
-                    <span style="background:#1e1e2e;border:1px solid #333;color:#555;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;letter-spacing:0.05em">v1.043</span>
+                    <span id="user-info" style="display:none;font-size:0.78rem;color:#778899;"></span>
+                    <button id="logout-btn" type="button" onclick="handleLogout()" style="display:none;background:#F5F7FA;border:1px solid #DDE4ED;color:#778899;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;cursor:pointer;">Logout</button>
+                    <span style="background:#F5F7FA;border:1px solid #DDE4ED;color:#778899;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;letter-spacing:0.05em">v1.050</span>
                 </div>
             </div>
         </header>
@@ -85,10 +83,10 @@
             <!-- Page header -->
             <div class="mb-6">
                 <div class="accent-bar"></div>
-                <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,5vw,2.2rem);font-weight:600;line-height:1.2;margin-bottom:0.4rem;">
+                <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,5vw,2.2rem);font-weight:600;line-height:1.2;margin-bottom:0.4rem;color:#1a1a2e;">
                     Create Your Video
                 </h1>
-                <p class="text-[#666] text-sm">Configure every detail. We'll handle the rest.</p>
+                <p class="text-[#778899] text-sm">Configure every detail. We'll handle the rest.</p>
             </div>
 
             <form id="video-form" novalidate>
@@ -104,11 +102,11 @@
                             <label class="section-label">Listing URL</label>
                             <div style="display:flex;gap:0.5rem;align-items:center">
                                 <input type="text" id="listing-url" class="form-input" placeholder="https://www.corcoran.com/... (listing URL)" style="flex:1">
-                                <button type="button" id="lookup-btn" onclick="fetchPropertyDetails()" style="background:linear-gradient(135deg,#8309EE,#146EF5);color:#fff;border:none;border-radius:0.75rem;padding:0.7rem 1.1rem;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif">&#128269; Lookup</button>
+                                <button type="button" id="lookup-btn" onclick="fetchPropertyDetails()" style="background:linear-gradient(135deg,#B0E0E6,#E6E6FA);color:#1a1a2e;border:none;border-radius:0.75rem;padding:0.7rem 1.1rem;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif">&#128269; Lookup</button>
                             </div>
-                            <div id="address-display" style="color:#8309EE;font-size:0.9rem;margin-top:4px;font-weight:600"></div>
-                            <div id="price-display" style="color:#00ff88;font-size:0.85rem;margin-top:2px"></div>
-                            <div id="lookup-status" style="font-size:0.82rem;margin-top:4px;display:none"></div>
+                            <div id="address-display" style="color:#1a1a2e;font-size:0.9rem;margin-top:4px;font-weight:600"></div>
+                            <div id="price-display" style="color:#00aa66;font-size:0.85rem;margin-top:2px"></div>
+                            <div id="lookup-status" style="font-size:0.82rem;margin-top:4px;display:none;color:#778899"></div>
                             <input type="hidden" id="m-beds" value="">
                             <input type="hidden" id="m-baths" value="">
                             <input type="hidden" id="m-sqft" value="">
@@ -120,7 +118,7 @@
                         <div>
                             <label class="section-label">Or Upload Images</label>
                             <input type="file" id="image-files" class="form-input" accept="image/*" multiple onchange="handleImgUpload(this.files)">
-                                <div id="img-count" class="section-label" style="color:#888;font-size:0.8rem;margin-top:4px"></div>
+                                <div id="img-count" class="section-label" style="color:#778899;font-size:0.8rem;margin-top:4px"></div>
                         </div>
                         <div>
                             <label class="section-label">Your Email (for delivery)</label>
@@ -172,9 +170,9 @@
                         <div>
                             <label class="section-label">Font Size — <span id="fs-val">55</span>px</label>
                             <div class="flex items-center gap-3">
-                                <span class="text-xs text-[#555]">20</span>
+                                <span class="text-xs text-[#778899]">20</span>
                                 <input type="range" id="font-size" min="20" max="80" value="55" oninput="updateFs(this.value)">
-                                <span class="text-xs text-[#555]">80</span>
+                                <span class="text-xs text-[#778899]">80</span>
                             </div>
                         </div>
                         <div>
@@ -187,7 +185,7 @@
                                 <div class="swatch" style="background:#FF4444" onclick="selColor(this,'#FF4444','textColor')"></div>
                                 <div class="swatch" style="background:#00CCFF" onclick="selColor(this,'#00CCFF','textColor')"></div>
                                 <div class="swatch" style="background:#FF9500" onclick="selColor(this,'#FF9500','textColor')"></div>
-                                <div class="swatch" style="background:#ffffff22;border:1px dashed #555" onclick="selColor(this,'transparent','textColor')"></div>
+                                <div class="swatch" style="background:#ffffff22;border:1px dashed #778899" onclick="selColor(this,'transparent','textColor')"></div>
                             </div>
                         </div>
                         <div>
@@ -198,7 +196,7 @@
                                 <div class="swatch" style="background:#2d1b4e" onclick="selColor(this,'#2d1b4e','bgColor')"></div>
                                 <div class="swatch" style="background:#0a1628" onclick="selColor(this,'#0a1628','bgColor')"></div>
                                 <div class="swatch" style="background:#1a0a0a" onclick="selColor(this,'#1a0a0a','bgColor')"></div>
-                                <div class="swatch" style="background:#ffffff22;border:1px dashed #555" onclick="selColor(this,'transparent','bgColor')"></div>
+                                <div class="swatch" style="background:#ffffff22;border:1px dashed #778899" onclick="selColor(this,'transparent','bgColor')"></div>
                             </div>
                         </div>
                     </div>
@@ -313,20 +311,19 @@
 
                 <div id="status" class="status-box"></div>
 
-                <div class="mt-6 text-center text-xs text-[#444]">
+                <div class="mt-6 text-center text-xs text-[#DDE4ED]">
                     By generating, you agree our AI may process this content.
                 </div>
             </form>
         </main>
 
-        <footer class="text-center py-8 text-xs text-[#333] mt-8">
+        <footer class="text-center py-8 text-xs text-[#DDE4ED] mt-8">
             © 2026 Vybord · Built with OpenClaw
         </footer>
     </div>
 
     <script>
     // ── State
-    // Wire up generate button after DOM is ready
     var genBtn = document.getElementById("gen-btn");
     if (genBtn) genBtn.addEventListener("click", function(e) { console.log("Button clicked"); handleSubmit(e); });
 
@@ -350,10 +347,8 @@
     var _uploadedFiles = [];
     var CONCURRENT = 3;
 
-    // ── sel() — scoped to .opt-group
     function sel(btn, key, val) {
         s[key] = val;
-        // Remove .sel from all siblings with the same tag name
         var sib = btn.previousElementSibling;
         while (sib) {
             if (sib.classList && sib.classList.contains('opt-btn')) sib.classList.remove('sel');
@@ -367,7 +362,6 @@
         btn.classList.add('sel');
     }
 
-    // ── Voice picker
     function selectVoice(id, btn) {
         var grid = btn.closest('#voice-grid');
         if (!grid) return;
@@ -376,7 +370,6 @@
         s.voice = id;
     }
 
-    // ── Color swatch
     function selColor(el, color, key) {
         s[key] = color;
         var sib = el.previousElementSibling;
@@ -392,13 +385,11 @@
         el.classList.add('sel');
     }
 
-    // ── Font size
     function updateFs(val) {
         s.fontSize = parseInt(val);
         document.getElementById('fs-val').textContent = val;
     }
 
-    // ── Status display
     function setStatus(msg, type) {
         var el = document.getElementById('status');
         if (!el) { console.error('STATUS ELEMENT NOT FOUND'); return; }
@@ -407,10 +398,8 @@
         el.innerHTML = msg;
         el.className = 'status-box ' + (type || 'info');
         console.log('Status set:', msg.substring(0, 100));
-        
     }
 
-    // ── Simple file upload (existing behavior)
     function handleImgUpload(files) {
         if (!files || files.length === 0) return;
         _uploadedFiles = [];
@@ -427,52 +416,6 @@
         });
     }
 
-    // ── Auto-generate voiceover
-    function generateAutoScript() {
-        var urlInput = document.getElementById('listing-url');
-        if (!urlInput || !urlInput.value.trim()) {
-            setStatus('⚠️ Enter a listing URL first to auto-generate the voiceover.', 'err');
-            return;
-        }
-        setStatus('⏳ Fetching listing details...', 'info');
-        var scriptTag = document.getElementById('auto-script');
-        if (scriptTag) scriptTag.textContent = '';
-        var address = document.getElementById('address-display');
-        if (address) address.textContent = '';
-        var price = document.getElementById('price-display');
-        if (price) price.textContent = '';
-
-        fetchListing().then(function(data) {
-            if (!data) {
-                setStatus('⚠️ Could not fetch listing details. Try pasting HTML manually.', 'err');
-                return;
-            }
-            var address2 = data.address || '';
-            var price2 = data.price || '';
-            var beds = data.beds || '';
-            var sqft = data.sqft || '';
-            var script = [];
-            if (address2) script.push('Beautiful home at ' + address2);
-            if (price2) script.push('Priced at ' + price2);
-            if (beds || sqft) {
-                var details = [];
-                if (beds) details.push(beds);
-                if (sqft) details.push(sqft);
-                script.push('Featuring ' + details.join(' with '));
-            }
-            script.push("Don't miss this incredible opportunity. Call today to schedule your private showing.");
-            var scriptText = script.join('. ');
-            var scriptEl = document.getElementById('voice-script');
-            if (scriptEl) scriptEl.value = scriptText;
-            if (address) address.textContent = address2;
-            if (price) price.textContent = price2;
-            setStatus('✅ Voiceover script generated! Edit if needed, then record.', 'info');
-        }).catch(function(e) {
-            setStatus('⚠️ Error: ' + e.message, 'err');
-        });
-    }
-
-    // ── Fetch listing (URL scan)
     function fetchListing() {
         var urlInput = document.getElementById('listing-url');
         var url = urlInput ? urlInput.value.trim() : '';
@@ -481,7 +424,6 @@
             .then(function(r) { return r.text(); })
             .then(function(html) {
                 var data = parseListingData(html, url);
-                // Auto-fill form fields
                 if (data.address) {
                     var a = document.getElementById('address-display');
                     if (a) a.textContent = data.address;
@@ -494,11 +436,9 @@
             });
     }
 
-    // ── Parse listing HTML for property data + images
     function parseListingData(html, baseUrl) {
         var data = { images: [], address: '', price: '', beds: '', sqft: '' };
         try {
-            // JSON-LD
             var jsonld = html.match(/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>([\s\S]*?)<\/script>/gi) || [];
             for (var i = 0; i < jsonld.length; i++) {
                 try {
@@ -521,7 +461,6 @@
             }
         } catch(e) {}
 
-        // Meta tags
         if (!data.address) {
             var titleMatch = html.match(/<title>([^<]+)<\/title>/i);
             if (titleMatch) {
@@ -535,19 +474,15 @@
             }
         }
 
-        // Parse images
         return parseAndShowImages(html, baseUrl, data);
     }
 
-    // ── Extract + display images from HTML
-    
     function parseAndShowImages(html, baseUrl, data) {
         data = data || {};
         data.images = data.images || [];
         var urls = [];
         var seen = {};
 
-        // ── 1. JSON-LD ─────────────────────────────────────────────────
         var jsonldMatches = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
         for (var ji = 0; ji < jsonldMatches.length; ji++) {
             try {
@@ -556,7 +491,6 @@
                 if (!Array.isArray(objs)) objs = [objs];
                 for (var oi = 0; oi < objs.length; oi++) {
                     var obj = objs[oi];
-                    // Direct image field
                     var imgField = obj.image || obj.photo || obj.photos;
                     if (typeof imgField === 'string' && imgField) {
                         if (!seen[imgField] && imgField.match(/\.(jpg|jpeg|png|webp)/i)) { seen[imgField] = true; urls.push(imgField); }
@@ -572,7 +506,6 @@
             } catch(e) {}
         }
 
-        // ── 2. __NEXT_DATA__ (Corcoran, Zillow, Realtor) ──────────────
         var nextDataMatch = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
         if (nextDataMatch) {
             try {
@@ -583,12 +516,10 @@
                     ? JSON.stringify(nd.props.pageProps.initialReduxState)
                     : '';
 
-                // Walk the object for image URLs
                 var imgList = [];
                 function walk(o) {
                     if (!o || typeof o !== 'object') return;
                     if (Array.isArray(o)) { for (var i = 0; i < o.length; i++) walk(o[i]); return; }
-                    // Look for URL fields that look like image URLs
                     for (var k in o) {
                         var v = o[k];
                         if (k === 'url' && typeof v === 'string' && v.match(/\.(jpg|jpeg|png|webp)/i) && !seen[v]) {
@@ -609,18 +540,15 @@
             } catch(e) {}
         }
 
-        // ── 3. OG:image meta ───────────────────────────────────────────
         var ogMatches = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*/gi) || [];
         for (var gi = 0; gi < ogMatches.length; gi++) {
             var m = ogMatches[gi].match(/content=["']([^"']+)["'/]/);
             if (m && m[1] && !seen[m[1]]) { seen[m[1]] = true; urls.push(m[1]); }
         }
 
-        // ── 4. CloudFront base64-encoded URLs ─────────────────────────
         var cdnMatches = html.match(/https?:\/\/[a-z0-9.\-]*cloudfront\.net[^"'\s>)]+/g) || [];
         for (var ci = 0; ci < cdnMatches.length; ci++) {
             var cdnUrl = cdnMatches[ci];
-            // Pattern: /f:webp/rt:fit/w:XXX/BASE64
             var b64M = cdnUrl.match(/\/f:webp\/rt:fit\/w:\d+\/([A-Za-z0-9_=\-]+)/);
             if (b64M) {
                 try {
@@ -632,73 +560,12 @@
                     }
                 } catch(e) {}
             }
-            // Also push CDN URLs directly if they look like photo URLs
             if (cdnUrl.match(/listingphotos|property_?photos|images\.|photos\./i) && !seen[cdnUrl]) {
                 seen[cdnUrl] = true; urls.push(cdnUrl);
             }
         }
 
-        // ── 7. data-src and src from img tags ─────────────────────────
-                var bgMatches = html.match(/background-image\s*:\s*url\(([^)]+)\)/gi) || [];
-        for (var bi = 0; bi < bgMatches.length; bi++) {
-            var m2 = bgMatches[bi].match(/url\(([^)]+)\)/i);
-            if (m2 && m2[1]) {
-                var u2 = m2[1].replace(/^["']|["']$/g, '');
-                if (!seen[u2] && u2.match(/^https?:/) && !u2.match(/logo|icon|avatar/i)) {
-                    seen[u2] = true; urls.push(u2);
-                }
-            }
-        }
-
-
-        var bgMatches = html.match(/background-image\s*:\s*url\(([^)]+)\)/gi) || [];
-        for (var bi = 0; bi < bgMatches.length; bi++) {
-            var m2 = bgMatches[bi].match(/url\(([^)]+)\)/i);
-            if (m2 && m2[1]) {
-                var u2 = m2[1].replace(/^["']|["']$/g, '');
-                if (!seen[u2] && u2.match(/^https?:/) && !u2.match(/logo|icon|avatar/i)) {
-                    seen[u2] = true; urls.push(u2);
-                }
-            }
-        }
-
-
-        var bgMatches = html.match(/background-image\s*:\s*url\(([^)]+)\)/gi) || [];
-        for (var bi = 0; bi < bgMatches.length; bi++) {
-            var m2 = bgMatches[bi].match(/url\(([^)]+)\)/i);
-            if (m2 && m2[1]) {
-                var u2 = m2[1].replace(/^["']|["']$/g, '');
-                if (!seen[u2] && u2.match(/^https?:/) && !u2.match(/logo|icon|avatar/i)) {
-                    seen[u2] = true; urls.push(u2);
-                }
-            }
-        }
-
-
-        var bgMatches = html.match(/background-image\s*:\s*url\(([^)]+)\)/gi) || [];
-        for (var bi = 0; bi < bgMatches.length; bi++) {
-            var m2 = bgMatches[bi].match(/url\(([^)]+)\)/i);
-            if (m2 && m2[1]) {
-                var u2 = m2[1].replace(/^['"]|['"]$/g, '');
-                if (!seen[u2] && u2.match(/^https?:/) && !u2.match(/logo|icon|avatar/i)) {
-                    seen[u2] = true; urls.push(u2);
-                }
-            }
-        }
-
-
-        var bgMatches = html.match(/background-image\s*:\s*url\(([^)]+)\)/gi) || [];
-        for (var bi = 0; bi < bgMatches.length; bi++) {
-            var m2 = bgMatches[bi].match(/url\(([^)]+)\)/i);
-            if (m2 && m2[1]) {
-                var u2 = m2[1].replace(/^['"]|['"]$/g, '');
-                if (!seen[u2] && u2.match(/^https?:/) && !u2.match(/logo|icon|avatar/i)) {
-                    seen[u2] = true; urls.push(u2);
-                }
-            }
-        }
-
-var allImgTags = html.match(/<img[^>]+>/gi) || [];
+        var allImgTags = html.match(/<img[^>]+>/gi) || [];
         for (var im = 0; im < allImgTags.length; im++) {
             var tag = allImgTags[im];
             var srcM = tag.match(/data-src=["']([^"']+)["'/]/) || tag.match(/src=["']([^"']+)["'/]/);
@@ -711,7 +578,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             }
         }
 
-        // ── 6. data-src from source tags ──────────────────────────────
         var sourceTags = html.match(/<source[^>]+>/gi) || [];
         for (var st = 0; st < sourceTags.length; st++) {
             var srcM = sourceTags[st].match(/src=["']([^"']+)["'/]/);
@@ -720,7 +586,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             }
         }
 
-        // ── 7. Unsplash/media thumbnails ────────────────────────────────
         var thumbMatches = html.match(/https?:\/\/[a-z0-9.\-]*\.(?:unsplash|media\.licdn|tam\.pm)\.com[^"'\s>)]+/g) || [];
         for (var ti = 0; ti < thumbMatches.length; ti++) {
             var u = thumbMatches[ti];
@@ -729,7 +594,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             }
         }
 
-        // ── img tag src and data-src ───────────────────────────────
         var imgTagMatches = html.match(/<img[^>]+>/gi) || [];
         for (var it = 0; it < imgTagMatches.length; it++) {
             var tag = imgTagMatches[it];
@@ -742,9 +606,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             }
         }
 
-        // ── Deduplicate and limit ─────────────────────────────────────
         urls = urls.filter(function(u) { return u && u.length < 2000; });
-        // Remove obvious duplicates by normalizing
         var normalized = {};
         var unique = [];
         for (var ui = 0; ui < urls.length; ui++) {
@@ -759,8 +621,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         return data;
     }
 
-
-    // ── Scan modal
     function openScanModal() {
         var m = document.getElementById('scan-modal');
         if (m) { m.style.display = 'block'; m.classList.add('open'); _modalSel = {}; }
@@ -781,7 +641,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         });
     }
 
-    // ── Paste HTML
     function fetchHtmlFromUrl() {
         var urlInput = document.getElementById('listing-url');
         var url = urlInput ? urlInput.value.trim() : '';
@@ -816,7 +675,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             if (!urlMatch) urlMatch = ta.value.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
             if (urlMatch) { baseUrl = urlMatch[1]; if (urlInput) urlInput.value = baseUrl; }
         }
-        // Try to extract URL from pasted HTML
         if (!baseUrl) {
             var urlMatch = ta.value.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
             if (!urlMatch) urlMatch = ta.value.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
@@ -842,7 +700,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         if (valid.length > 0) showImageGrid(valid);
     }
 
-    // ── Image grid (modal)
     var _imgBatch = [];
     var _imgOffset = 0;
     var _imgBatchSize = 30;
@@ -873,7 +730,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
                 return function() {
                     el.style.opacity = '1';
                     var badge = document.createElement('span');
-                    badge.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;';
+                    badge.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(176,224,230,0.9);color:#1a1a2e;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;';
                     badge.textContent = n;
                     el.parentElement.appendChild(badge);
                 };
@@ -890,7 +747,7 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             if (!more) {
                 more = document.createElement('div');
                 more.id = 'load-more';
-                more.style.cssText = 'text-align:center;padding:12px;color:#666;cursor:pointer;';
+                more.style.cssText = 'text-align:center;padding:12px;color:#778899;cursor:pointer;';
                 more.textContent = 'Load more...';
                 more.onclick = renderBatch;
                 grid.parentElement.appendChild(more);
@@ -946,7 +803,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         }
     }
 
-    // ── Image download + confirm
     function confirmSelection() {
         var urls = Object.keys(_modalSel);
         if (urls.length === 0) return;
@@ -967,8 +823,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
                 var url = queue.shift();
                 active++;
                 (function(imgUrl, idx) {
-                    // CDN / cloud storage: try direct CORS fetch ONLY for hosts known to support it.
-                    // Everything else goes through the server-side proxy to avoid CORS errors.
                     var corsSafe = /cloudfront\.net|cloudinary\.com|imgix\.net|photobucket\.com/i.test(imgUrl);
                     var proxy = 'https://vybord.com/api/proxy-img.php?url=' + encodeURIComponent(imgUrl);
                     var fetchPromise;
@@ -1034,28 +888,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         startNext();
     }
 
-    // ── Property details from URL slug
-    function parseAddressFromUrl(url) {
-        try {
-            var parts = url.split('/');
-            var slug = parts[parts.length - 1] || '';
-            var segs = slug.split('-');
-            var state = '', zip = '', city = '', street = '';
-            for (var i = 0; i < segs.length; i++) {
-                if (segs[i].match(/^[A-Z]{2}$/) && i < segs.length - 1 && segs[i+1].match(/^\d{5}$/)) {
-                    state = segs[i]; zip = segs[i+1];
-                    city = segs.slice(Math.max(0, i-3), i).join(' ');
-                    street = segs.slice(0, Math.max(0, i-3)).join(' ');
-                    break;
-                }
-            }
-            if (city && state) {
-                return { address: street, city: city, state: state, zip: zip };
-            }
-        } catch(e) {}
-        return null;
-    }
-
     function fetchPropertyDetails() {
         var urlInput = document.getElementById('listing-url');
         var url = urlInput ? urlInput.value.trim() : '';
@@ -1102,17 +934,15 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         var el = document.getElementById('lookup-status');
         if (!msg) { el.style.display = 'none'; return; }
         el.style.display = 'block';
-        el.style.color = type === 'err' ? '#ff6666' : type === 'ok' ? '#00ff88' : '#60a5fa';
+        el.style.color = type === 'err' ? '#dc2626' : type === 'ok' ? '#00aa66' : '#778899';
         el.textContent = msg;
     }
 
-    // ── YouTube music
     function applyMusicUrl() {
         var input = document.getElementById('music-url');
         if (!input) return;
         var url = input.value.trim();
         s.musicUrl = url;
-        // Deselect all music presets
         var musicGroup = document.querySelector('.music-group');
         if (musicGroup) musicGroup.querySelectorAll('.opt-btn').forEach(function(b) { b.classList.remove('sel'); });
         if (url) {
@@ -1122,7 +952,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         }
     }
 
-    // ── Submit
     function toB64(file) {
         return new Promise(function(resolve, reject) {
             var reader = new FileReader();
@@ -1132,7 +961,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         });
     }
 
-    // Upload images ONE AT A TIME directly to VPS — bypass Hostinger nginx
     async function handleSubmit(e) {
         e.preventDefault();
         const btn = document.getElementById('gen-btn');
@@ -1146,7 +974,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         const address = addressEl ? addressEl.textContent.trim() : '';
         const priceEl = document.getElementById('price-display');
         const priceRaw = priceEl ? priceEl.textContent.trim() : '';
-        // Strip $ and validate — only keep if it looks like a real number
         const priceClean = priceRaw.replace(/[^0-9,]/g, '');
         const price = /^\d/.test(priceClean) ? priceClean : '';
         const beds = (document.getElementById('m-beds') || {value:''}).value.trim();
@@ -1194,7 +1021,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         let jobId = null;
 
         try {
-            // Debug: log cookies being sent
             console.log('Cookies before send.php:', document.cookie);
             const res = await fetch('https://app.vybord.com/api/send.php', {
                 method: 'POST',
@@ -1218,7 +1044,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
                 btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
             }
 
-            // Upload images one by one directly to VPS
             await uploadImagesSequential(jobId, total);
 
         } catch(err) {
@@ -1231,8 +1056,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
     async function uploadImagesSequential(jobId, total) {
         for (let i = 0; i < total; i++) {
             setStatus('📤 Uploading image ' + (i+1) + '/' + total + '...', 'info');
-
-            // Compress before upload
             const compressed = await compressForUpload(_uploadedFiles[i].data);
             const b64 = compressed.split(',')[1];
 
@@ -1254,7 +1077,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
             }
         }
 
-        // Trigger build on VPS
         setStatus('🎬 Building video...', 'info');
         const buildResp = await fetch('https://app.vybord.com/api/build/' + jobId, {
             method: 'POST',
@@ -1264,7 +1086,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         });
         const buildResult = await buildResp.json();
 
-        // Redirect to review page
         const reviewUrl = 'https://app.vybord.com/review/' + jobId;
         setStatus('🎬 Redirecting to review page...', 'info');
         window.location.href = reviewUrl;
@@ -1283,7 +1104,6 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                 resolve(canvas.toDataURL('image/jpeg', 0.70));
             };
-            // Handle base64 or data URL input
             if (!dataUrl.startsWith('data:')) {
                 dataUrl = 'data:image/jpeg;base64,' + dataUrl;
             }
@@ -1291,89 +1111,86 @@ var allImgTags = html.match(/<img[^>]+>/gi) || [];
         });
     }
 
+    </script>
 
-</script>
+    <!-- Image Scan Modal -->
+    <style>
+    .modal-overlay.open{display:block}
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,26,46,0.85);z-index:9999;display:none;overflow-y:auto;padding:20px}
+    .modal-overlay.open{display:block}
+    .modal-box{background:#F5F7FA;border:1px solid #DDE4ED;border-radius:16px;max-width:900px;margin:40px auto;padding:28px;color:#1a1a2e}
+    .modal-box h2{font-size:1.3rem;margin-bottom:16px;color:#1a1a2e}
+    .modal-tabs{display:flex;gap:8px;margin-bottom:16px}
+    .modal-tabs button{padding:8px 16px;border-radius:8px;border:1px solid #DDE4ED;background:#FFFFFF;color:#778899;cursor:pointer;font-size:0.9rem}
+    .modal-tabs button.sel{background:rgba(176,224,230,0.3);color:#1a1a2e;border-color:#B0E0E6}
+    .modal-close{float:right;background:none;border:none;color:#778899;font-size:1.5rem;cursor:pointer;padding:0;line-height:1}
+    .modal-close:hover{color:#1a1a2e}
+    #tab-url,#tab-paste{display:none}
+    .modal-actions{display:flex;gap:10px;margin:12px 0;flex-wrap:wrap}
+    .modal-actions button{padding:9px 18px;border-radius:8px;border:1px solid #DDE4ED;background:#FFFFFF;color:#1a1a2e;cursor:pointer;font-size:0.88rem}
+    .modal-actions button:hover{background:#EEF2F7}
+    .modal-actions button.primary{background:linear-gradient(135deg,#B0E0E6,#E6E6FA);border-color:#B0E0E6;color:#1a1a2e;font-weight:600}
+    .modal-actions button.primary:hover{opacity:0.85}
+    #modal-progress{color:#778899;font-size:0.85rem;margin:8px 0;min-height:20px}
+    #img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:420px;overflow-y:auto;margin-top:12px}
+    #img-grid .img-thumb.sel{outline:3px solid #B0E0E6;border-radius:8px}
+    .img-thumb{position:relative;cursor:pointer}
+    .img-thumb img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px}
+    </style>
+    <div id="scan-modal" class="modal-overlay">
+    <div class="modal-box">
+    <button class="modal-close" onclick="closeScanModal()">&#215;</button>
+    <h2>Select Listing Images</h2>
+    <div class="modal-tabs">
+    <button id="tab-btn-url" class="sel" onclick="switchTab('url')">Scan URL</button>
+    <button id="tab-btn-paste" onclick="switchTab('paste')">Paste HTML</button>
+    </div>
+    <div id="tab-url">
+    <div class="modal-actions">
+    <button class="primary" onclick="fetchPropertyDetails()">&#128269; Fetch from URL</button>
+    <button onclick="openScanModal()">&#128247; Open Image Selector</button>
+    </div>
+    <p style="color:#778899;font-size:0.82rem;margin:4px 0 12px">Fetches images automatically. Opens selector to confirm/trim selection.</p>
+    </div>
+    <div id="tab-paste">
+    <div class="modal-actions">
+    <button class="primary" onclick="fetchHtmlFromUrl()" style="width:100%;padding:12px;font-size:1rem;font-weight:bold;background:linear-gradient(135deg,#B0E0E6,#E6E6FA)">&#128269; Fetch HTML from URL</button>
+    <button class="primary" onclick="extractFromHtml()" style="width:100%;padding:12px;font-size:1rem;font-weight:bold">&#128269; Parse HTML (manual paste)</button>
+    <button onclick="addManualUrls()">Add Image URLs</button>
+    </div>
+    <p style="color:#778899;font-size:0.82rem;margin-bottom:8px">Open the listing page, press <b>Ctrl+U</b> (View Source), then <b>Ctrl+A</b> → <b>Ctrl+C</b> to copy everything, then paste below.</p>
+    <textarea id="paste-area" rows="8" style="width:100%;background:#FFFFFF;border:1px solid #DDE4ED;color:#1a1a2e;border-radius:8px;padding:10px;font-size:0.82rem;font-family:monospace" placeholder="Ctrl+U, Ctrl+A, Ctrl+V to paste page source here..."></textarea>
+    <textarea id="manual-urls" rows="3" style="width:100%;background:#FFFFFF;border:1px solid #DDE4ED;color:#1a1a2e;border-radius:8px;padding:8px;font-size:0.83rem;margin-top:8px" placeholder="Or paste image URLs (one per line)"></textarea>
+    </div>
+    <div id="modal-progress"></div>
+    <div id="img-grid"></div>
+    <div class="modal-actions" style="margin-top:12px">
+    <button onclick="selectAllModalImages()">Select All</button>
+    <button class="primary" id="modal-confirm-btn" onclick="confirmSelection()" disabled style="opacity:0.4">Confirm (<span id="sel-confirm-count">0</span>)</button>
+    </div>
+    </div>
+    </div>
 
-<!-- Image Scan Modal -->
-<style>
-.modal-overlay.open{display:block}
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:none;overflow-y:auto;padding:20px}
-.modal-overlay.open{display:block}
-.modal-box{background:#1a1a2e;border:1px solid #333;border-radius:16px;max-width:900px;margin:40px auto;padding:28px;color:#e0e0e0}
-.modal-box h2{font-size:1.3rem;margin-bottom:16px;color:#fff}
-.modal-tabs{display:flex;gap:8px;margin-bottom:16px}
-.modal-tabs button{padding:8px 16px;border-radius:8px;border:1px solid #444;background:#2a2a3e;color:#aaa;cursor:pointer;font-size:0.9rem}
-.modal-tabs button.sel{background:#8309EE;color:#fff;border-color:#8309EE}
-.modal-close{float:right;background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;padding:0;line-height:1}
-.modal-close:hover{color:#fff}
-#tab-url,#tab-paste{display:none}
-.modal-actions{display:flex;gap:10px;margin:12px 0;flex-wrap:wrap}
-.modal-actions button{padding:9px 18px;border-radius:8px;border:1px solid #555;background:#2a2a3e;color:#e0e0e0;cursor:pointer;font-size:0.88rem}
-.modal-actions button:hover{background:#3a3a4e}
-.modal-actions button.primary{background:#8309EE;border-color:#8309EE;color:#fff}
-.modal-actions button.primary:hover{background:#6b07c7}
-#modal-progress{color:#aaa;font-size:0.85rem;margin:8px 0;min-height:20px}
-#img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:420px;overflow-y:auto;margin-top:12px}
-#img-grid .img-thumb.sel{outline:3px solid #8309EE;border-radius:8px}
-.img-thumb{position:relative;cursor:pointer}
-.img-thumb img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px}
-</style>
-<div id="scan-modal" class="modal-overlay">
-<div class="modal-box">
-<button class="modal-close" onclick="closeScanModal()">&#215;</button>
-<h2>Select Listing Images</h2>
-<div class="modal-tabs">
-<button id="tab-btn-url" class="sel" onclick="switchTab('url')">Scan URL</button>
-<button id="tab-btn-paste" onclick="switchTab('paste')">Paste HTML</button>
-</div>
-<div id="tab-url">
-<div class="modal-actions">
-<button class="primary" onclick="fetchPropertyDetails()">&#128269; Fetch from URL</button>
-<button onclick="openScanModal()">&#128247; Open Image Selector</button>
-</div>
-<p style="color:#888;font-size:0.82rem;margin:4px 0 12px">Fetches images automatically. Opens selector to confirm/trim selection.</p>
-</div>
-<div id="tab-paste">
-<div class="modal-actions">
-<button class="primary" onclick="fetchHtmlFromUrl()" style="width:100%;padding:12px;font-size:1rem;font-weight:bold;background:linear-gradient(135deg,#146EF5,#8309EE)">&#128269; Fetch HTML from URL</button>
-<button class="primary" onclick="extractFromHtml()" style="width:100%;padding:12px;font-size:1rem;font-weight:bold">&#128269; Parse HTML (manual paste)</button>
-<button onclick="addManualUrls()">Add Image URLs</button>
-</div>
-<p style="color:#aaa;font-size:0.82rem;margin-bottom:8px">Open the listing page, press <b>Ctrl+U</b> (View Source), then <b>Ctrl+A</b> → <b>Ctrl+C</b> to copy everything, then paste below.</p>
-<textarea id="paste-area" rows="8" style="width:100%;background:#111;border:1px solid #444;color:#ccc;border-radius:8px;padding:10px;font-size:0.82rem;font-family:monospace" placeholder="Ctrl+U, Ctrl+A, Ctrl+V to paste page source here..."></textarea>
-<textarea id="manual-urls" rows="3" style="width:100%;background:#111;border:1px solid #333;color:#ccc;border-radius:8px;padding:8px;font-size:0.83rem;margin-top:8px" placeholder="Or paste image URLs (one per line)"></textarea>
-</div>
-<div id="modal-progress"></div>
-<div id="img-grid"></div>
-<div class="modal-actions" style="margin-top:12px">
-<button onclick="selectAllModalImages()">Select All</button>
-<button class="primary" id="modal-confirm-btn" onclick="confirmSelection()" disabled style="opacity:0.4">Confirm (<span id="sel-confirm-count">0</span>)</button>
-</div>
-</div>
-</div>
+    <script>
+    async function loadUserInfo() {
+        try {
+            const r = await fetch('https://app.vybord.com/api/me', { credentials: 'include' });
+            if (r.ok) {
+                const d = await r.json();
+                document.getElementById('user-info').textContent = d.email;
+                document.getElementById('user-info').style.display = 'inline';
+                document.getElementById('logout-btn').style.display = 'inline';
+            }
+        } catch(e) {}
+    }
+    loadUserInfo();
 
-
-<script>
-// Show logged-in user info
-async function loadUserInfo() {
-    try {
-        const r = await fetch('https://app.vybord.com/api/me', { credentials: 'include' });
-        if (r.ok) {
-            const d = await r.json();
-            document.getElementById('user-info').textContent = d.email;
-            document.getElementById('user-info').style.display = 'inline';
-            document.getElementById('logout-btn').style.display = 'inline';
-        }
-    } catch(e) {}
-}
-loadUserInfo();
-
-async function handleLogout() {
-    try {
-        await fetch('https://app.vybord.com/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch(e) {}
-    location.href = 'https://app.vybord.com/login.html';
-}
-</script>
+    async function handleLogout() {
+        try {
+            await fetch('https://app.vybord.com/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch(e) {}
+        location.href = 'https://app.vybord.com/login.html';
+    }
+    </script>
 </body>
 </html>
