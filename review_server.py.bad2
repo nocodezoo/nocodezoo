@@ -1,0 +1,705 @@
+#!/usr/bin/env python3
+"""Review Web Server — VPS version with full pipeline. Port 7073."""
+import http.server, socketserver, json, os, subprocess, shutil, re, uuid
+import asyncio, threading
+from urllib.parse import urlparse
+from pathlib import Path
+
+PORT = 7073
+WORK_DIR = Path('/opt/video_pipeline/work')
+LISTING_DIR = WORK_DIR / 'review_images'
+CONFIG_FILE = WORK_DIR / 'review_config.json'
+WWW_DIR = Path('/opt/video_pipeline/review_www')
+VENV = '/opt/venv/bin/python'
+ELEVENLABS_API_KEY = 'sk_8fc024b5406b1e3ac437db283f36bb69a40a13b5e72c6041'
+
+VOICE_MAP = {
+    'Bella':    ('en-US-JennyNeural',  'hpp4J3VqNfWAUOO0d1Us'),
+    'Sarah':    ('en-US-AriaNeural',   'EXAVITQu4vr4xnSDxMaL'),
+    'Roger':    ('en-US-RogerNeural',  'CwhRBWXzGAHq8TQ4Fs17'),
+    'George':   ('en-US-AndrewNeural', 'JBFqnCBsd6RMkjVDRZzb'),
+    'Jessica':  ('en-US-AvaNeural',    'cgSgspJ2msm6clMCkdW9'),
+    'Charlie':  ('en-US-BrianNeural',  'IKne3meq5aSn9XLyUdCD'),
+    'Laura':    ('en-US-EmmaNeural',   'FGY2WhTYpPnrIDTdsKH5'),
+    'Liam':     ('en-US-GuyNeural',    'TX3LPaxmHKxFdv7VOQHJ'),
+    'Will':     ('en-US-WillNeural',   'bIHbv24MWmeRgasZH58o'),
+    'Daniel':   ('en-US-DanielNeural', 'onwK4e9ZLuTAKqWW03F9'),
+    'Adam':     ('en-US-AdamNeural',   'pNInz6obpgDQGcFmaJgB'),
+    'Harry':    ('en-US-HarryNeural',  'SOYHLrjzK2X1ezoPC6cr'),
+}
+
+def read_config():
+    try:
+        with open(CONFIG_FILE) as f:
+            return json.load(f)
+    except:
+        return None
+
+def log(msg):
+    print(f'[{msg}]', flush=True)
+
+def format_srt_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds - int(seconds)) * 1000)
+    return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
+
+def run(cmd, cwd=None, timeout=600):
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, timeout=timeout)
+    if r.returncode != 0:
+        log(f'RUN ERR: {r.stderr[-300:]}')
+    return r
+
+def render_page(cfg):
+    img_files = sorted([f for f in os.listdir(LISTING_DIR) if f.lower().endswith(('.jpg','.jpeg'))])
+    sel = cfg.get('selectedIndices', list(range(min(15, len(img_files)))))
+    sel_set = set(sel)
+
+    cards = []
+    for i, fname in enumerate(img_files):
+        is_sel = i in sel_set
+        order = sel.index(i) + 1 if is_sel else 0
+        tag = (cfg.get('images') or [{}])[i].get('tag', '') if i < len(cfg.get('images') or []) else ''
+        notes = (cfg.get('images') or [{}])[i].get('notes', '') if i < len(cfg.get('images') or []) else ''
+        badge = f'<span class="badge {tag.lower()}">{tag}</span>' if tag else '<span></span>'
+        right = f'<span class="sel-badge">{order}</span>' if is_sel else f'<span class="img-num">{i+1}</span>'
+        cards.append({'index': i, 'fname': fname, 'is_selected': is_sel,
+                      'badge': badge, 'right': right, 'notes': notes})
+
+    pool_cards = [{'fname': img_files[si], 'i': i+1} for i, si in enumerate(sel)]
+    pool_parts = []
+    for p in pool_cards:
+        pool_parts.append(
+            "<div class='mini-card'><img src='/images/" + p['fname'] + "' alt='S" + str(p['i'])
+            + "' onerror=\"this.style.display='none'\" /><span class='mini-num'>" + str(p['i']) + "</span></div>"
+        )
+    pool_html = ''.join(pool_parts)
+
+    cap = cfg.get('captionStyle', {})
+    voices = [
+        ('Bella', 'Professional, Bright, Warm'),
+        ('Sarah', 'Mature, Reassuring, Confident'),
+        ('Roger', 'Laid-Back, Casual'),
+        ('George', 'Warm, Storyteller'),
+        ('Jessica', 'Playful, Bright, Warm'),
+        ('Charlie', 'Deep, Confident, Energetic'),
+        ('Laura', 'Enthusiast, Quirky'),
+        ('Liam', 'Energetic, Social Media Creator'),
+        ('Will', 'Relaxed Optimist'),
+        ('Daniel', 'Steady Broadcaster'),
+        ('Adam', 'Dominant, Firm'),
+        ('Harry', 'Fierce Warrior'),
+    ]
+    voice_opts = '\n'.join(
+        f'<option value="{v}"{" selected" if cfg.get("voice","Bella")==v else ""}>{v} — {d}</option>'
+        for v, d in voices
+    )
+    glow_opts = '\n'.join(
+        f'<option value="{g}"{" selected" if cap.get("glowIntensity","explosive")==g else ""}>{g.capitalize()}</option>'
+        for g in ['subtle', 'medium', 'explosive']
+    )
+    template_opts = '\n'.join(
+        f'<option value="{t}"{" selected" if cfg.get("template","word-focus")==t else ""}>{t.replace("-"," ").title()}</option>'
+        for t in ['word-focus', 'explosive', 'classic', 'minimalist', 'hype', 'retro-gaming']
+    )
+    effect_opts = '\n'.join(
+        f'<button type="button" class="eff-btn{" sel" if cfg.get("effect","random")==e[0] else ""}" data-val="{e[0]}" onclick="selEff(this)">{e[1]}</button>'
+        for e in [('random','🔀 Random'),('zoom','🔍 Zoom'),('slow','🐢 Slow'),('vintage','📺 Vintage'),('glow','✨ Glow'),('contrast','◐ Contrast')]
+    )
+    trans_opts = '\n'.join(
+        f'<button type="button" class="trans-btn{" sel" if cfg.get("transition","fade")==t[0] else ""}" data-val="{t[0]}" onclick="selTrans(this)">{t[1]}</button>'
+        for t in [('fade','Fade'),('slide','Slide'),('zoom','Zoom'),('none','Cut'),('blur','Blur'),('slideup','Slide Up')]
+    )
+    music_opts = '\n'.join(
+        f'<option value="{m}"{" selected" if cfg.get("music","none")==m else ""}>{d}</option>'
+        for m, d in [('none','🔇 None'),('upbeat','🎵 Upbeat'),('chill','🎵 Chill'),('cinematic','🎵 Cinematic'),('positive','🎵 Positive')]
+    )
+    ratio_opts = '\n'.join(
+        f'<option value="{r}"{" selected" if cfg.get("ratio","9:16")==r else ""}>{d}</option>'
+        for r, d in [('9:16','9:16 TikTok/Reels'),('16:9','16:9 YouTube/Web')]
+    )
+    duration_opts = '\n'.join(
+        f'<option value="{d}"{" selected" if int(cfg.get("duration",30))==d else ""}>{d}s</option>'
+        for d in [15,30,40,60]
+    )
+    ips_opts = '\n'.join(
+        f'<option value="{n}"{" selected" if int(cfg.get("imagesPerSlide",1))==n else ""}>{n} per slide</option>'
+        for n in [1,2,3]
+    )
+    script_html = (cfg.get('script') or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    addr = (cfg.get('address') or 'Listing').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+    listing_type = (cfg.get('listingType') or 'Real Estate').replace('&', '&amp;')
+    price = cfg.get('price') or '—'
+    beds = cfg.get('beds') or '—'
+    baths = cfg.get('baths') or '—'
+    sqft = cfg.get('sqft') or '—'
+    sel_len = len(sel)
+    font_size = cap.get('fontSize', 55)
+    color_val = cap.get('highlightColor', '#FFFF00')
+    sel_json = json.dumps(sel)
+    files_json = json.dumps(img_files)
+    cfg_voice = cfg.get('voice', 'Bella')
+    cfg_effect = cfg.get('effect', 'random')
+    cfg_trans = cfg.get('transition', 'fade')
+    cfg_template = cfg.get('template', 'word-focus')
+    cfg_music = cfg.get('music', 'none')
+    cfg_ratio = cfg.get('ratio', '9:16')
+    cfg_duration = int(cfg.get('duration', 30))
+    cfg_ips = int(cfg.get('imagesPerSlide', 1))
+    cfg_cta = cfg.get('ctaText', '')
+    cfg_cta_url = cfg.get('ctaUrl', '')
+    cfg_music_url = cfg.get('musicUrl', '')
+
+    img_cards_html = ''
+    for c in cards:
+        img_cards_html += (
+            "<div class='img-card" + (" selected" if c["is_selected"] else "") + "' data-index='" + str(c["index"])
+            + "' onclick=\"toggle(" + str(c["index"]) + ")\" draggable='true'"
+            " ondragstart='dragStart(event)' ondragover='dragOver(event)' ondrop='drop(event)' ondragend='dragEnd(event)'>"
+            "<img src='/images/" + c["fname"] + "' alt='Img" + str(c["index"]+1)
+            + "' onerror=\"this.style.display='none'\" />"
+            "<div class='img-meta'>" + c["badge"] + c["right"] + "</div>"
+            "<div class='img-notes'>" + c["notes"] + "</div>"
+            "</div>"
+        )
+
+    html = (
+"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Review — """ + addr + """</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="container">
+    <h1>""" + addr + """</h1>
+    <div class="subtitle">""" + listing_type + """ &middot; """ + str(len(img_files)) + """ images &middot; Click to select</div>
+
+    <div class="section">
+        <div class="section-title">Property Details</div>
+        <div class="prop-info">
+            <div class="prop-stat"><div class="val">""" + price + """</div><div class="lbl">Price</div></div>
+            <div class="prop-stat"><div class="val">""" + beds + """</div><div class="lbl">Beds</div></div>
+            <div class="prop-stat"><div class="val">""" + baths + """</div><div class="lbl">Baths</div></div>
+            <div class="prop-stat"><div class="val">""" + sqft + """</div><div class="lbl">Sq Ft</div></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Image Pool &mdash; """ + str(len(img_files)) + """ images &middot; Click to select (max 15)</div>
+        <div class="sel-hint"><span id="sel-count">""" + str(sel_len) + """</span> selected &middot; First 15 in order used for video</div>
+        <div class="img-grid" id="img-grid">
+""" + img_cards_html + """
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="pool-header">
+            <span>Selected for Video &mdash; <span id="pool-count">""" + str(sel_len) + """</span> images</span>
+            <button class="clear-btn" onclick="clearSel()">Clear All</button>
+        </div>
+        <div id="pool-grid">
+""" + pool_html + """
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Narration Script</div>
+        <textarea id="script">""" + script_html + """</textarea>
+        <div class="char-count"><span id="char-count">""" + str(len(script_html)) + """</span> chars</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Caption Style</div>
+        <div class="sgrid">
+            <div class="field"><label>Font Size (px)</label>
+                <input type="number" id="fontSize" value="" + str(font_size) + "" min="24" max="80" /></div>
+            <div class="field"><label>Highlight Color</label>
+                <input type="color" id="highlightColor" value="" + color_val + "" /></div>
+            <div class="field"><label>Glow Intensity</label>
+                <select id="glowIntensity">""" + glow_opts + """</select></div>
+        </div>
+        <div id="caption-preview">
+            <span class="word-being">Pool</span><span class="done-word"> views </span><span class="done-word">and </span><span class="done-word">sunset</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Caption Template</div>
+        <select id="template">""" + template_opts + """</select>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Voice (Edge TTS)</div>
+        <select id="voice">""" + voice_opts + """</select>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Background Music</div>
+        <select id="music">""" + music_opts + """</select>
+        <div style="margin-top:8px">
+            <label style="font-size:11px;color:#778899;font-weight:500;display:block;margin-bottom:4px;">Music URL (optional)</label>
+            <input type="text" id="musicUrl" placeholder="https://...mp3" value="" + cfg_music_url + "" style="background:#FFFFFF;border:1px solid #DDE4ED;border-radius:6px;color:#1a1a2e;font-size:12px;padding:8px 10px;width:100%;box-sizing:border-box;" />
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Image Effect</div>
+        <div class="eff-grid">""" + effect_opts + """</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Transition</div>
+        <div class="trans-grid">""" + trans_opts + """</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Images Per Slide</div>
+        <select id="imagesPerSlide">""" + ips_opts + """</select>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Video Settings</div>
+        <div class="sgrid">
+            <div class="field">
+                <label>Ratio</label>
+                <select id="ratio">""" + ratio_opts + """</select>
+            </div>
+            <div class="field">
+                <label>Duration</label>
+                <select id="duration">""" + duration_opts + """</select>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Call to Action</div>
+        <div class="sgrid">
+            <div class="field">
+                <label>CTA Button Text</label>
+                <input type="text" id="ctaText" value="" + cfg_cta.replace('&','&amp;').replace('"','&quot;') + "" placeholder="Call today to schedule your private showing" />
+            </div>
+            <div class="field">
+                <label>CTA URL</label>
+                <input type="text" id="ctaUrl" value="" + cfg_cta_url.replace('&','&amp;').replace('"','&quot;') + "" placeholder="https://..." />
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Branding</div>
+        <div class="field">
+            <label>Logo (transparent PNG)</label>
+            <input type="file" id="logo" accept="image/png" />
+        </div>
+        <div class="sgrid" style="margin-top:8px">
+            <div class="field">
+                <label>Logo Position</label>
+                <select id="logoPosition">
+                    <option value="bottom-right" selected>Bottom Right</option>
+                    <option value="bottom-left">Bottom Left</option>
+                    <option value="top-right">Top Right</option>
+                    <option value="top-left">Top Left</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Logo Size (%)</label>
+                <input type="number" id="logoSize" value="15" min="5" max="40" />
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-row">
+        <button class="btn btn-primary" id="gen-btn" onclick="generate()">Generate Video</button>
+    </div>
+    <div id="status"></div>
+</div>
+<script>
+var TOTAL = """ + str(len(img_files)) + """;
+var MAX = 15;
+var sel = new Set(""" + sel_json + """);
+var imgFiles = """ + files_json + """;
+
+function selEff(btn) {
+    document.querySelectorAll('.eff-btn').forEach(function(b) { b.classList.remove('sel'); });
+    btn.classList.add('sel');
+}
+function selTrans(btn) {
+    document.querySelectorAll('.trans-btn').forEach(function(b) { b.classList.remove('sel'); });
+    btn.classList.add('sel');
+}
+function getSelVal(cls) {
+    var btns = document.querySelectorAll('.' + cls);
+    for (var i = 0; i < btns.length; i++) {
+        if (btns[i].classList.contains('sel')) return btns[i].getAttribute('data-val');
+    }
+    return btns[0] && btns[0].getAttribute('data-val') || '';
+}
+
+function render() {
+    document.querySelectorAll('.img-card').forEach(function(card) {
+        var i = parseInt(card.dataset.index);
+        var isSel = sel.has(i);
+        card.classList.toggle('selected', isSel);
+        var meta = card.querySelector('.img-meta');
+        if (isSel) {
+            meta.innerHTML = '<span class="sel-badge">' + (Array.from(sel).indexOf(i)+1) + '</span>';
+        } else {
+            meta.innerHTML = '<span></span><span class="img-num">' + (i+1) + '</span>';
+        }
+    });
+    document.getElementById('pool-grid').innerHTML = Array.from(sel).map(function(si, di) {
+        return "<div class='mini-card'><img src='/images/" + imgFiles[si] + "' /><span class='mini-num'>" + (di+1) + "</span></div>";
+    }).join('');
+    document.getElementById('sel-count').textContent = sel.size;
+    document.getElementById('pool-count').textContent = sel.size;
+}
+
+function toggle(i) {
+    if (sel.has(i)) sel.delete(i);
+    else { if (sel.size >= MAX) return; sel.add(i); }
+    render();
+}
+
+function clearSel() { sel = new Set(); render(); }
+
+var dragSrc = null;
+function dragStart(e) { dragSrc = parseInt(e.target.closest('.img-card').dataset.index); }
+function dragOver(e) { e.preventDefault(); }
+function drop(e) {
+    e.preventDefault();
+    var target = parseInt(e.target.closest('.img-card').dataset.index);
+    if (sel.has(dragSrc) && sel.has(target) && dragSrc !== target) {
+        var arr = Array.from(sel);
+        var dp = arr.indexOf(dragSrc), tp = arr.indexOf(target);
+        arr.splice(dp, 1); arr.splice(tp, 0, dragSrc);
+        sel = new Set(arr); render();
+    }
+    dragSrc = null;
+}
+function dragEnd() { dragSrc = null; }
+
+document.getElementById('script').addEventListener('input', function(e) {
+    document.getElementById('char-count').textContent = e.target.value.length;
+});
+
+function generate() {
+    var btn = document.getElementById('gen-btn');
+    var status = document.getElementById('status');
+    if (sel.size === 0) { status.className = 'error'; status.textContent = 'Select at least 1 image.'; return; }
+    btn.disabled = true;
+    status.className = 'running';
+    status.textContent = 'Setting up pipeline...';
+
+    var logoData = '';
+    var logoFile = document.getElementById('logo').files[0];
+    if (logoFile) {
+        var reader = new FileReader();
+        reader.onload = function(e) { submitPayload(e.target.result); };
+        reader.readAsDataURL(logoFile);
+    } else {
+        submitPayload('');
+    }
+
+    function submitPayload(logoData) {
+        var payload = {
+            address: '""" + addr.replace("'", "\\'") + """',
+            script: document.getElementById('script').value,
+            selectedIndices: Array.from(sel),
+            captionStyle: {
+                fontSize: parseInt(document.getElementById('fontSize').value),
+                highlightColor: document.getElementById('highlightColor').value,
+                glowIntensity: document.getElementById('glowIntensity').value
+            },
+            voice: document.getElementById('voice').value,
+            music: document.getElementById('music').value,
+            musicUrl: document.getElementById('musicUrl').value,
+            template: document.getElementById('template').value,
+            effect: getSelVal('eff-btn'),
+            transition: getSelVal('trans-btn'),
+            imagesPerSlide: parseInt(document.getElementById('imagesPerSlide').value),
+            ratio: document.getElementById('ratio').value,
+            duration: parseInt(document.getElementById('duration').value),
+            ctaText: document.getElementById('ctaText').value,
+            ctaUrl: document.getElementById('ctaUrl').value,
+            logo: logoData,
+            logoPosition: document.getElementById('logoPosition').value,
+            logoSize: parseInt(document.getElementById('logoSize').value) || 15,
+        };
+        fetch('/api/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(function(res) { return res.json(); })
+          .then(function(r) {
+            if (r.success) {
+                status.className = 'done';
+                status.textContent = 'Pipeline started — video ready in ~45s. Job: ' + r.job_id;
+                btn.disabled = false;
+            } else {
+                status.className = 'error';
+                status.textContent = 'Error: ' + (r.error||'unknown');
+                btn.disabled = false;
+            }
+        }).catch(function(e) {
+            status.className = 'error';
+            status.textContent = 'Error: ' + e.message;
+            btn.disabled = false;
+        });
+    }
+}
+
+render();
+</script>
+<style>
+.eff-grid, .trans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.eff-btn, .trans-btn { padding: 7px 6px; border: 1px solid #DDE4ED; border-radius: 6px; background: #FFFFFF; color: #1a1a2e; font-size: 12px; cursor: pointer; text-align: center; transition: all 0.15s; }
+.eff-btn:hover, .trans-btn:hover { border-color: #B0E0E6; }
+.eff-btn.sel, .trans-btn.sel { border-color: #B0E0E6; background: rgba(176,224,230,0.2); font-weight: 600; }
+</style>
+</body>
+</html>""")
+    return html
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args):
+        print(f'[{self.address_string()}] {fmt%args}', flush=True)
+
+    def do_GET(self):
+        p = urlparse(self.path).path
+
+        if p.startswith('/images/'):
+            fname = p[8:]
+            fpath = str(LISTING_DIR / fname)
+            if os.path.exists(fpath):
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/jpeg')
+                self.send_header('Cache-Control', 'max-age=3600')
+                self.end_headers()
+                with open(fpath, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(404)
+                self.end_headers()
+            return
+
+        if p == '/style.css':
+            fpath = str(WWW_DIR / 'style.css')
+            if os.path.exists(fpath):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/css')
+                self.end_headers()
+                with open(fpath, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(404)
+                self.end_headers()
+            return
+
+        cfg = read_config()
+        if not cfg:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b'No review config. Run image analysis first.')
+            return
+
+        if p in ('/', '/review', '/index.html'):
+            html = render_page(cfg)
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(html.encode())
+            return
+
+        self.send_response(404)
+        self.end_headers()
+
+    def do_POST(self):
+        p = urlparse(self.path).path
+        if p == '/api/generate':
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length).decode()
+            payload = json.loads(body)
+            addr = payload.get('address', 'Listing')
+            sel_indices = payload.get('selectedIndices', list(range(15)))
+            voice = payload.get('voice', 'Bella')
+            script = payload.get('script', '')
+            cap = payload.get('captionStyle', {})
+            music = payload.get('music', 'none')
+            music_url = payload.get('musicUrl', '')
+            template = payload.get('template', 'word-focus')
+            effect = payload.get('effect', 'random')
+            transition = payload.get('transition', 'fade')
+            images_per_slide = int(payload.get('imagesPerSlide', 1) or 1)
+            ratio = payload.get('ratio', '9:16')
+            duration = int(payload.get('duration', 30) or 30)
+            cta_text = payload.get('ctaText', '')
+            cta_url = payload.get('ctaUrl', '')
+            logo_b64 = payload.get('logo', '')
+            logo_position = payload.get('logoPosition', 'bottom-right')
+            logo_size = int(payload.get('logoSize', 15))
+
+            log(f'Generate: {addr} | {len(sel_indices)} images | voice={voice} | ratio={ratio} | dur={duration}s | effect={effect} | trans={transition} | ips={images_per_slide} | music={music}')
+
+            # Create job dir
+            job_id = 'review_' + str(uuid.uuid4())[:8]
+            work = WORK_DIR / job_id
+            img_dir = work / 'images'
+            os.makedirs(img_dir, exist_ok=True)
+
+            # Copy selected images as img01.jpg, img02.jpg, ...
+            img_files = sorted([f for f in os.listdir(LISTING_DIR) if f.lower().endswith(('.jpg','.jpeg'))])
+            for i, src_idx in enumerate(sel_indices[:15]):
+                if src_idx < len(img_files):
+                    src = LISTING_DIR / img_files[src_idx]
+                    dst = img_dir / f'img{i+1:02d}.jpg'
+                    shutil.copy2(src, dst)
+
+            # Write pipeline config
+            n = min(15, len(sel_indices))
+            cfg_out = {
+                'address': addr, 'script': script, 'voice': voice,
+                'imageCount': n,
+                'selectedIndices': list(range(n)),
+                'captionStyle': cap,
+                'music': music,
+                'musicUrl': music_url,
+                'template': template,
+                'effect': effect,
+                'transition': transition,
+                'imagesPerSlide': images_per_slide,
+                'ratio': ratio,
+                'duration': duration,
+                'ctaText': cta_text,
+                'ctaUrl': cta_url,
+                'logoPosition': logo_position,
+                'logoSize': logo_size,
+            }
+            with open(work / 'pipeline_config.json', 'w') as f:
+                json.dump(cfg_out, f, indent=2)
+
+            # Save logo if provided
+            logo_path = None
+            if logo_b64 and logo_b64.startswith('data:'):
+                import base64
+                hdr, data = logo_b64.split(',', 1)
+                ext = hdr.split('/')[1].split(';')[0]
+                logo_path = work / f'logo.{ext}'
+                with open(logo_path, 'wb') as f:
+                    f.write(base64.b64decode(data))
+
+            def generate_voice():
+                try:
+                    import edge_tts
+                    voice_m4a = work / 'voice.m4a'
+                    edge_voice, elevenlabs_id = VOICE_MAP.get(voice, ('en-US-JennyNeural', 'hpp4J3VqNfWAUOO0d1Us'))
+
+                    asyncio.run(edge_tts.Communicate(script, edge_voice).save(str(voice_m4a)))
+                    log(f'Voice generated: {voice_m4a.stat().st_size} bytes')
+
+                    # Whisper transcript
+                    r = run([VENV, '-m', 'whisper', str(voice_m4a), '--model', 'small', '--language', 'English',
+                            '--output_dir', str(work)],
+                           cwd='/opt/video_pipeline')
+                    log(f'Whisper done: {r.stdout[-200:]}')
+
+                    # Convert whisper JSON to SRT and pycaps JSON
+                    wj = work / 'voice.json'
+                    if wj.exists():
+                        with open(wj) as f:
+                            wdata = json.load(f)
+                        srt_path = work / 'voice.srt'
+                        with open(srt_path, 'w') as f:
+                            for seg in wdata.get('segments', []):
+                                start = seg['start']
+                                end = seg['end']
+                                text = seg['text'].strip()
+                                f.write(f"{seg['id']+1}\n")
+                                f.write(f"{format_srt_time(start)} --> {format_srt_time(end)}\n")
+                                f.write(f"{text}\n\n")
+                        pc_path = work / 'voice_transcript.json'
+                        with open(pc_path, 'w') as f:
+                            json.dump({'segments': [{
+                                'structure_tags': [],
+                                'max_layout': {'width': 1920, 'height': 1080, 'left': 0, 'top': 0},
+                                'time': {'start': seg['start'], 'end': seg['end']},
+                                'words': [{'word': w.strip(), 'start': seg['start'], 'end': seg['end']} for w in text.split()],
+                                'text': text
+                            } for seg in wdata.get('segments', [])]}, f)
+
+                    # Map music preset to file path
+                    music_file = None
+                    if music_url:
+                        # Download music from URL
+                        try:
+                            import urllib.request
+                            music_file = str(work / 'music.mp3')
+                            urllib.request.urlretrieve(music_url, music_file)
+                            log(f'Downloaded music: {music_file}')
+                        except Exception as ex:
+                            log(f'Music download failed: {ex}')
+                            music_file = None
+                    elif music and music != 'none':
+                        preset_map = {'upbeat': '/opt/video_pipeline/music/upbeat.mp3',
+                                     'chill': '/opt/video_pipeline/music/chill.mp3',
+                                     'cinematic': '/opt/video_pipeline/music/cinematic.mp3',
+                                     'positive': '/opt/video_pipeline/music/positive.mp3',
+                                     'panning': '/opt/video_pipeline/music/panning_track.mp3'}
+                        mp = preset_map.get(music)
+                        if mp and os.path.exists(mp):
+                            music_file = mp
+
+                    # Build video
+                    log('Starting build_vps.py...')
+                    build_cmd = [
+                        VENV, '/opt/video_pipeline/scripts/build_vps.py',
+                        '--work', str(work),
+                        '--listing', str(img_dir),
+                        '--config', str(work / 'pipeline_config.json'),
+                        '--output', str(work / 'video_final.mp4'),
+                        '--duration', str(float(duration)),
+                        '--ratio', str(ratio),
+                        '--effect', str(effect),
+                        '--transition', str(transition),
+                        '--images_per_slide', str(images_per_slide),
+                    ]
+                    if music_file:
+                        build_cmd += ['--music', music_file]
+                    if logo_path and logo_path.exists():
+                        build_cmd += ['--logo', str(logo_path), '--logo_position', logo_position, '--logo_size', str(logo_size)]
+
+                    r = run(build_cmd, cwd='/opt/video_pipeline')
+                    log(f'Build done: returncode={r.returncode}')
+                    if r.returncode == 0:
+                        sz = os.path.getsize(work / 'video_final.mp4') // 1024 // 1024
+                        dur = float(subprocess.run(
+                            ['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+                             '-of', 'default=noprint_wrappers=1:nokey=1', str(work / 'video_final.mp4')],
+                            capture_output=True, text=True).stdout or 0)
+                        log(f'Video ready: {sz}MB, {dur}s at {work / "video_final.mp4"}')
+                    else:
+                        log(f'Build error: {r.stderr[-500:]}')
+                except Exception as e:
+                    log(f'Voice/build error: {e}')
+
+            threading.Thread(target=generate_voice, daemon=True).start()
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            resp = json.dumps({'success': True, 'job_id': job_id}).encode()
+            self.wfile.write(resp)
+            return
+
+        self.send_response(404)
+        self.end_headers()
+
+if __name__ == '__main__':
+    socketserver.TCPServer.allow_reuse_address = True
+    with socketserver.TCPServer(('0.0.0.0', PORT), Handler) as httpd:
+        print(f'Review server: http://0.0.0.0:{PORT}')
+        httpd.serve_forever()

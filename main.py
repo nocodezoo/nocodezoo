@@ -12,6 +12,7 @@ from pathlib import Path
 
 import jinja2
 from fastapi import FastAPI, Request, HTTPException, Form, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import uvicorn
 
@@ -59,6 +60,14 @@ def _render(template_name: str, context: dict) -> HTMLResponse:
     return HTMLResponse(template.render(ctx))
 
 app = FastAPI(title="Vybord User API", version="1.0.50")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://app.vybord.com", "http://app.vybord.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ── Health ──────────────────────────────────────────────────────────────────
 

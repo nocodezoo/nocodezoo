@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Create Video — Vybord v1.050</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #B0E0E6; --accent2: #E6E6FA; --green: #00aa66; --text: #ffffff; --bg: #0f0f11; --surface: #18181b; --surface2: #222226; --border: #2e2e33; --text-muted: #c8cdd6; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0f0f11; color: #ffffff; min-height: 100vh; }
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .content { position: relative; z-index: 1; }
+        .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .section-card { background: #18181b; border: 1px solid #2e2e33; border-radius: 1.25rem; padding: 1.5rem; margin-bottom: 1.25rem; }
+        .step-badge { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; color: #1a1a2e; }
+        .step-title { font-size: 1.1rem; font-weight: 700; color: #ffffff; }
+        .form-input { background: #222226; border: 1px solid #2e2e33; border-radius: 0.75rem; padding: 0.8rem 1rem; color: #ffffff; width: 100%; font-size: 0.9rem; transition: border-color 0.2s; font-family: 'Inter', sans-serif; }
+        .form-input:focus { border-color: var(--accent); outline: none; }
+        .form-input::placeholder { color: #888888; }
+        .opt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+        .opt-btn { padding: 0.6rem 0.5rem; border: 1px solid #2e2e33; border-radius: 0.6rem; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; color: #c8cdd6; background: #222226; }
+        .opt-btn:hover { border-color: var(--accent); color: #ffffff; }
+        .opt-btn.sel { border-color: var(--accent); background: rgba(176,224,230,0.15); color: #ffffff; }
+        .color-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+        .swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; flex-shrink: 0; }
+        .swatch:hover { border-color: #778899; }
+        .swatch.sel { border-color: #1a1a2e; }
+        .range-val { font-size: 0.8rem; color: #c8cdd6; min-width: 2rem; text-align: right; }
+        input[type=range] { -webkit-appearance: none; height: 6px; background: #2e2e33; border-radius: 3px; width: 100%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; cursor: pointer; }
+        select.form-input { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23778899' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.8rem center; padding-right: 2.2rem; }
+        .btn-fetch { white-space: nowrap; padding: 0.5rem 1rem; border-radius: 0.6rem; border: 1px solid #B0E0E6; background: rgba(176,224,230,0.15); color: #1a1a2e; cursor: pointer; font-size: 0.85rem; }
+        .btn-generate { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1a1a2e; font-size: 1.1rem; font-weight: 700; border: none; border-radius: 1rem; cursor: pointer; transition: opacity 0.2s; font-family: 'Inter', sans-serif; }
+        .btn-generate:hover { opacity: 0.85; }
+        .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+        .status-box { margin-top: 1rem; padding: 1rem; border-radius: 0.75rem; font-size: 0.88rem; display: none; background: #18181b; border: 1px solid #2e2e33; color: #ffffff; }
+        .status-box.ok { border-color: #00aa66; color: #00aa66; }
+        .status-box.err { border-color: #dc2626; color: #dc2626; }
+        .status-box.info { border-color: var(--accent2); color: #778899; }
+        .voice-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.8rem; border: 1px solid #2e2e33; border-radius: 0.6rem; cursor: pointer; transition: all 0.2s; font-size: 0.82rem; color: #c8cdd6; background: #222226; }
+        .voice-btn:hover { border-color: var(--accent); color: #ffffff; }
+        .voice-btn.sel { border-color: var(--accent); background: rgba(176,224,230,0.15); color: #ffffff; }
+        .section-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #c8cdd6; margin-bottom: 0.75rem; font-weight: 600; }
+        .divider { border-top: 1px solid #2e2e33; margin: 1rem 0; }
+        .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; }
+        .logo-text { font-weight: 700; font-size: 1.1rem; }
+        .floating-shape { position: fixed; border: 1px solid rgba(176,224,230,0.15); border-radius: 50%; pointer-events: none; z-index: 0; animation: float 20s ease-in-out infinite; }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-30px)} }
+        .accent-bar { width: 40px; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body>
+    <!-- Animated background canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Decorative floating shapes -->
+    <div class="floating-shape" style="width:300px;height:300px;top:10%;left:-5%;animation-delay:0s;opacity:0.3"></div>
+    <div class="floating-shape" style="width:200px;height:200px;top:60%;right:-3%;animation-delay:-7s;opacity:0.2"></div>
+    <div class="floating-shape" style="width:150px;height:150px;bottom:20%;left:10%;animation-delay:-14s;opacity:0.15"></div>
+
+    <div class="content">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 bg-[#0f0f11]/90 backdrop-blur-md border-b border-[#2e2e33]">
+            <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+                <a href="/" class="logo">
+                    <div class="logo-icon">V</div>
+                    <span class="logo-text gradient-text">Vybord</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span id="user-info" style="display:none;font-size:0.78rem;color:#c8cdd6;"></span>
+                    <button id="logout-btn" type="button" onclick="handleLogout()" style="display:none;background:#18181b;border:1px solid #2e2e33;color:#c8cdd6;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:800;cursor:pointer;">Logout</button>
+                    <span style="background:#18181b;border:1px solid #2e2e33;color:#c8cdd6;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:800;letter-spacing:0.05em">v1.050</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-lg mx-auto px-4 py-6">
+            <!-- Page header -->
+            <div class="mb-6">
+                <div class="accent-bar"></div>
+                <h1 style="font-family:'Poppins',sans-serif;font-size:clamp(1.6rem,5vw,2.2rem);font-weight:800;line-height:1.2;margin-bottom:0.4rem;color:#ffffff;">
+                    Create Your Video
+                </h1>
+                <p class="text-[#c8cdd6] text-sm">Configure every detail. We'll handle the rest.</p>
+            </div>
+
+            <form id="video-form" novalidate>
+
+                <!-- Step 1: Property -->
+                <div class="section-card">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="step-badge">1</div>
+                        <div class="step-title">Property</div>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="section-label">Listing URL</label>
+                            <div style="display:flex;gap:0.5rem;align-items:center">
+                                <input type="text" id="listing-url" class="form-input" placeholder="https://www.corcoran.com/... (listing URL)" style="flex:1">
+                                <button type="button" id="lookup-btn" onclick="fetchPropertyDetails()" style="background:linear-gradient(135deg,#B0E0E6,#E6E6FA);color:#0f0f11;border:none;border-radius:0.75rem;padding:0.7rem 1.1rem;font-size:0.85rem;font-weight:800;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif">&#128269; Lookup</button>
+                            </div>
+                            <div id="address-display" style="color:#ffffff;font-size:0.9rem;margin-top:4px;font-weight:800"></div>
+                            <div id="price-display" style="color:#00aa66;font-size:0.85rem;margin-top:2px"></div>
+                            <div id="lookup-status" style="font-size:0.82rem;margin-top:4px;display:none;color:#c8cdd6"></div>
+                            <input type="hidden" id="m-beds" value="">
+                            <input type="hidden" id="m-baths" value="">
+                            <input type="hidden" id="m-sqft" value="">
+                            <input type="hidden" id="m-script" value="">
+                            <div style="margin-top:0.75rem">
+                                <button type="button" class="btn-fetch" onclick="openScanModal()" style="width:100%">&#128247; Scan / Paste Images &amp; Details</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Or Upload Images</label>
+                            <input type="file" id="image-files" class="form-input" accept="image/*" multiple onchange="handleImgUpload(this.files)">
+                                <div id="img-count" class="section-label" style="color:#c8cdd6;font-size:0.8rem;margin-top:4px"></div>
+                        </div>
+                        <div>
+                            <label class="section-label">Your Email (for delivery)</label>
+                            <input type="email" id="user-email" class="form-input" placeholder="you@email.com">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Voice -->
+                <div class="section-card">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="step-badge">2</div>
+                        <div class="step-title">AI Voice</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2" id="voice-grid">
+                        <button type="button" class="voice-btn sel" onclick="selectVoice('Bella',this)">🎤 Bella</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Sarah',this)">🎤 Sarah</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Roger',this)">🎤 Roger</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('George',this)">🎤 George</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Jessica',this)">🎤 Jessica</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Charlie',this)">🎤 Charlie</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Laura',this)">🎤 Laura</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Liam',this)">🎤 Liam</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Will',this)">🎤 Will</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Daniel',this)">🎤 Daniel</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Adam',this)">🎤 Adam</button>
+                        <button type="button" class="voice-btn" onclick="selectVoice('Harry',this)">🎤 Harry</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Captions -->
+                <div class="section-card">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="step-badge">3</div>
+                        <div class="step-title">Captions (PyCaps)</div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="section-label">Template</label>
+                            <div class="opt-grid">
+                                <button type="button" class="opt-btn sel" onclick="sel(this,'template','word-focus')">Word Focus</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'template','explosive')">Explosive</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'template','classic')">Classic</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'template','minimalist')">Minimal</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'template','hype')">Hype</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'template','retro-gaming')">Retro</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Font Size — <span id="fs-val">55</span>px</label>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-[#c8cdd6]">20</span>
+                                <input type="range" id="font-size" min="20" max="80" value="55" oninput="updateFs(this.value)">
+                                <span class="text-xs text-[#c8cdd6]">80</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Text Color</label>
+                            <div class="color-row">
+                                <div class="swatch sel" style="background:#FF69B4" onclick="selColor(this,'#FF69B4','textColor')"></div>
+                                <div class="swatch" style="background:#FFFFFF" onclick="selColor(this,'#FFFFFF','textColor')"></div>
+                                <div class="swatch" style="background:#FFFF00" onclick="selColor(this,'#FFFF00','textColor')"></div>
+                                <div class="swatch" style="background:#00FF88" onclick="selColor(this,'#00FF88','textColor')"></div>
+                                <div class="swatch" style="background:#FF4444" onclick="selColor(this,'#FF4444','textColor')"></div>
+                                <div class="swatch" style="background:#00CCFF" onclick="selColor(this,'#00CCFF','textColor')"></div>
+                                <div class="swatch" style="background:#FF9500" onclick="selColor(this,'#FF9500','textColor')"></div>
+                                <div class="swatch" style="background:#ffffff22;border:1px dashed #778899" onclick="selColor(this,'transparent','textColor')"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Background</label>
+                            <div class="color-row">
+                                <div class="swatch sel" style="background:#000000" onclick="selColor(this,'#000000','bgColor')"></div>
+                                <div class="swatch" style="background:#1a1a2e" onclick="selColor(this,'#1a1a2e','bgColor')"></div>
+                                <div class="swatch" style="background:#2d1b4e" onclick="selColor(this,'#2d1b4e','bgColor')"></div>
+                                <div class="swatch" style="background:#0a1628" onclick="selColor(this,'#0a1628','bgColor')"></div>
+                                <div class="swatch" style="background:#1a0a0a" onclick="selColor(this,'#1a0a0a','bgColor')"></div>
+                                <div class="swatch" style="background:#ffffff22;border:1px dashed #778899" onclick="selColor(this,'transparent','bgColor')"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Video Settings -->
+                <div class="section-card">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="step-badge">4</div>
+                        <div class="step-title">Video Settings</div>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="section-label">Format / Ratio</label>
+                            <select id="ratio" class="form-input" onchange="s.ratio=this.value">
+                                <option value="16:9">16:9 — YouTube / Web</option>
+                                <option value="9:16">9:16 — TikTok / Reels</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="section-label">Duration</label>
+                            <select id="duration" class="form-input" onchange="s.duration=this.value">
+                                <option value="15">15 seconds</option>
+                                <option value="30" selected>30 seconds</option>
+                                <option value="40">40 seconds</option>
+                                <option value="60">60 seconds</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="section-label">Image Effect</label>
+                            <div class="opt-grid">
+                                <button type="button" class="opt-btn sel" onclick="sel(this,'effect','random')">🔀 Random</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'effect','zoom')">🔍 Zoom</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'effect','slow')">🐢 Slow</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'effect','vintage')">📺 Vintage</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'effect','glow')">✨ Glow</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'effect','contrast')">◐ Contrast</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Transition</label>
+                            <div class="opt-grid">
+                                <button type="button" class="opt-btn sel" onclick="sel(this,'transition','fade')">Fade</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'transition','slide')">Slide</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'transition','zoom')">Zoom</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'transition','none')">Cut</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'transition','blur')">Blur</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'transition','slideup')">Slide Up</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Images Per Slide</label>
+                            <select id="imagesPerSlide" class="form-input" onchange="s.imagesPerSlide=parseInt(this.value)">
+                                <option value="1" selected>1 image per slide</option>
+                                <option value="2">2 images per slide</option>
+                                <option value="3">3 images per slide</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Music -->
+                <div class="section-card">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="step-badge">5</div>
+                        <div class="step-title">Background Music</div>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="section-label">Music Preset</label>
+                            <div class="opt-grid">
+                                <button type="button" class="opt-btn sel" onclick="sel(this,'music','none')">🔇 None</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'music','upbeat')">🎵 Upbeat</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'music','chill')">🎵 Chill</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'music','cinematic')">🎵 Cinematic</button>
+                                <button type="button" class="opt-btn" onclick="sel(this,'music','positive')">🎵 Positive</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Or Music URL</label>
+                            <input type="text" id="music-url" class="form-input" placeholder="https://...mp3">
+                        </div>
+                        <div>
+                            <label class="section-label">Or Upload MP3</label>
+                            <input type="file" id="music-file" class="form-input" accept="audio/mp3,audio/*">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 6: CTA -->
+                <div class="section-card">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="step-badge">6</div>
+                        <div class="step-title">Call to Action</div>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="section-label">CTA Button Text</label>
+                            <input type="text" id="cta-text" class="form-input" placeholder="Schedule a Tour" value="Call today to schedule your private showing">
+                        </div>
+                        <div>
+                            <label class="section-label">CTA URL (optional)</label>
+                            <input type="text" id="cta-url" class="form-input" placeholder="https://..." onchange="s.ctaUrl=this.value">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generate -->
+                <button type="button" class="btn-generate" id="gen-btn">
+                    🚀 Generate Video
+                </button>
+
+                <div id="status" class="status-box"></div>
+
+                <div class="mt-6 text-center text-xs text-[#c8cdd6]">
+                    By generating, you agree our AI may process this content.
+                </div>
+            </form>
+        </main>
+
+        <footer class="text-center py-8 text-xs text-[#c8cdd6] mt-8">
+            © 2026 Vybord · Built with OpenClaw
+        </footer>
+    </div>
+
+    <script>
+    // ── State
+    var genBtn = document.getElementById("gen-btn");
+    if (genBtn) genBtn.addEventListener("click", function(e) { console.log("Button clicked"); handleSubmit(e); });
+
+    var s = {
+        voice: 'Bella',
+        template: 'word-focus',
+        fontSize: 55,
+        textColor: '#FF69B4',
+        bgColor: '#000000',
+        effect: 'random',
+        music: 'none',
+        musicUrl: '',
+        transition: 'fade',
+        ratio: '16:9',
+        duration: '30',
+        imagesPerSlide: 1,
+        cta: "Call today to schedule your private showing",
+        ctaUrl: ''
+    };
+    var selectedImages = [];
+    var MAX_IMAGES = 15;
+    var _modalSel = {};
+    var _serverJobId = null;
+    var _uploadedFiles = [];
+    var CONCURRENT = 3;
+
+    function sel(btn, key, val) {
+        s[key] = val;
+        var sib = btn.previousElementSibling;
+        while (sib) {
+            if (sib.classList && sib.classList.contains('opt-btn')) sib.classList.remove('sel');
+            sib = sib.previousElementSibling;
+        }
+        var sib2 = btn.nextElementSibling;
+        while (sib2) {
+            if (sib2.classList && sib2.classList.contains('opt-btn')) sib2.classList.remove('sel');
+            sib2 = sib2.nextElementSibling;
+        }
+        btn.classList.add('sel');
+    }
+
+    function selectVoice(name, btn) {
+        var grid = btn.closest('#voice-grid');
+        if (!grid) return;
+        grid.querySelectorAll('.voice-btn').forEach(function(b) { b.classList.remove('sel'); });
+        btn.classList.add('sel');
+        s.voice = name;
+    }
+
+    function selColor(el, color, key) {
+        s[key] = color;
+        var sib = el.previousElementSibling;
+        while (sib) {
+            if (sib.classList && sib.classList.contains('swatch')) sib.classList.remove('sel');
+            sib = sib.previousElementSibling;
+        }
+        var sib2 = el.nextElementSibling;
+        while (sib2) {
+            if (sib2.classList && sib2.classList.contains('swatch')) sib2.classList.remove('sel');
+            sib2 = sib2.nextElementSibling;
+        }
+        el.classList.add('sel');
+    }
+
+    function updateFs(val) {
+        s.fontSize = parseInt(val);
+        document.getElementById('fs-val').textContent = val;
+    }
+
+    function setStatus(msg, type) {
+        var el = document.getElementById('status');
+        if (!el) { console.error('STATUS ELEMENT NOT FOUND'); return; }
+        el.style.display = 'block';
+        el.style.visibility = 'visible';
+        el.innerHTML = msg;
+        el.className = 'status-box ' + (type || 'info');
+        console.log('Status set:', msg.substring(0, 100));
+    }
+
+    function handleImgUpload(files) {
+        if (!files || files.length === 0) return;
+        _uploadedFiles = [];
+        Array.from(files).forEach(function(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var ext = file.name.split('.').pop().replace('jpeg', 'jpg');
+                _uploadedFiles.push({ name: file.name, data: e.target.result.split(',')[1] });
+                if (_uploadedFiles.length === 1) {
+                    document.getElementById('img-count').textContent = _uploadedFiles.length + ' image(s) selected';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function fetchListing() {
+        var urlInput = document.getElementById('listing-url');
+        var url = urlInput ? urlInput.value.trim() : '';
+        if (!url) return Promise.reject(new Error('No URL'));
+        return fetch(url, { mode: 'cors' })
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                var data = parseListingData(html, url);
+                if (data.address) {
+                    var a = document.getElementById('address-display');
+                    if (a) a.textContent = data.address;
+                }
+                if (data.price) {
+                    var p = document.getElementById('price-display');
+                    if (p) p.textContent = data.price;
+                }
+                return data;
+            });
+    }
+
+    function parseListingData(html, baseUrl) {
+        var data = { images: [], address: '', price: '', beds: '', sqft: '' };
+        try {
+            var jsonld = html.match(/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+            for (var i = 0; i < jsonld.length; i++) {
+                try {
+                    var obj = JSON.parse(jsonld[i].replace(/<[^>]+>/g, ''));
+                    if (obj.address) {
+                        data.address = obj.address.streetAddress || '';
+                        if (obj.address.addressLocality) data.address += ', ' + obj.address.addressLocality;
+                        if (obj.address.addressRegion) data.address += ', ' + obj.address.addressRegion;
+                        if (obj.address.postalCode) data.address += ' ' + obj.address.postalCode;
+                        data.address = data.address.trim();
+                    }
+                    if (obj.price) data.price = obj.price;
+                    if (obj.numberOfBedrooms) data.beds = obj.numberOfBedrooms + ' bed';
+                    if (obj.floorSize) data.sqft = obj.floorSize.replace(/[^0-9,]/g, '') + ' sq ft';
+                    if (obj.image) {
+                        if (Array.isArray(obj.image)) data.images = obj.image.slice(0, 15);
+                        else data.images = [obj.image];
+                    }
+                } catch(e) {}
+            }
+        } catch(e) {}
+
+        if (!data.address) {
+            var titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+            if (titleMatch) {
+                var title = titleMatch[1].replace(/\s*\|\s*/g, ' ').trim();
+                var parts = title.split(' ');
+                var cityIdx = -1;
+                for (var j = 0; j < parts.length; j++) {
+                    if (parts[j].length === 2 && parts[j] === parts[j].toUpperCase()) { cityIdx = j; break; }
+                }
+                if (cityIdx > 0) data.address = parts.slice(0, cityIdx).join(' ');
+            }
+        }
+
+        return parseAndShowImages(html, baseUrl, data);
+    }
+
+    function parseAndShowImages(html, baseUrl, data) {
+        data = data || {};
+        data.images = data.images || [];
+        var urls = [];
+        var seen = {};
+
+        var jsonldMatches = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+        for (var ji = 0; ji < jsonldMatches.length; ji++) {
+            try {
+                var raw = jsonldMatches[ji].replace(/<[^>]+>/g, '');
+                var objs = JSON.parse(raw);
+                if (!Array.isArray(objs)) objs = [objs];
+                for (var oi = 0; oi < objs.length; oi++) {
+                    var obj = objs[oi];
+                    var imgField = obj.image || obj.photo || obj.photos;
+                    if (typeof imgField === 'string' && imgField) {
+                        if (!seen[imgField] && imgField.match(/\.(jpg|jpeg|png|webp)/i)) { seen[imgField] = true; urls.push(imgField); }
+                    } else if (Array.isArray(imgField)) {
+                        for (var ii = 0; ii < imgField.length; ii++) {
+                            var u = typeof imgField[ii] === 'string' ? imgField[ii] : imgField[ii].url;
+                            if (u && !seen[u] && u.match(/\.(jpg|jpeg|png|webp)/i)) { seen[u] = true; urls.push(u); }
+                        }
+                    } else if (obj['@type'] === 'ImageObject' && obj.url) {
+                        if (!seen[obj.url]) { seen[obj.url] = true; urls.push(obj.url); }
+                    }
+                }
+            } catch(e) {}
+        }
+
+        var nextDataMatch = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+        if (nextDataMatch) {
+            try {
+                var nd = JSON.parse(nextDataMatch[1]);
+                var listing = nd.props && nd.props.pageProps && nd.props.pageProps.listing
+                    ? nd.props.pageProps.listing
+                    : nd.props && nd.props.pageProps && nd.props.pageProps.initialReduxState
+                    ? JSON.stringify(nd.props.pageProps.initialReduxState)
+                    : '';
+
+                var imgList = [];
+                function walk(o) {
+                    if (!o || typeof o !== 'object') return;
+                    if (Array.isArray(o)) { for (var i = 0; i < o.length; i++) walk(o[i]); return; }
+                    for (var k in o) {
+                        var v = o[k];
+                        if (k === 'url' && typeof v === 'string' && v.match(/\.(jpg|jpeg|png|webp)/i) && !seen[v]) {
+                            seen[v] = true; urls.push(v);
+                        } else if (k === 'media' && Array.isArray(v)) {
+                            for (var m = 0; m < v.length; m++) {
+                                var u2 = typeof v[m] === 'string' ? v[m] : v[m].url;
+                                if (u2 && !seen[u2] && u2.match(/\.(jpg|jpeg|png|webp)/i)) { seen[u2] = true; urls.push(u2); }
+                            }
+                        } else if (typeof v === 'object') {
+                            walk(v);
+                        }
+                    }
+                }
+                if (typeof listing === 'string') {
+                    try { walk(JSON.parse(listing)); } catch(e) {}
+                } else { walk(listing); }
+            } catch(e) {}
+        }
+
+        var ogMatches = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*/gi) || [];
+        for (var gi = 0; gi < ogMatches.length; gi++) {
+            var m = ogMatches[gi].match(/content=["']([^"']+)["'/]/);
+            if (m && m[1] && !seen[m[1]]) { seen[m[1]] = true; urls.push(m[1]); }
+        }
+
+        var cdnMatches = html.match(/https?:\/\/[a-z0-9.\-]*cloudfront\.net[^"'\s>)]+/g) || [];
+        for (var ci = 0; ci < cdnMatches.length; ci++) {
+            var cdnUrl = cdnMatches[ci];
+            var b64M = cdnUrl.match(/\/f:webp\/rt:fit\/w:\d+\/([A-Za-z0-9_=\-]+)/);
+            if (b64M) {
+                try {
+                    var b64 = b64M[1].replace(/_/g, '/').replace(/-/g, '+');
+                    while (b64.length % 4) b64 += '=';
+                    var decoded = atob(b64);
+                    if (decoded && decoded.match(/listingphotos|listing_?images|property_?photos|photos\./i) && !seen[decoded]) {
+                        seen[decoded] = true; urls.push(decoded);
+                    }
+                } catch(e) {}
+            }
+            if (cdnUrl.match(/listingphotos|property_?photos|images\.|photos\./i) && !seen[cdnUrl]) {
+                seen[cdnUrl] = true; urls.push(cdnUrl);
+            }
+        }
+
+        var allImgTags = html.match(/<img[^>]+>/gi) || [];
+        for (var im = 0; im < allImgTags.length; im++) {
+            var tag = allImgTags[im];
+            var srcM = tag.match(/data-src=["']([^"']+)["'/]/) || tag.match(/src=["']([^"']+)["'/]/);
+            if (srcM && srcM[1]) {
+                var u = srcM[1];
+                if (!seen[u] && u.match(/\.(jpg|jpeg|png|webp)/i) &&
+                    !u.match(/logo|icon|avatar|banner|nav|header|footer|background|sprite|spacer/i)) {
+                    seen[u] = true; urls.push(u);
+                }
+            }
+        }
+
+        var sourceTags = html.match(/<source[^>]+>/gi) || [];
+        for (var st = 0; st < sourceTags.length; st++) {
+            var srcM = sourceTags[st].match(/src=["']([^"']+)["'/]/);
+            if (srcM && srcM[1] && !seen[srcM[1]] && srcM[1].match(/\.(jpg|jpeg|png|webp)/i)) {
+                seen[srcM[1]] = true; urls.push(srcM[1]);
+            }
+        }
+
+        var thumbMatches = html.match(/https?:\/\/[a-z0-9.\-]*\.(?:unsplash|media\.licdn|tam\.pm)\.com[^"'\s>)]+/g) || [];
+        for (var ti = 0; ti < thumbMatches.length; ti++) {
+            var u = thumbMatches[ti];
+            if (!seen[u] && u.match(/listingphotos|property|home|house|real.estate|photo/i)) {
+                seen[u] = true; urls.push(u);
+            }
+        }
+
+        var imgTagMatches = html.match(/<img[^>]+>/gi) || [];
+        for (var it = 0; it < imgTagMatches.length; it++) {
+            var tag = imgTagMatches[it];
+            var srcM = tag.match(/data-src=["']([^"']+)["']/) || tag.match(/src=["']([^"']+)["']/);
+            if (srcM && srcM[1]) {
+                var u = srcM[1];
+                if (!seen[u] && u.match(/\.(jpg|jpeg|png|webp)/i) && !u.match(/logo|icon|avatar|banner|nav/i)) {
+                    seen[u] = true; urls.push(u);
+                }
+            }
+        }
+
+        urls = urls.filter(function(u) { return u && u.length < 2000; });
+        var normalized = {};
+        var unique = [];
+        for (var ui = 0; ui < urls.length; ui++) {
+            var norm = urls[ui].split('?')[0].replace(/\/$/, '');
+            if (!normalized[norm]) {
+                normalized[norm] = true;
+                unique.push(urls[ui]);
+            }
+        }
+
+        if (unique.length > 0) showImageGrid(unique);
+        return data;
+    }
+
+    function openScanModal() {
+        var m = document.getElementById('scan-modal');
+        if (m) { m.style.display = 'block'; m.classList.add('open'); _modalSel = {}; }
+    }
+
+    function closeScanModal() {
+        var m = document.getElementById('scan-modal');
+        if (m) m.style.display = 'none'; m.classList.remove('open');
+    }
+
+    function switchTab(tab) {
+        var tabs = ['url', 'paste'];
+        tabs.forEach(function(t) {
+            var el = document.getElementById('tab-' + t);
+            if (el) el.style.display = t === tab ? 'block' : 'none';
+            var btn = document.getElementById('tab-btn-' + t);
+            if (btn) btn.classList.toggle('sel', t === tab);
+        });
+    }
+
+    function fetchHtmlFromUrl() {
+        var urlInput = document.getElementById('listing-url');
+        var url = urlInput ? urlInput.value.trim() : '';
+        if (!url) {
+            setStatus('⚠️ Enter the listing URL in the URL field first.', 'err');
+            return;
+        }
+        setStatus('⏳ Fetching page HTML...', 'info');
+        fetch('https://app.vybord.com/api/fetch-html', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+        }).then(function(r) { return r.text(); }).then(function(html) {
+            var ta = document.getElementById('paste-area');
+            if (ta) { ta.value = html; ta.dispatchEvent(new Event('input', {bubbles: true})); }
+            extractFromHtml();
+        }).catch(function(e) {
+            setStatus('⚠️ Fetch failed: ' + e.message, 'err');
+        });
+    }
+
+    function extractFromHtml() {
+        var ta = document.getElementById('paste-area');
+        if (!ta || !ta.value.trim()) {
+            setStatus('⚠️ Paste the listing page HTML first (View Source, Ctrl+A, Ctrl+C).', 'err');
+            return;
+        }
+        var urlInput = document.getElementById('listing-url');
+        var baseUrl = urlInput ? urlInput.value.trim() : '';
+        if (!baseUrl) {
+            var urlMatch = ta.value.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
+            if (!urlMatch) urlMatch = ta.value.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
+            if (urlMatch) { baseUrl = urlMatch[1]; if (urlInput) urlInput.value = baseUrl; }
+        }
+        if (!baseUrl) {
+            var urlMatch = ta.value.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
+            if (!urlMatch) urlMatch = ta.value.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
+            if (urlMatch) { baseUrl = urlMatch[1]; if (urlInput) urlInput.value = baseUrl; }
+        }
+        var data = parseListingData(ta.value, baseUrl);
+        if (data.images.length === 0) {
+            setStatus('⚠️ No images found. Try a different listing URL or paste different HTML.', 'err');
+        } else {
+            setStatus('✅ Found ' + data.images.length + ' images! Review and confirm.', 'info');
+        }
+    }
+
+    function addManualUrls() {
+        var ta = document.getElementById('manual-urls');
+        if (!ta || !ta.value.trim()) return;
+        var lines = ta.value.trim().split('\n');
+        var valid = [];
+        lines.forEach(function(line) {
+            var url = line.trim();
+            if (url.match(/\.(jpg|jpeg|png|webp)/i)) valid.push(url);
+        });
+        if (valid.length > 0) showImageGrid(valid);
+    }
+
+    var _imgBatch = [];
+    var _imgOffset = 0;
+    var _imgBatchSize = 30;
+
+    function showImageGrid(urls) {
+        _imgBatch = urls;
+        _imgOffset = 0;
+        var grid = document.getElementById('img-grid');
+        if (grid) grid.innerHTML = '';
+        renderBatch();
+    }
+
+    function renderBatch() {
+        var grid = document.getElementById('img-grid');
+        if (!grid) return;
+        var end = Math.min(_imgOffset + _imgBatchSize, _imgBatch.length);
+        for (var i = _imgOffset; i < end; i++) {
+            var url = _imgBatch[i];
+            var div = document.createElement('div');
+            div.className = 'img-thumb' + (_modalSel[url] ? ' sel' : '');
+            div.style.cssText = 'position:relative;cursor:pointer;padding:4px;';
+            var img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = 'width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;opacity:0.8;';
+            img.onerror = function() { this.style.opacity = '0.3'; };
+            var num = i + 1;
+            img.onload = function(n, el) {
+                return function() {
+                    el.style.opacity = '1';
+                    var badge = document.createElement('span');
+                    badge.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(176,224,230,0.9);color:#0f0f11;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;';
+                    badge.textContent = n;
+                    el.parentElement.appendChild(badge);
+                };
+            }(num, img);
+            div.appendChild(img);
+            div.onclick = (function(u) {
+                return function() { toggleThumb(this, u); };
+            })(url);
+            grid.appendChild(div);
+        }
+        _imgOffset = end;
+        if (_imgOffset < _imgBatch.length) {
+            var more = document.getElementById('load-more');
+            if (!more) {
+                more = document.createElement('div');
+                more.id = 'load-more';
+                more.style.cssText = 'text-align:center;padding:12px;color:#c8cdd6;cursor:pointer;';
+                more.textContent = 'Load more...';
+                more.onclick = renderBatch;
+                grid.parentElement.appendChild(more);
+            }
+        } else {
+            var more = document.getElementById('load-more');
+            if (more) more.remove();
+        }
+        updateConfirmBtn();
+    }
+
+    function toggleThumb(el, url) {
+        var isSelected = !!_modalSel[url];
+        if (isSelected) {
+            delete _modalSel[url];
+            el.classList.remove('sel');
+        } else {
+            var count = Object.keys(_modalSel).length;
+            if (count >= MAX_IMAGES) {
+                setStatus('⚠️ Maximum ' + MAX_IMAGES + ' images allowed.', 'err');
+                return;
+            }
+            _modalSel[url] = true;
+            el.classList.add('sel');
+        }
+        updateConfirmBtn();
+    }
+
+    function selectAllModalImages() {
+        _modalSel = {};
+        var count = 0;
+        _imgBatch.forEach(function(url) {
+            if (count < MAX_IMAGES) {
+                _modalSel[url] = true;
+                count++;
+            }
+        });
+        document.querySelectorAll('.img-thumb img').forEach(function(img) {
+            img.parentElement.classList.add('sel');
+        });
+        updateConfirmBtn();
+    }
+
+    function updateConfirmBtn() {
+        var count = Object.keys(_modalSel).length;
+        var btn = document.getElementById('modal-confirm-btn');
+        var cnt = document.getElementById('sel-confirm-count');
+        if (cnt) cnt.textContent = count;
+        if (btn) {
+            btn.textContent = 'Confirm (' + count + ')';
+            btn.disabled = (count === 0);
+            btn.style.opacity = count === 0 ? '0.4' : '1';
+        }
+    }
+
+    function confirmSelection() {
+        var urls = Object.keys(_modalSel);
+        if (urls.length === 0) return;
+        var prog = document.getElementById('modal-progress');
+        var btn = document.getElementById('modal-confirm-btn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Downloading...'; }
+        if (prog) prog.textContent = 'Starting...';
+
+        _uploadedFiles = [];
+        var queue = urls.slice();
+        var active = 0;
+        var done = 0;
+        var failed = 0;
+        var total = urls.length;
+
+        function startNext() {
+            while (active < CONCURRENT && queue.length > 0) {
+                var url = queue.shift();
+                active++;
+                (function(imgUrl, idx) {
+                    var corsSafe = /cloudfront\.net|cloudinary\.com|imgix\.net|photobucket\.com/i.test(imgUrl);
+                    var proxy = 'https://vybord.com/api/proxy-img.php?url=' + encodeURIComponent(imgUrl);
+                    var fetchPromise;
+
+                    if (corsSafe) {
+                        fetchPromise = fetch(imgUrl, { mode: 'cors' }).then(function(r) {
+                            if (!r.ok) throw new Error('HTTP ' + r.status);
+                            return r.blob();
+                        }).then(function(blob) {
+                            return new Promise(function(resolve) {
+                                var reader = new FileReader();
+                                reader.onloadend = function() { resolve(reader.result); };
+                                reader.readAsDataURL(blob);
+                            });
+                        });
+                    } else {
+                        fetchPromise = fetch(proxy)
+                            .then(function(r) {
+                                if (!r.ok) throw new Error('Proxy HTTP ' + r.status);
+                                return r.json().catch(function() { return null; });
+                            })
+                            .then(function(data) {
+                                if (data && data.data) return 'data:image/' + (data.ext || 'jpg') + ';base64,' + data.data;
+                                throw new Error(data && data.error ? data.error : 'Proxy returned no data');
+                            });
+                    }
+
+                    fetchPromise
+                        .then(function(dataUrl) {
+                            var extMatch = imgUrl.match(/\.(jpg|jpeg|png|webp)/i);
+                            var ext = extMatch ? extMatch[0].replace('.', '').replace('jpeg', 'jpg') : 'jpg';
+                            _uploadedFiles.push({
+                                name: 'image_' + String(done + 1).padStart(3, '0') + '.' + ext,
+                                data: dataUrl
+                            });
+                        })
+                        .catch(function(e) {
+                            failed++;
+                            _uploadedFiles.push({
+                                name: 'image_' + String(done + 1).padStart(3, '0') + '.jpg',
+                                data: imgUrl,
+                                _isUrl: true
+                            });
+                        })
+                        .finally(function() {
+                            done++;
+                            active--;
+                            if (prog) prog.textContent = 'Downloaded ' + done + '/' + total + (failed > 0 ? ' (' + failed + ' failed)' : '') + '...';
+                            if (queue.length > 0 || active > 0) {
+                                startNext();
+                            } else {
+                                closeScanModal();
+                                var count = _uploadedFiles.length;
+                                document.getElementById('img-count').textContent = count + ' image(s) selected';
+                                setStatus(count + ' images ready' + (failed > 0 ? ' (' + failed + ' failed).' : '.'), 'info');
+                                if (btn) { btn.disabled = false; btn.textContent = 'Confirm (' + count + ')'; }
+                            }
+                        });
+                })(url, done);
+            }
+        }
+
+        startNext();
+    }
+
+    function fetchPropertyDetails() {
+        var urlInput = document.getElementById('listing-url');
+        var url = urlInput ? urlInput.value.trim() : '';
+        if (!url) { showLookupStatus('⚠️ Enter a listing URL first', 'err'); return; }
+        if (!url.startsWith('http')) { showLookupStatus('⚠️ Enter a full URL starting with http', 'err'); return; }
+        var btn = document.getElementById('lookup-btn');
+        btn.disabled = true; btn.textContent = '⏳…';
+        showLookupStatus('Looking up property details…', 'info');
+
+        fetch('https://vybord.com/lookup.php', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false; btn.textContent = '🔍 Lookup';
+            if (data.error) {
+                showLookupStatus('⚠️ ' + data.error, 'err'); return;
+            }
+            var a = document.getElementById('address-display');
+            if (a && data.address) a.textContent = data.address;
+            var p = document.getElementById('price-display');
+            if (p && data.price) p.textContent = '$' + data.price;
+            var b = document.getElementById('m-beds');
+            if (b) b.value = data.beds || '';
+            var bt = document.getElementById('m-baths');
+            if (bt) bt.value = data.baths || '';
+            var sq = document.getElementById('m-sqft');
+            if (sq) sq.value = data.sqft || '';
+            var ta = document.getElementById('m-script');
+            if (ta && data.script) ta.value = data.script;
+            var details = [data.address, data.price, data.beds, data.baths].filter(Boolean).join(' · ');
+            showLookupStatus('✅ ' + (details || 'Property details loaded'), 'ok');
+        })
+        .catch(function(e) {
+            btn.disabled = false; btn.textContent = '🔍 Lookup';
+            showLookupStatus('⚠️ Connection error: ' + e.message, 'err');
+        });
+    }
+
+    function showLookupStatus(msg, type) {
+        var el = document.getElementById('lookup-status');
+        if (!msg) { el.style.display = 'none'; return; }
+        el.style.display = 'block';
+        el.style.color = type === 'err' ? '#dc2626' : type === 'ok' ? '#00aa66' : '#778899';
+        el.textContent = msg;
+    }
+
+    function applyMusicUrl() {
+        var input = document.getElementById('music-url');
+        if (!input) return;
+        var url = input.value.trim();
+        s.musicUrl = url;
+        var musicGroup = document.querySelector('.music-group');
+        if (musicGroup) musicGroup.querySelectorAll('.opt-btn').forEach(function(b) { b.classList.remove('sel'); });
+        if (url) {
+            var ytGroup = document.querySelector('.music-group .opt-btn:last-child');
+            if (ytGroup) ytGroup.classList.add('sel');
+            setStatus('🎵 YouTube music: ' + url, 'info');
+        }
+    }
+
+    function toB64(file) {
+        return new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function(e) { resolve(e.target.result); };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        const btn = document.getElementById('gen-btn');
+        if (!btn) { console.error('Button not found'); return; }
+        btn.disabled = true;
+        btn.textContent = '⏳ Sending...';
+
+        const emailInput = document.getElementById('user-email');
+        const email = emailInput ? emailInput.value.trim() : '';
+        const addressEl = document.getElementById('address-display');
+        const address = addressEl ? addressEl.textContent.trim() : '';
+        const priceEl = document.getElementById('price-display');
+        const priceRaw = priceEl ? priceEl.textContent.trim() : '';
+        const priceClean = priceRaw.replace(/[^0-9,]/g, '');
+        const price = /^\d/.test(priceClean) ? priceClean : '';
+        const beds = (document.getElementById('m-beds') || {value:''}).value.trim();
+        const baths = (document.getElementById('m-baths') || {value:''}).value.trim();
+        const sqft = (document.getElementById('m-sqft') || {value:''}).value.trim();
+        const script = (document.getElementById('m-script') || {value:''}).value.trim();
+
+        const total = _uploadedFiles.length;
+
+        if (total === 0) {
+            setStatus('⚠️ No images loaded. Click Scan first, then Confirm.', 'err');
+            btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
+        }
+
+        const urlInputVal = (document.getElementById('listing-url') || {value:''}).value.trim();
+        const metaPayload = {
+            url: urlInputVal,
+            settings: {
+                voice: s.voice,
+                template: s.template,
+                fontSize: s.fontSize,
+                textColor: s.textColor.replace('#', ''),
+                bgColor: (s.bgColor || '#000000').replace('#', ''),
+                effect: s.effect,
+                music: s.music,
+                musicUrl: s.musicUrl,
+                transition: s.transition,
+                ratio: s.ratio,
+                duration: s.duration,
+                imagesPerSlide: s.imagesPerSlide || 1,
+                ctaText: s.cta,
+                ctaUrl: s.ctaUrl || '',
+                address: address,
+                price: price,
+                beds: beds,
+                baths: baths,
+                sqft: sqft,
+                script: script
+            },
+            address: address,
+            price: price,
+            beds: beds,
+            baths: baths,
+            sqft: sqft,
+            userEmail: email
+        };
+
+        setStatus('📋 Creating job...', 'info');
+        let jobId = null;
+
+        try {
+            console.log('Cookies before send.php:', document.cookie);
+            const res = await fetch('https://app.vybord.com/api/send.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(metaPayload),
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                setStatus('⚠️ Server error ' + res.status + ': ' + (text.slice(0, 100)), 'err');
+                btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
+            }
+            const result = await res.json();
+            if (result.error) {
+                setStatus('⚠️ ' + result.error, 'err');
+                btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
+            }
+            jobId = result.job_id;
+            if (!jobId) {
+                setStatus('⚠️ No job_id from server (cf/Rate limit?)', 'err');
+                btn.disabled = false; btn.textContent = '🚀 Generate Video'; return;
+            }
+
+            await uploadImagesSequential(jobId, total);
+
+        } catch(err) {
+            console.error('Submit failed:', err);
+            setStatus('⚠️ Network error: ' + err.message, 'err');
+            btn.disabled = false; btn.textContent = '🚀 Generate Video';
+        }
+    }
+
+    async function uploadImagesSequential(jobId, total) {
+        for (let i = 0; i < total; i++) {
+            setStatus('📤 Uploading image ' + (i+1) + '/' + total + '...', 'info');
+            const compressed = await compressForUpload(_uploadedFiles[i].data);
+            const b64 = compressed.split(',')[1];
+
+            const resp = await fetch('https://app.vybord.com/api/upload-images/' + jobId, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    images: [{
+                        name: _uploadedFiles[i].name || ('img' + (i+1) + '.jpg'),
+                        data: b64
+                    }]
+                }),
+            });
+            const r = await resp.json();
+            if (r.error) {
+                setStatus('⚠️ ' + r.error, 'err');
+                return;
+            }
+        }
+
+        setStatus('🎬 Building video...', 'info');
+        const buildResp = await fetch('https://app.vybord.com/api/build/' + jobId, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+        });
+        const buildResult = await buildResp.json();
+
+        const reviewUrl = 'https://app.vybord.com/review/' + jobId;
+        setStatus('🎬 Redirecting to review page...', 'info');
+        window.location.href = reviewUrl;
+    }
+
+    async function compressForUpload(dataUrl) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxW = 800;
+                let w = img.width, h = img.height;
+                if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+                else if (h > maxW) { w = Math.round(w * maxW / h); h = maxW; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.70));
+            };
+            if (!dataUrl.startsWith('data:')) {
+                dataUrl = 'data:image/jpeg;base64,' + dataUrl;
+            }
+            img.src = dataUrl;
+        });
+    }
+
+    </script>
+
+    <!-- Image Scan Modal -->
+    <style>
+    .modal-overlay.open{display:block}
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,26,46,0.85);z-index:9999;display:none;overflow-y:auto;padding:20px}
+    .modal-overlay.open{display:block}
+    .modal-box{background:#18181b;border:1px solid #2e2e33;border-radius:16px;max-width:900px;margin:40px auto;padding:28px;color:#ffffff}
+    .modal-box h2{font-size:1.3rem;margin-bottom:16px;color:#ffffff}
+    .modal-tabs{display:flex;gap:8px;margin-bottom:16px}
+    .modal-tabs button{padding:8px 16px;border-radius:8px;border:1px solid #2e2e33;background:#222226;color:#c8cdd6;cursor:pointer;font-size:0.9rem}
+    .modal-tabs button.sel{background:rgba(176,224,230,0.3);color:#0f0f11;border-color:#B0E0E6}
+    .modal-close{float:right;background:none;border:none;color:#c8cdd6;font-size:1.5rem;cursor:pointer;padding:0;line-height:1}
+    .modal-close:hover{color:#ffffff}
+    #tab-url,#tab-paste{display:none}
+    .modal-actions{display:flex;gap:10px;margin:12px 0;flex-wrap:wrap}
+    .modal-actions button{padding:9px 18px;border-radius:8px;border:1px solid #2e2e33;background:#222226;color:#ffffff;cursor:pointer;font-size:0.88rem}
+    .modal-actions button:hover{background:#EEF2F7}
+    .modal-actions button.primary{background:linear-gradient(135deg,#B0E0E6,#E6E6FA);border-color:#B0E0E6;color:#0f0f11;font-weight:800}
+    .modal-actions button.primary:hover{opacity:0.85}
+    #modal-progress{color:#c8cdd6;font-size:0.85rem;margin:8px 0;min-height:20px}
+    #img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:420px;overflow-y:auto;margin-top:12px}
+    #img-grid .img-thumb.sel{outline:3px solid #B0E0E6;border-radius:8px}
+    .img-thumb{position:relative;cursor:pointer}
+    .img-thumb img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px}
+    </style>
+    <div id="scan-modal" class="modal-overlay">
+    <div class="modal-box">
+    <button class="modal-close" onclick="closeScanModal()">&#215;</button>
+    <h2>Select Listing Images</h2>
+    <div class="modal-tabs">
+    <button id="tab-btn-url" class="sel" onclick="switchTab('url')">Scan URL</button>
+    <button id="tab-btn-paste" onclick="switchTab('paste')">Paste HTML</button>
+    </div>
+    <div id="tab-url">
+    <div class="modal-actions">
+    <button class="primary" onclick="fetchPropertyDetails()">&#128269; Fetch from URL</button>
+    <button onclick="openScanModal()">&#128247; Open Image Selector</button>
+    </div>
+    <p style="color:#c8cdd6;font-size:0.82rem;margin:4px 0 12px">Fetches images automatically. Opens selector to confirm/trim selection.</p>
+    </div>
+    <div id="tab-paste">
+    <div class="modal-actions">
+    <button class="primary" onclick="fetchHtmlFromUrl()" style="width:100%;padding:12px;font-size:1rem;font-weight:bold;background:linear-gradient(135deg,#B0E0E6,#E6E6FA)">&#128269; Fetch HTML from URL</button>
+    <button class="primary" onclick="extractFromHtml()" style="width:100%;padding:12px;font-size:1rem;font-weight:bold">&#128269; Parse HTML (manual paste)</button>
+    <button onclick="addManualUrls()">Add Image URLs</button>
+    </div>
+    <p style="color:#c8cdd6;font-size:0.82rem;margin-bottom:8px">Open the listing page, press <b>Ctrl+U</b> (View Source), then <b>Ctrl+A</b> → <b>Ctrl+C</b> to copy everything, then paste below.</p>
+    <textarea id="paste-area" rows="8" style="width:100%;background:#222226;border:1px solid #2e2e33;color:#ffffff;border-radius:8px;padding:10px;font-size:0.82rem;font-family:monospace" placeholder="Ctrl+U, Ctrl+A, Ctrl+V to paste page source here..."></textarea>
+    <textarea id="manual-urls" rows="3" style="width:100%;background:#222226;border:1px solid #2e2e33;color:#ffffff;border-radius:8px;padding:8px;font-size:0.83rem;margin-top:8px" placeholder="Or paste image URLs (one per line)"></textarea>
+    </div>
+    <div id="modal-progress"></div>
+    <div id="img-grid"></div>
+    <div class="modal-actions" style="margin-top:12px">
+    <button onclick="selectAllModalImages()">Select All</button>
+    <button class="primary" id="modal-confirm-btn" onclick="confirmSelection()" disabled style="opacity:0.4">Confirm (<span id="sel-confirm-count">0</span>)</button>
+    </div>
+    </div>
+    </div>
+
+    <script>
+    async function loadUserInfo() {
+        try {
+            const r = await fetch('https://app.vybord.com/api/me', { credentials: 'include' });
+            if (r.ok) {
+                const d = await r.json();
+                document.getElementById('user-info').textContent = d.email;
+                document.getElementById('user-info').style.display = 'inline';
+                document.getElementById('logout-btn').style.display = 'inline';
+            }
+        } catch(e) {}
+    }
+    loadUserInfo();
+
+    async function handleLogout() {
+        try {
+            await fetch('https://app.vybord.com/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch(e) {}
+        location.href = 'https://app.vybord.com/login.html';
+    }
+    </script>
+</body>
+</html>

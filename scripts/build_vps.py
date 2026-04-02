@@ -14,6 +14,9 @@ parser.add_argument('--transition', default='smoothleft')
 parser.add_argument('--images_per_slide', type=int, default=1)
 parser.add_argument('--kb', default=None)
 parser.add_argument('--music', default=None)
+parser.add_argument('--logo', default=None)
+parser.add_argument('--logo_position', default='bottom-right')
+parser.add_argument('--logo_size', type=float, default=15.0)
 args = parser.parse_args()
 
 WORK = args.work
@@ -243,3 +246,25 @@ else:
     run(['ffmpeg', '-y', '-i', noaudio, '-c:v', 'copy', '-c:a', 'copy', '-movflags', '+faststart', wna])
 
 print(f'Done: {OUT} ({os.path.getsize(OUT if os.path.exists(OUT) else wna)//1024//1024}MB)')
+# Logo overlay
+if args.logo and os.path.exists(args.logo):
+    logo_pos = getattr(args, 'logo_position', 'bottom-right')
+    logo_pct = float(getattr(args, 'logo_size', 15)) / 100.0
+    out_with_logo = WORK + '/video_logo.mp4'
+    scale_w = int(W * logo_pct)
+    scale_h = -2  # auto to maintain aspect
+    pos_str = {
+        'bottom-right': f'W-w-10:H-h-10',
+        'bottom-left': '10:H-h-10',
+        'top-right': 'W-w-10:10',
+        'top-left': '10:10',
+    }.get(logo_pos, 'W-w-10:H-h-10')
+    ov_cmd = ['ffmpeg', '-y', '-i', wna, '-i', args.logo,
+              '-filter_complex', f'[1:v]scale={scale_w}:{scale_h}[logo];[0:v][logo]overlay={pos_str}',
+              '-c:a', 'copy', out_with_logo]
+    r = run(ov_cmd)
+    if r.returncode == 0:
+        os.replace(out_with_logo, wna)
+        print(f'Logo overlay OK')
+    else:
+        print(f'Logo ERR: {r.stderr[-200:]}')

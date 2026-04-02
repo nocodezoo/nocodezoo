@@ -132,6 +132,20 @@ server {
         proxy_buffering off;
     }
 
+    location /api/upload-images {
+        proxy_pass http://127.0.0.1:7073/api/upload-images;
+        proxy_set_header Host \;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+    }
+
+    location /api/build {
+        proxy_pass http://127.0.0.1:7073/api/build;
+        proxy_set_header Host \;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+    }
+
     location ^~ /videos {
         proxy_pass http://127.0.0.1:7073/videos;
         proxy_http_version 1.1;
