@@ -55,3 +55,32 @@ if check_quota(user_id) → allowed (1 remaining):
 **What should have happened:** The GenReq model update (adding user_id) is a cross-system contract change — needs coordination with the browser-side code in send.php AND the vps_api.py. This is a multi-system interface, not just a backend change.
 
 **Lesson:** When building multi-system integrations, define the interface contracts first (in CODING_PLAN.md Phase 2), document them, and get sign-off before implementing.
+
+## Lesson N+1: Client-side JS and server-side Python image extraction must be kept in sync
+
+**Problem:** juanmiamihomes.com uses `style="background-image: url(...)"` for listing images (not `<img>` tags). The Python `scrape_listing()` was fixed to handle this, but `create.html`'s `parseAndShowImages()` had the same bug and was missed.
+
+**Root cause:** Two separate code paths extract images from the same listing URL — Python on the server (via `/api/scrape`) and JavaScript in the browser (via "Scan / Paste" + `parseListingData`). A fix to one doesn't automatically reach the other.
+
+**Fix:** Added `background-image` CSS extraction block to `parseAndShowImages()` in `create.html` — same pattern as the Python fix.
+
+**Lesson:** When maintaining parallel extraction paths (server-side + client-side), always check both when fixing image extraction bugs.
+
+## Lesson: VPS reboot wiped all uncommitted changes to review_server.py
+
+**Problem:** Made edits to `/opt/video_pipeline/review_server.py` during the session. VPS was rebooted. After reboot, the file reverted to the git version (711-line minimal), losing all edits.
+
+**Root cause:** Changes were not committed to git before reboot. VPS restart restored file from whatever source systemd or init uses (which was the git-committed version, not the modified on-disk version).
+
+**Fix:** Restored from git commit `96f4918` and re-applied the `background-image` regex fix.
+
+**Lesson:** Always commit to git before rebooting the VPS. Or: keep a deployment script that rsyncs/copies from a known-good source on boot.
+
+## Lesson: Multiple listing IDs on same page — must filter by URL listing ID
+
+**Problem:** juanmiamihomes.com embeds two sets of images in its HTML: the correct listing's images (A11914388) in `style="background-image: url(...)"` and a different listing's images (A11942169) in JSON-LD structured data. The scraper was returning both, polluting results.
+
+**Fix:** Extract listing ID from the URL (`A119\d+` regex) and only keep images whose URL contains that exact listing ID.
+
+**Files changed:** `review_server.py` (Python) + `create.html` (JS)
+

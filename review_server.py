@@ -498,13 +498,21 @@ def scrape_listing(url):
             result['baths'] = baths
             result['sqft'] = sqft
 
+            # Extract listing ID from URL to filter correct images (page JSON-LD may contain wrong listing)
+            url_listing_id = None
+            mls_m = _re.search(r'A119\d+', url)
+            if mls_m:
+                url_listing_id = mls_m.group(0)
+
             images = []
             for el in soup.find_all(style=True):
                 style = el.get('style', '')
                 if 'background-image' in style and 'url(' in style:
-                    m = _re.search(r'url\("?([^\)"]+)"?\)', style)
+                    m = _re.search(r'url\("?([^)]+)"?\)', style)
                     if m:
                         src = m.group(1)
+                        if url_listing_id and url_listing_id not in src:
+                            continue  # skip images from other listings
                         if ('loopt-idx' in src or 'A119' in src) and 'logo' not in src.lower():
                             images.append(src)
             result['images'] = list(dict.fromkeys(images))[:70]
