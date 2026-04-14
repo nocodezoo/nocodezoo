@@ -1,0 +1,49 @@
+The Setup (If You Want to Try)
+
+Hardware: Mac Mini M4, base model, $599, 16GB unified memory. Any Apple Silicon Mac with 16GB will work. The M4’s NVMe SSD speed helps for the mmap approach, but M1/M2/M3 work too.
+Option A: Gemma 4 (recommended, what I run now)
+# Step 1: Install Ollama (0.20+ required for Gemma 4)
+brew install ollama
+
+# Step 2: Pull Gemma 4 models
+ollama pull gemma4:e2b        # Fast tier (7.2 GB, 2.3B effective, vision+audio)
+ollama pull gemma4:e4b        # Primary tier (9.6 GB, 4.5B effective)
+ollama pull nomic-embed-text  # Local embeddings (274 MB, optional)
+
+# Step 3: Set environment for 16GB systems
+export OLLAMA_FLASH_ATTENTION=1
+export OLLAMA_KV_CACHE_TYPE=q8_0
+export OLLAMA_KEEP_ALIVE=10m
+export OLLAMA_MAX_LOADED_MODELS=1
+Option B: Qwen 3.5 (what I started with, still solid)
+# Same Ollama install, different models
+ollama pull qwen3.5:4b        # Fast tier (3.4 GB)
+ollama pull qwen3.5:9b        # Primary tier (~6 GB)
+The 35B Heavy Tier (works with either Option A or B)
+# Step 4: Install llama.cpp for the big model
+brew install llama.cpp
+
+# Step 5: Download Qwen 3.5 35B (13 GB quantized)
+pip3 install huggingface-hub
+python3 -c "from huggingface_hub import hf_hub_download; \
+  hf_hub_download('unsloth/Qwen3.5-35B-A3B-GGUF', \
+  'Qwen3.5-35B-A3B-UD-IQ3_XXS.gguf', \
+  local_dir='~/.local/share/llama-models')"
+
+# Step 6: Start llama-server with the magic flag
+llama-server \
+  --model ~/.local/share/llama-models/Qwen3.5-35B-A3B-UD-IQ3_XXS.gguf \
+  --port 8081 --ctx-size 16384 --n-gpu-layers 0 --mmap \
+  --flash-attn on --threads 8
+Some things that tripped me up:
+OLLAMA_MAX_LOADED_MODELS=1 is critical on 16GB. Without it, Ollama tries to keep both the fast and primary models in memory at once and the system just dies. One model at a time, 10-minute idle timeout, then it unloads and frees your RAM.
+--n-gpu-layers 0 on the llama.cpp command looks wrong. On Apple Silicon you’d normally offload layers to the GPU. But with mmap, we want the OS to manage the paging. Setting GPU layers to 0 means everything goes through the mmap path. The M4’s unified memory means “GPU” and “CPU” are reading from the same pool anyway, so it doesn’t really matter.
+Ollama and llama.cpp coexist on different ports (11434 and 8081). The heavy tier (llama.cpp) is on-demand: I start it when needed and stop it when not. The fast and primary tiers (Ollama) run as a LaunchAgent, always on, auto-restarting. Two separate inference servers on one Mac Mini. Works fine.
+What I Actually Learned
+
+Local models are not Claude. They can’t chain multi-step tool calls, refactor code, or make creative decisions. Claude Code does this because Anthropic spent years on tool calling. Local models aren’t there yet. But that’s fine. I don’t need them to be Claude. I need them to classify messages in 2 seconds and compress context before Claude sees it.
+The mmap thing is probably the most underappreciated trick in this whole setup. One flag. The difference between “impossible” and “17 tok/s with zero swap.” If you have Apple Silicon and an NVMe SSD, you can run models much larger than your RAM would suggest. I’m running it daily. It just works.
+Centralizing model names saved me. I had three files with hardcoded "qwen3.5:9b". Found them all during the swap. If I’d had ten files like that, a quick migration would’ve been a 2-hour headache. Lesson learned (although honestly I should have known better).
+I benchmarked before swapping, and I’m glad I did. Google’s marketing said Gemma 4 was better. The benchmarks confirmed speed gains but also showed a slight accuracy regression. Speed got better, instruction following got slightly worse. That’s a tradeoff I chose to accept, not one that surprised me in production.
+One more thing: Gemma E2B is 7.2GB on disk (vs Qwen 4B at 3.4GB). Looks huge. But that’s because it bundles vision and audio encoders. Loaded RAM is nearly identical. I almost rejected it based on download size. Would have been a mistake.
+And the thinking mode thing. Disable it for fast tasks. 30x speed difference for classification. This single setting is the difference between a usable triage system and a painfully slow one. Test it. Seriously.
