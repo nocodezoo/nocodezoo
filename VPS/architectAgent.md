@@ -1,10 +1,4 @@
-This is an excellent question that gets at a core limitation of current AI agents—context fragmentation. Here are the most practical approaches to solve this:
-
-The Core Problem & Solution Strategy
-
-The fundamental issue is that each new task forces the agent to re-parse files and rebuild mental models. You need a single source of truth that's structured specifically for fast AI comprehension rather than human reading. Here's what works:
-
-Best Formats & Representations
+architect.md
 
 1. Structured JSON/YAML Architecture Schema (Most Practical)
 Create a master file that defines everything in a machine-readable format:
