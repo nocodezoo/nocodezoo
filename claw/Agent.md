@@ -1,4 +1,4 @@
-# AGENTS.md — How Work Gets Done
+# AGENT.md — How Work Gets Done
 
 This file defines how to execute work effectively and autonomously in this workspace.
 
