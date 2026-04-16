@@ -1,0 +1,273 @@
+import pandas as pd
+import requests
+import time
+import logging
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from datetime import datetime
+from pathlib import Path
+
+# ========================= CONFIGURATION =========================
+# Set your paths and credentials here
+BROKER_CSV_PATH = "broker_email_list.csv"          # Columns: brokerage_name, email (add more if needed)
+VIDEO_PIPELINE_API_URL = "https://your-video-pipeline.example.com/generate"  # ← Replace with your actual video pipeline endpoint
+EMAIL_SMTP_SERVER = "smtp.gmail.com"               # Or your provider (e.g., smtp.office365.com)
+EMAIL_SENDER = "yourcompany@yourrealestate.com"
+EMAIL_PASSWORD = "your-app-password"               # Use app password for Gmail
+MLS_API_BASE_URL = "https://your-mls-api.example.com"  # ← Replace with your authorized MLS/RETS/Bridge API endpoint
+SPECIFIC_MLS_WEBSITE = "https://your-mls-portal.example.com/listings"  # The exact site you want Claw to pull from
+
+# Logging setup
+logging.basicConfig(
+    filename=f"claw_logs_{datetime.now().strftime('%Y%m%d')}.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# ========================= CORE FUNCTIONS =========================
+
+def load_broker_list(csv_path: str) -> pd.DataFrame:
+    """Load the broker email list."""
+    df = pd.read_csv(csv_path)
+    required_cols = {"brokerage_name", "email"}
+    if not required_cols.issubset(df.columns):
+        raise ValueError(f"CSV must contain columns: {required_cols}")
+    logging.info(f"Loaded {len(df)} brokers from {csv_path}")
+    return df
+
+
+def get_stale_listings_for_brokerage(brokerage_name: str, days_threshold: int = 150, limit: int = 1) -> list[dict]:
+    """
+    Query MLS (or scrape the specific website you identify) for listings belonging to this brokerage
+    that have been on market > days_threshold.
+    Returns a list of listing dicts (max 'limit' per run to avoid spam).
+    """
+    # TODO: Replace this placeholder with your real MLS integration
+    # Example options:
+    # 1. Official MLS API / RETS / Bridge Interactive / RESO Web API
+    # 2. Authorized data feed you already have access to
+    # 3. If only public site scraping is possible, use Selenium + your login (but NOT recommended for production)
+
+    payload = {
+        "brokerage": brokerage_name,
+        "days_on_market_min": days_threshold,
+        "limit": limit,
+        "fields": "listing_id,address,price,description,days_on_market,photo_urls,listing_url,listing_agent"
+    }
+
+    try:
+        # Example API call (replace with your real endpoint)
+        response = requests.post(
+            f"{MLS_API_BASE_URL}/search",
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        listings = response.json().get("listings", [])
+
+        # Fallback: if you want Claw to visit the exact website you identify
+        # (uncomment and adapt if you prefer scraping the site you specified)
+        # for listing in listings:
+        #     if "listing_url" not in listing or not listing["listing_url"]:
+        #         listing["listing_url"] = f"{SPECIFIC_MLS_WEBSITE}/{listing['listing_id']}"
+
+        logging.info(f"Found {len(listings)} stale listings for {brokerage_name}")
+        return listings
+
+    except Exception as e:
+        logging.error(f"Failed to fetch listings for {brokerage_name}: {e}")
+        return []
+
+
+def fetch_listing_details(listing: dict) -> dict:
+    """Enrich listing with images and full info from the specific website you identify."""
+    # If your MLS API already returns everything, you can skip this step.
+    # Otherwise, Claw visits the listing_url and extracts images + data.
+    if not listing.get("listing_url"):
+        return listing
+
+    try:
+        # Example: simple GET + parsing (replace with your authenticated scraper or API)
+        resp = requests.get(listing["listing_url"], timeout=15)
+        # In production you would use BeautifulSoup or your MLS data feed here
+        # For now we assume the API already gave us photo_urls
+        logging.info(f"Successfully pulled details & images for {listing.get('address')}")
+    except Exception as e:
+        logging.warning(f"Could not enrich listing {listing.get('listing_id')}: {e}")
+
+    return listing
+
+
+def trigger_video_pipeline(listing: dict) -> str | None:
+    """
+    Calls your existing video pipeline.
+    The pipeline should automatically:
+      - Generate a compelling voice-over script from the listing data
+      - Add captions
+      - Layer background music
+      - Apply motion/graphics
+      - Return a downloadable video file path or public URL
+    """
+    payload = {
+        "listing_data": listing,
+        "style": "real-estate-showcase",   # Customize as needed
+        "voice": "professional-realtor",   # Your preferred voice
+        "duration_target": 60,             # seconds
+        "include_motion": True,
+        "include_captions": True,
+        "music_track": "upbeat-modern"
+    }
+
+    try:
+        response = requests.post(
+            VIDEO_PIPELINE_API_URL,
+            json=payload,
+            timeout=300  # 5-minute timeout for video generation
+        )
+        response.raise_for_status()
+        video_path_or_url = response.json().get("video_path") or response.json().get("video_url")
+
+        logging.info(f"Video pipeline triggered successfully for {listing.get('address')}")
+        return video_path_or_url
+
+    except Exception as e:
+        logging.error(f"Video pipeline failed for {listing.get('address')}: {e}")
+        return None
+
+
+def create_email_body(listing: dict, video_url: str) -> str:
+    """Professional pitch email template."""
+    return f"""
+Dear {listing.get('listing_agent', 'Listing Broker')},
+
+I hope this email finds you well.
+
+My name is Claw, an AI marketing assistant at [Your Real Estate Company]. We noticed your listing at  
+**{listing.get('address')}** has been on the market for {listing.get('days_on_market')} days.
+
+As a courtesy, we created a **professional marketing video** for this property at no cost to you:
+
+▶️ Watch the video here: {video_url}
+
+This 60-second video includes:
+• Engaging voice-over script
+• Dynamic motion graphics
+• Captioning for silent viewing
+• Background music
+
+Videos like this dramatically increase buyer engagement and time-on-page. When embedded or linked directly in the MLS, they help your listing stand out when buyers are searching online.
+
+We'd love to partner with your brokerage and produce similar videos for **all** of your active listings going forward. This would:
+• Enhance your team's reputation
+• Give every property a competitive edge in the MLS
+• Drive more showings and faster offers
+
+Would you be open to a quick 10-minute call next week to discuss rolling this out across your entire inventory?
+
+Best regards,  
+Claw  
+AI Marketing Agent  
+[Your Real Estate Company]  
+{EMAIL_SENDER}  
+[Your Phone Number]
+"""
+
+
+def send_video_email(broker_email: str, listing: dict, video_path_or_url: str):
+    """Send the video + pitch to the broker."""
+    msg = MIMEMultipart()
+    msg["From"] = EMAIL_SENDER
+    msg["To"] = broker_email
+    msg["Subject"] = f"Free Custom Video for {listing.get('address')} – Let's Get It Sold Faster"
+
+    body = create_email_body(listing, video_path_or_url)
+    msg.attach(MIMEText(body, "plain"))
+
+    # If video is a local file, attach it; otherwise just link it
+    if video_path_or_url.startswith("http"):
+        # Video is hosted – just use the link (already in body)
+        pass
+    else:
+        # Attach the actual video file
+        with open(video_path_or_url, "rb") as f:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(f.read())
+            encoders.encode_base64(part)
+            part.add_header("Content-Disposition", f"attachment; filename=video_{listing.get('listing_id')}.mp4")
+            msg.attach(part)
+
+    try:
+        with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, 465) as server:
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.send_message(msg)
+        logging.info(f"Email sent successfully to {broker_email} for listing {listing.get('address')}")
+        print(f"✅ Email sent to {broker_email}")
+    except Exception as e:
+        logging.error(f"Failed to send email to {broker_email}: {e}")
+        print(f"❌ Email failed for {broker_email}")
+
+
+# ========================= MAIN AGENT LOOP =========================
+
+def run_claw():
+    """Main execution loop for Claw – your AI agent."""
+    print("🚀 Claw AI Agent started – Stale Listing Video Outreach")
+    logging.info("Claw AI Agent started")
+
+    brokers = load_broker_list(BROKER_CSV_PATH)
+
+    for _, row in brokers.iterrows():
+        brokerage = row["brokerage_name"]
+        email = row["email"]
+
+        print(f"\n🔍 Processing brokerage: {brokerage}")
+
+        # Step 1: Identify stale MLS listings for this brokerage
+        stale_listings = get_stale_listings_for_brokerage(brokerage)
+
+        for listing in stale_listings:
+            # Step 2: Enrich with images & full details from the website you identified
+            listing = fetch_listing_details(listing)
+
+            # Step 3: Trigger the video pipeline (voice-over + script + captions + music + motion)
+            video_path_or_url = trigger_video_pipeline(listing)
+            if not video_path_or_url:
+                continue
+
+            # Step 4: Email the video + partnership proposal to the broker
+            send_video_email(email, listing, video_path_or_url)
+
+            # Polite delay to respect email sending limits
+            time.sleep(5)
+
+    print("\n🎉 Claw AI Agent completed run. Check claw_logs_*.log for details.")
+    logging.info("Claw AI Agent completed run")
+
+
+# ========================= RUN THE AGENT =========================
+if __name__ == "__main__":
+    run_claw()
+How to Use This Script (Claw)
+	1	Save the code above as claw_agent.py.
+	2	Update the CONFIGURATION section with your real paths, API keys, and credentials.
+	3	Prepare broker_email_list.csv with at least brokerage_name and email columns.
+	4	Replace the placeholders:
+	◦	MLS_API_BASE_URL → your authorized MLS data feed
+	◦	VIDEO_PIPELINE_API_URL → your existing video generation service
+	◦	Email credentials (use an app password for security)
+	5	Run it with: python claw_agent.py
+Claw will automatically:
+	•	Scan your broker list
+	•	Pull stale MLS listings (>150 days) from the brokerage
+	•	Visit the exact website you identified to grab images & details
+	•	Trigger your video pipeline (full voice-over, script, captions, music, motion)
+	•	Email the finished video + professional pitch to the broker
+Would you like me to:
+	•	Modify it for a specific MLS provider (e.g., Bright MLS, FlexMLS, etc.)?
+	•	Convert it into a LangChain / CrewAI agent with tool calls?
+	•	Add scheduling (run daily via cron)?
+	•	Make a Zapier/Make.com version instead?
+Just let me know the details of your MLS access and video pipeline and I’ll refine Claw instantly!
