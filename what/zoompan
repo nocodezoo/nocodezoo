@@ -1,0 +1,244 @@
+FFmpeg Pan Left & Pan Right with Zoom using Python
+
+Here are both effects built the same way as the zoom-out script — using zoompan with centered, controlled motion.
+
+🧠 Core Concepts Before the Code
+
+The zoompan filter controls three things per frame:
+z** — zoom level
+x** — horizontal pan position
+y** — vertical pan position (kept centered)
+
+For a pan, you hold a fixed zoom and move x linearly across the frame. The key formula for safe panning bounds is:
+max_x = iw - (iw/zoom)   ← rightmost safe x position
+At zoom 1.0, max_x = 0 (no room to pan), so you must zoom in slightly (e.g., 1.2x–1.5x) to have pixel space to pan across.
+
+✅ Pan Right (Left → Right) with Zoom
+
+Starts panned to the left edge, moves to the right edge over the duration.
+
+import subprocess
+
+def pan_right_zoom(
+    input_image: str,
+    output_video: str,
+    zoom: float = 1.3,          # Must be > 1.0 to have room to pan
+    duration_sec: int = 4,
+    fps: int = 25,
+    width: int = 1920,
+    height: int = 1080,
+):
+    total_frames = duration_sec * fps
+
+x moves from 0 (left) to max safe x (right)
+max x = iw - (iw/zoom)
+    x_expr = f"(iw-(iw/zoom))*(on/{total_frames})"
+
+y stays vertically centered throughout
+    y_expr = f"ih/2-(ih/zoom/2)"
+
+    zoompan_filter = (
+        f"zoompan="
+        f"z='{zoom}':"
+        f"x='{x_expr}':"
+        f"y='{y_expr}':"
+        f"d={total_frames}:"
+        f"s={width}x{height}:"
+        f"fps={fps}"
+    )
+
+    command = [
+        "ffmpeg",
+        "-loop", "1",
+        "-i", input_image,
+        "-vf", zoompan_filter,
+        "-c:v", "libx264",
+        "-crf", "18",
+        "-preset", "slow",
+        "-pix_fmt", "yuv420p",
+        "-t", str(duration_sec),
+        "-y",
+        output_video,
+    ]
+
+    print("Running FFmpeg Pan-Right command:")
+    print(" ".join(command))
+
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print("FFmpeg Error:\n", result.stderr)
+        raise RuntimeError("FFmpeg failed.")
+    else:
+        print(f"✅ Pan Right saved to: {output_video}")
+
+--- Usage ---
+pan_right_zoom(
+    input_image="input.jpg",
+    output_video="pan_right.mp4",
+    zoom=1.3,
+    duration_sec=4,
+    fps=25,
+    width=1920,
+    height=1080,
+)
+
+✅ Pan Left (Right → Left) with Zoom
+
+Starts panned to the right edge, moves to the left edge — simply the reverse of the x expression.
+
+import subprocess
+
+def pan_left_zoom(
+    input_image: str,
+    output_video: str,
+    zoom: float = 1.3,
+    duration_sec: int = 4,
+    fps: int = 25,
+    width: int = 1920,
+    height: int = 1080,
+):
+    total_frames = duration_sec * fps
+
+x moves from max safe x (right) back down to 0 (left)
+    x_expr = f"(iw-(iw/zoom))*(1-(on/{total_frames}))"
+
+y stays vertically centered throughout
+    y_expr = f"ih/2-(ih/zoom/2)"
+
+    zoompan_filter = (
+        f"zoompan="
+        f"z='{zoom}':"
+        f"x='{x_expr}':"
+        f"y='{y_expr}':"
+        f"d={total_frames}:"
+        f"s={width}x{height}:"
+        f"fps={fps}"
+    )
+
+    command = [
+        "ffmpeg",
+        "-loop", "1",
+        "-i", input_image,
+        "-vf", zoompan_filter,
+        "-c:v", "libx264",
+        "-crf", "18",
+        "-preset", "slow",
+        "-pix_fmt", "yuv420p",
+        "-t", str(duration_sec),
+        "-y",
+        output_video,
+    ]
+
+    print("Running FFmpeg Pan-Left command:")
+    print(" ".join(command))
+
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print("FFmpeg Error:\n", result.stderr)
+        raise RuntimeError("FFmpeg failed.")
+    else:
+        print(f"✅ Pan Left saved to: {output_video}")
+
+--- Usage ---
+pan_left_zoom(
+    input_image="input.jpg",
+    output_video="pan_left.mp4",
+    zoom=1.3,
+    duration_sec=4,
+    fps=25,
+    width=1920,
+    height=1080,
+)
+
+✅ Combined: Pan + Dynamic Zoom (Zoom IN while Panning)
+
+This is the most cinematic version — it pans right while simultaneously zooming in from 1.2x to 1.5x, like a classic Ken Burns effect.
+
+import subprocess
+
+def pan_right_with_zoom_in(
+    input_image: str,
+    output_video: str,
+    start_zoom: float = 1.2,
+    end_zoom: float = 1.5,
+    duration_sec: int = 4,
+    fps: int = 25,
+    width: int = 1920,
+    height: int = 1080,
+):
+    total_frames = duration_sec * fps
+    zoom_delta = end_zoom - start_zoom  # positive = zoom in
+
+Zoom increases linearly from start_zoom to end_zoom
+    zoom_expr = f"{start_zoom}+({zoom_delta}*(on/{total_frames}))"
+
+x pans right — uses current zoom value for safe bounding
+Since zoom changes per frame, we use the same dynamic expression
+    x_expr = f"(iw-(iw/({zoom_expr})))*(on/{total_frames})"
+
+y stays vertically centered
+    y_expr = f"ih/2-(ih/({zoom_expr})/2)"
+
+    zoompan_filter = (
+        f"zoompan="
+        f"z='{zoom_expr}':"
+        f"x='{x_expr}':"
+        f"y='{y_expr}':"
+        f"d={total_frames}:"
+        f"s={width}x{height}:"
+        f"fps={fps}"
+    )
+
+    command = [
+        "ffmpeg",
+        "-loop", "1",
+        "-i", input_image,
+        "-vf", zoompan_filter,
+        "-c:v", "libx264",
+        "-crf", "18",
+        "-preset", "slow",
+        "-pix_fmt", "yuv420p",
+        "-t", str(duration_sec),
+        "-y",
+        output_video,
+    ]
+
+    print("Running FFmpeg Pan-Right + Zoom-In command:")
+    print(" ".join(command))
+
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print("FFmpeg Error:\n", result.stderr)
+        raise RuntimeError("FFmpeg failed.")
+    else:
+        print(f"✅ Pan Right + Zoom In saved to: {output_video}")
+
+--- Usage ---
+pan_right_with_zoom_in(
+    input_image="input.jpg",
+    output_video="pan_right_zoom_in.mp4",
+    start_zoom=1.2,
+    end_zoom=1.5,
+    duration_sec=4,
+    fps=25,
+    width=1920,
+    height=1080,
+)
+
+📊 Effect Comparison Summary
+
+| Effect | Zoom | x Direction | y |
+|---|---|---|---|
+| Pan Right | Fixed (e.g. 1.3) | 0 → max_x | Centered |
+| Pan Left | Fixed (e.g. 1.3) | max_x → 0 | Centered |
+| Pan Right + Zoom In | 1.2 → 1.5 (dynamic) | 0 → max_x (dynamic) | Centered |
+| Pan Left + Zoom Out | 1.5 → 1.2 (dynamic) | max_x → 0 (dynamic) | Centered |
+
+📌 Critical Reminders
+
+Zoom must always be > 1.0** when panning — at zoom 1.0, max_x = 0 and there is literally no pixel space to move across.
+Input image resolution* must be large enough — at zoom 1.3 with 1920×1080 output, your image should be at least *~2496×1404px** to avoid any upscaling artifacts.
+To make Pan Left + Zoom Out, simply flip start_zoom/end_zoom in the combined script and reverse the x_expr direction using (1-(on/{total_frames})).
