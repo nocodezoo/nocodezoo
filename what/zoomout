@@ -1,0 +1,109 @@
+FFmpeg Zoom-Out Effect with Python
+
+Here's the most optimal way to achieve a zoom-out effect from 1.5x → 1.0x over 2 seconds using Python's subprocess module with FFmpeg.
+
+🔧 The Core FFmpeg zoompan Filter Logic
+
+The zoompan filter works frame-by-frame. At 25fps over 2 seconds = 50 frames total.
+
+The zoom formula for zooming out from 1.5 to 1.0:
+zoom = 1.5 - (0.5 * (on/50))
+Where on = current frame number (FFmpeg built-in variable).
+
+✅ Recommended Python Script
+
+import subprocess
+
+def zoom_out_video(
+    input_image: str,
+    output_video: str,
+    start_zoom: float = 1.5,
+    end_zoom: float = 1.0,
+    duration_sec: int = 2,
+    fps: int = 25,
+    width: int = 1920,
+    height: int = 1080,
+):
+    total_frames = duration_sec * fps
+    zoom_delta = start_zoom - end_zoom  # 0.5
+
+Zoom expression: linearly interpolates from start_zoom down to end_zoom
+    zoom_expr = f"{start_zoom}-({zoom_delta}*(on/{total_frames}))"
+
+Center the pan so the zoom stays anchored to the center
+    x_expr = f"iw/2-(iw/zoom/2)"
+    y_expr = f"ih/2-(ih/zoom/2)"
+
+    zoompan_filter = (
+        f"zoompan="
+        f"z='{zoom_expr}':"
+        f"x='{x_expr}':"
+        f"y='{y_expr}':"
+        f"d={total_frames}:"
+        f"s={width}x{height}:"
+        f"fps={fps}"
+    )
+
+    command = [
+        "ffmpeg",
+        "-loop", "1",                   # Loop the still image
+        "-i", input_image,              # Input image
+        "-vf", zoompan_filter,          # Apply the zoompan filter
+        "-c:v", "libx264",              # H.264 codec
+        "-pix_fmt", "yuv420p",          # Broad compatibility pixel format
+        "-t", str(duration_sec),        # Duration in seconds
+        "-y",                           # Overwrite output without asking
+        output_video,
+    ]
+
+    print("Running FFmpeg command:")
+    print(" ".join(command))
+
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print("FFmpeg Error:\n", result.stderr)
+        raise RuntimeError("FFmpeg failed.")
+    else:
+        print(f"✅ Output saved to: {output_video}")
+
+--- Usage ---
+zoom_out_video(
+    input_image="input.jpg",
+    output_video="zoom_out.mp4",
+    start_zoom=1.5,
+    end_zoom=1.0,
+    duration_sec=2,
+    fps=25,
+    width=1920,
+    height=1080,
+)
+
+🧠 Key Parameter Breakdown
+
+| Parameter | Value | Purpose |
+|---|---|---|
+| -loop 1 | Always on for images | Keeps the still image feeding frames |
+| z='...' | Linear zoom expression | Controls zoom per frame |
+| x= / y= | Center anchor formula | Prevents drift — keeps zoom centered |
+| d=50 | Total frames (2s × 25fps) | Duration of the effect |
+| fps=25 | Frames per second | Smoothness of animation |
+| pix_fmt yuv420p | Pixel format | Ensures compatibility with all players |
+| -t 2 | Output duration | Caps the video at exactly 2 seconds |
+
+⚡ Optional: High-Quality Output
+
+For better quality (e.g., for editing), swap the codec block with:
+"-c:v", "libx264",
+"-crf", "18",          # Lower = higher quality (18 is near-lossless)
+"-preset", "slow",     # Better compression efficiency
+
+Or for ProRes (if you're feeding it into a video editor):
+"-c:v", "prores_ks",
+"-profile:v", "3",     # ProRes 422 HQ
+
+📌 Key Tips
+
+Image resolution matters* — your input image must be *at least 1.5× larger** than your output resolution (e.g., for 1920×1080 output, your image should be at least ~2880×1620) to avoid pixelation at the starting zoom of 1.5x.
+The x and y center expressions (iw/2-(iw/zoom/2)) are critical — without them, the zoom will drift to the top-left corner.
+The on variable in FFmpeg's zoompan is 1-indexed (starts at 1, not 0), so the formula lands perfectly at end_zoom on the last frame.
