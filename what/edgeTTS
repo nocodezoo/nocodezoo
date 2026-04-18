@@ -1,0 +1,147 @@
+<speak version="1.0" xmlns="http://www.w3.org/2001/XmlSchema-instance"
+       xmlns:mstts="https://www.w3.org/2001/mstts"
+       xml:lang="en-US">
+
+  <!-- INTRO — Cheerful and energetic -->
+  <mstts:express-as style="cheerful">
+    Welcome! <break time="400ms"/>
+    I am <emphasis level="strong">so</emphasis> excited to show you this home today.
+    <break time="300ms"/>
+    I think you are genuinely going to fall in love with it.
+  </mstts:express-as>
+
+  <break strength="strong"/>
+
+  <!-- EXTERIOR -->
+  <mstts:express-as style="cheerful">
+    First, let's talk about what you see right here —
+    <break time="300ms"/>
+    the <emphasis level="strong">curb appeal</emphasis>.
+    <break time="200ms"/>
+    That gorgeous stone facade, the mature oak trees lining the driveway —
+    <prosody pitch="+8%" rate="95%">absolutely stunning.</prosody>
+    <break time="400ms"/>
+    And the front porch? Perfect for your morning coffee.
+    <break time="200ms"/>
+    Just <emphasis level="moderate">imagine</emphasis> sitting out here on a Sunday.
+  </mstts:express-as>
+
+  <break strength="x-strong"/>
+
+  <!-- FOYER — Building anticipation -->
+  Now, as we step inside —
+  <break time="600ms"/>
+  <prosody pitch="+5%" rate="90%">
+    take a moment to just <emphasis level="strong">take it all in.</emphasis>
+  </prosody>
+  <break time="500ms"/>
+  That ceiling is <emphasis level="moderate">eighteen feet</emphasis> high.
+  <break time="300ms"/>
+  And this <emphasis level="moderate">natural light</emphasis> flooding in from the skylight above —
+  <break time="400ms"/>
+  you simply cannot fake that.
+
+  <break strength="strong"/>
+
+  <!-- LIVING ROOM — Conversational and warm -->
+  <mstts:express-as style="cheerful">
+    Moving into the living room — oh, and <emphasis level="strong">wow</emphasis> —
+    <break time="300ms"/>
+    look at that <prosody pitch="+6%">fireplace.</prosody>
+    <break time="200ms"/>
+    Original brick, fully restored. <break time="300ms"/>
+    This is the kind of space where memories get made.
+  </mstts:express-as>
+
+  <break strength="strong"/>
+
+  <!-- KITCHEN — Enthusiastic -->
+  <mstts:express-as style="cheerful">
+    And now — <break time="400ms"/> the kitchen.
+    <break time="300ms"/>
+    I know, I <emphasis level="strong">know</emphasis> —
+    <prosody pitch="+10%" rate="105%">it is incredible.</prosody>
+    <break time="400ms"/>
+  </mstts:express-as>
+
+  Quartz countertops, <break time="200ms"/>
+  a <emphasis level="moderate">waterfall island</emphasis> that seats four comfortably,
+  <break time="300ms"/>
+  and <prosody rate="90%">top-of-the-line stainless appliances</prosody> — all included.
+  <break time="400ms"/>
+  The walk-in pantry alone is bigger than most studio apartments I have seen.
+
+  <break strength="x-strong"/>
+
+  <!-- A GENTLE HEADS UP — Slightly subdued -->
+  Now, <break time="300ms"/>
+  I do want to be <emphasis level="moderate">upfront</emphasis> with you.
+  <break time="300ms"/>
+  The primary bathroom is currently being <emphasis level="reduced">renovated</emphasis>.
+  <break time="400ms"/>
+  So what you see there today is mid-construction —
+  <break time="300ms"/>
+  but the finishes selected are <prosody pitch="+5%">absolutely gorgeous</prosody>
+  and it will be fully complete before closing.
+
+  <break strength="strong"/>
+
+  <!-- PRIMARY BEDROOM — Whisper moment -->
+  <mstts:express-as style="cheerful">
+    Now follow me down the hall — <break time="300ms"/>
+    and brace yourself —
+    <break time="500ms"/>
+  </mstts:express-as>
+
+  <mstts:express-as style="whisper">
+    this is the primary suite.
+  </mstts:express-as>
+
+  <break time="600ms"/>
+
+  <prosody pitch="+6%" rate="92%">
+    Over eight hundred square feet. <break time="300ms"/>
+    Private balcony. <break time="300ms"/>
+    His and hers walk-in closets.
+  </prosody>
+  <break time="400ms"/>
+  And that view of the backyard and the tree line beyond —
+  <break time="300ms"/>
+  <emphasis level="strong">there is nothing like waking up to that every single morning.</emphasis>
+
+  <break strength="x-strong"/>
+
+  <!-- BACKYARD — Building to a close -->
+  <mstts:express-as style="cheerful">
+    And finally — <break time="400ms"/> the backyard.
+    <break time="500ms"/>
+    Half an acre, fully fenced, with a <emphasis level="strong">heated saltwater pool</emphasis>
+    <break time="200ms"/>
+    and an outdoor kitchen that is fully plumbed and wired.
+    <break time="400ms"/>
+    Summer entertaining? <break time="300ms"/>
+    <prosody pitch="+12%" rate="108%">Done and done.</prosody>
+  </mstts:express-as>
+
+  <break strength="x-strong"/>
+
+  <!-- CLOSE — Warm and confident -->
+  So — <break time="400ms"/>
+  whether you are looking for a place to <emphasis level="moderate">raise a family</emphasis>,
+  <break time="200ms"/>
+  to <emphasis level="moderate">entertain in style</emphasis>,
+  <break time="200ms"/>
+  or simply to have a home that truly feels like a <emphasis level="strong">sanctuary</emphasis> —
+  <break time="500ms"/>
+  <prosody pitch="+5%" rate="93%">
+    this property checks every single box.
+  </prosody>
+
+  <break time="400ms"/>
+
+  <mstts:express-as style="cheerful">
+    I would love to hear your thoughts. <break time="300ms"/>
+    What questions do you have for me?
+  </mstts:express-as>
+
+</speak>
