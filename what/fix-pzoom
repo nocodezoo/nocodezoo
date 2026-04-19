@@ -1,0 +1,262 @@
+The main thing you’re doing wrong is mixing two different zoompan models.
+
+The core bug
+
+Your filter is using:
+
+d=1
+z='if(eq(on,0),2.0,max(1.0,zoom-STEP))'
+
+That combination is usually wrong if your input is a looped/repeated still image.
+
+With zoompan, there are two common patterns:
+
+| Pattern | Input style | d | State variable to use |
+|---|---:|---:|---|
+| Single still image | one input frame | d=n_frames | zoom works |
+| Looped/repeated image stream | many identical input frames | d=1 | pzoom, not zoom |
+
+Your code is a hybrid:
+d=1** says “one output frame per input frame”
+but zoom-STEP assumes zoom state persists the way it does inside a single-image / multi-output-frame setup
+
+That’s why the zoom often snaps or behaves incorrectly instead of animating smoothly.
+
+What zoom vs pzoom means here
+
+If you are feeding zoompan a repeated image stream and using d=1:
+
+zoom may effectively start from the default again for each new input frame
+pzoom is the previous output frame’s zoom
+So for a smooth animation across frames, you want:
+
+pzoom-STEP
+
+not
+
+zoom-STEP
+
+So this:
+
+if(eq(on,0),2.0,max(1.0,zoom-0.016667))
+
+should usually be:
+
+if(eq(on,0),2.0,max(1.0,pzoom-0.016667))
+
+Your second bug: the step is off by one
+
+If you want:
+
+frame 0 = 2.0
+final frame = 1.0
+
+and you have n_frames = 60, then you do not have 60 decrements after the initial frame.
+
+You have:
+
+frame indices 0..59
+so only 59 transitions
+
+That means:
+
+STEP = (START - END) / (n_frames - 1)
+
+not
+
+STEP = 1.0 / n_frames
+
+Example
+
+If:
+START = 2.0
+END = 1.0
+n_frames = 60
+
+then:
+
+STEP = 1.0 / 59 = 0.016949...
+
+Your current 1.0/60 = 0.016667 means the last visible frame lands around:
+
+2.0 - 59*(1/60) = 1.0167
+
+So it never quite reaches 1.0 during the 60-frame clip.
+
+Your third misunderstanding: what d=1 actually means
+
+This part of your explanation is shaky:
+d=1 means "advance to next frame every frame" at 30fps = 2 second slide
+
+Not exactly.
+
+d=1 means:
+
+generate 1 output frame for each input frame**
+
+It does not itself create a 2-second animation.
+
+So whether you get 2 seconds depends on:
+how many input frames are being fed in
+what the upstream input rate is
+whether you are looping the image
+whether -t 2 is trimming/extending output
+
+If the input is a single still frame and you use d=1, you do not get a real zoom animation. You basically get one computed frame, and the rest is just duration handling elsewhere.
+
+So your setup is only valid if you are already feeding a repeated image stream into zoompan.
+
+Your fourth issue: the scale + pad after zoompan is probably redundant or misleading
+
+You already have:
+
+zoompan ... :s=1920x1080
+
+That means zoompan is already outputting 1920x1080.
+
+Then you do:
+
+[zp]scale=1920:1080:force_original_aspect_ratio=increase,pad=1920:1080...
+
+That does not preserve the original aspect ratio of the source in the way you seem to think, because by that point zoompan has already rendered to 1920x1080.
+
+So:
+
+if the source AR handling matters, do it before zoompan
+if your source is already normalized for zoompan, this post-scale/pad is mostly unnecessary
+
+At minimum, it’s not helping the zoom logic.
+
+What to change
+
+If your input is a repeated/looped still stream and you want to keep d=1
+
+Use this:
+
+elif direction == 'zoom_out':
+    START, END = 2.0, 1.0
+    STEP = (START - END) / (n_frames - 1)
+    return (
+        f"[0:v]zoompan="
+        f"z='if(eq(on,0),{START},max({END},pzoom-{STEP:.6f}))':"
+        f"x='iw/2-(iw/zoom/2)':"
+        f"y='ih/2-(ih/zoom/2)':"
+        f"d=1:s={W}x{H}:fps={FPS}[out]"
+    )
+
+Why this is correct
+pzoom carries state across output frames
+STEP reaches exactly END on the last frame
+x/y stay centered
+
+If your input is a single still image, this is the cleaner design
+
+This is often the better version:
+
+elif direction == 'zoom_out':
+    START, END = 2.0, 1.0
+    STEP = (START - END) / (n_frames - 1)
+    return (
+        f"[0:v]zoompan="
+        f"z='max({END},{START}-on*{STEP:.6f})':"
+        f"x='iw/2-(iw/zoom/2)':"
+        f"y='ih/2-(ih/zoom/2)':"
+        f"d={n_frames}:s={W}x{H}:fps={FPS}[out]"
+    )
+
+This is better because:
+no dependence on zoom/pzoom state weirdness
+deterministic per-frame math
+easier to reason about
+ideal for a single image turned into a Ken Burns shot
+
+A few notes on your written explanation
+
+A few lines in your description are conceptually backward:
+
+1. This comment is wrong
+You wrote:
+Zoom OUT: zoom in from 1x to 2x
+
+That’s the opposite.
+
+For a zoom out effect, you want:
+
+start at 2.0
+decrease toward 1.0
+
+So the comment should be:
+
+Zoom OUT: start at 2x effective zoom, then decrease to 1x
+
+2. This sentence is wrong
+You wrote:
+As zoom decreases (zooming out), the visible area shrinks
+
+It’s the reverse.
+
+As zoom decreases:
+the crop gets larger
+the visible area grows
+the viewer sees more of the image
+
+3. This sentence is misleading
+You wrote:
+The camera appears to move closer to the subject then pull back
+
+For this filter, it should simply be:
+
+starts tight
+pulls back
+
+There is no “move closer then pull back” unless the animation actually goes both directions.
+
+Best-practice recommendation
+
+If this is a slideshow/property-video pipeline, I’d strongly recommend:
+
+Option A — single still in, d=n_frames
+Use:
+one image frame
+d=n_frames
+z='START - on*STEP'
+
+This is the simplest and most robust for still-image Ken Burns effects.
+
+Option B — looped input stream, d=1
+Only use this if your whole pipeline is already frame-based.
+Then use:
+pzoom
+not zoom
+
+Most likely corrected line for your current build scripts
+
+If you want the smallest change to your current code, this is probably it:
+
+elif direction == 'zoom_out':
+    START, END = 2.0, 1.0
+    STEP = (START - END) / (n_frames - 1)
+    return (
+        f"[0:v]zoompan="
+        f"z='if(eq(on,0),{START},max({END},pzoom-{STEP:.6f}))':"
+        f"x='iw/2-(iw/zoom/2)':"
+        f"y='ih/2-(ih/zoom/2)':"
+        f"d=1:s={W}x{H}:fps={FPS}[zp];"
+        f"[zp]setsar=1[out]"
+    )
+
+And unless you really need that post-processing, I would remove the extra scale,pad chain.
+
+In short
+
+You’re probably wrong in three places:
+
+Using zoom instead of pzoom with d=1
+Using 1.0/n_frames instead of 1.0/(n_frames-1)
+Treating d=1 as if it creates the full 2-second zoom by itself
+
+If you want, I can rewrite both the v1 and v3 filter blocks in a clean, drop-in form for:
+zoom_in**
+zoom_out**
+pan_left/right**
+with consistent frame math and exact end positions.
