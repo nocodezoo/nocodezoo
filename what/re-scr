@@ -1,0 +1,1059 @@
+You should build this as a config-driven real estate aggregation system, not as one giant scraper with hardcoded logic for 60 sites.
+
+Important constraint first: I can help you build a scraper that works on public, permitted pages, including static HTML, JSON-LD, and some JavaScript-rendered pages. I cannot help bypass bot protection, CAPTCHAs, login walls, or anti-scraping controls. For MLS coverage, the durable approach is to combine:
+
+Public brokerage and portal pages**
+Permitted IDX/VOW/RESO/API feeds where licensed**
+Regional source configs by state/metro**
+A canonical merge layer** that creates one “best” listing from multiple sources
+
+If your goal is the “perfect listing”, the key is not just scraping. It’s:
+
+Collecting listing candidates from many sources
+Normalizing fields into one shared schema
+Deduplicating the same home across multiple sites
+Merging the best details, description, and media into one canonical record
+Tracking provenance so you know where each field came from
+
+Recommended architecture
+
+Use one adapter per source, but keep the app generic enough that most sites can be configured in YAML instead of requiring custom code.
+
+Source types to support
+Static HTML pages**
+Pages with JSON-LD structured data**
+JavaScript-rendered pages**
+Public APIs / feed endpoints**
+Sitemap-driven discovery**
+
+Suggested nationwide coverage strategy
+Don’t think only in terms of “60 random websites.” Think in coverage layers:
+
+| Layer | Target count | Purpose |
+|---|---:|---|
+| National portals | 8–12 | Broad nationwide inventory |
+| Large franchise brokerage sites | 15–20 | Good national spread |
+| Regional brokerages by metro/state | 15–20 | Fill local gaps |
+| Specialty sites | 5–10 | Luxury, land, multifamily, rentals, new construction |
+| Licensed MLS/IDX/RESO feeds | As available | Highest quality, most structured |
+
+That gives you a practical path to 60 sources without pretending every source is equally scrapeable.
+
+Python application scaffold
+
+Below is a working starter application that does the right thing architecturally:
+
+Reads a sites.yaml registry
+Searches multiple configured sources
+Extracts listing details
+Supports static and JS-rendered pages
+Parses JSON-LD when present
+Stores source records in SQLite
+Builds merged canonical listings
+Keeps image/video URLs
+Scales to 60+ sources by config
+
+requirements.txt
+
+requests
+beautifulsoup4
+PyYAML
+playwright
+lxml
+
+If you want JavaScript rendering support:
+
+pip install -r requirements.txt
+playwright install chromium
+
+app.py
+
+from future import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sqlite3
+import time
+from dataclasses import dataclass, asdict, field
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlencode, urljoin, urlparse
+from urllib.robotparser import RobotFileParser
+
+import requests
+import yaml
+from bs4 import BeautifulSoup
+
+try:
+    from playwright.sync_api import sync_playwright
+except Exception:
+    sync_playwright = None
+
+----------------------------
+Models
+----------------------------
+
+@dataclass
+class Listing:
+    source_name: str
+    source_url: str
+    source_search_url: Optional[str] = None
+    external_id: Optional[str] = None
+    mls_id: Optional[str] = None
+
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+
+    price: Optional[float] = None
+    beds: Optional[float] = None
+    baths: Optional[float] = None
+    sqft: Optional[float] = None
+    lot_sqft: Optional[float] = None
+
+    property_type: Optional[str] = None
+    status: Optional[str] = None
+
+    description: Optional[str] = None
+    features: List[str] = field(default_factory=list)
+
+    image_urls: List[str] = field(default_factory=list)
+    video_urls: List[str] = field(default_factory=list)
+
+    broker_name: Optional[str] = None
+    agent_name: Optional[str] = None
+
+    scraped_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    raw: Dict[str, Any] = field(default_factory=dict)
+
+----------------------------
+Utilities
+----------------------------
+
+ROBOTS_CACHE: Dict[str, RobotFileParser] = {}
+
+def slugify(text: str) -> str:
+    text = text.strip().lower()
+    text = re.sub(r"+", "-", text)
+    return text.strip("-")
+
+def clean_text(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    value = re.sub(r"\s+", " ", value).strip()
+    return value or None
+
+def parse_num(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = str(value).replace(",", "")
+    m = re.search(r"(-?\d+(?:\.\d+)?)", s)
+    return float(m.group(1)) if m else None
+
+def parse_money(value: Any) -> Optional[float]:
+    return parse_num(value)
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def dedupe_key(listing: Listing) -> str:
+    if listing.mls_id:
+        return f"mls:{listing.mls_id}".lower()
+    parts = [
+        (listing.address or "").lower().strip(),
+        (listing.city or "").lower().strip(),
+        (listing.state or "").lower().strip(),
+        (listing.postal_code or "").lower().strip(),
+    ]
+    joined = "|".join(parts)
+    return "addr:" + hashlib.sha256(joined.encode("utf-8")).hexdigest()
+
+def completeness_score(l: Listing) -> int:
+    score = 0
+    fields = [
+        l.address, l.city, l.state, l.postal_code, l.price, l.beds, l.baths,
+        l.sqft, l.description, l.property_type, l.status, l.broker_name,
+        l.agent_name, l.lat, l.lon
+    ]
+    score += sum(1 for x in fields if x not in (None, "", []))
+    score += len(l.image_urls)
+    score += len(l.video_urls) * 2
+    score += len(l.features)
+    return score
+
+def get_robot_parser(base_url: str) -> RobotFileParser:
+    parsed = urlparse(base_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    if origin in ROBOTS_CACHE:
+        return ROBOTS_CACHE[origin]
+    rp = RobotFileParser()
+    rp.set_url(urljoin(origin, "/robots.txt"))
+    try:
+        rp.read()
+    except Exception:
+        pass
+    ROBOTS_CACHE[origin] = rp
+    return rp
+
+def allowed_by_robots(base_url: str, target_url: str, user_agent: str) -> bool:
+    try:
+        rp = get_robot_parser(base_url)
+        return rp.can_fetch(user_agent, target_url)
+    except Exception:
+        return True
+
+def first_text(soup: BeautifulSoup, selectors: List[str]) -> Optional[str]:
+    for sel in selectors or []:
+        node = soup.select_one(sel)
+        if node:
+            text = clean_text(node.get_text(" ", strip=True))
+            if text:
+                return text
+    return None
+
+def all_attrs(soup: BeautifulSoup, selectors: List[str], attr: str) -> List[str]:
+    values = []
+    for sel in selectors or []:
+        for node in soup.select(sel):
+            value = node.get(attr)
+            if value:
+                values.append(value.strip())
+    return list(dict.fromkeys(values))
+
+def extract_jsonld_objects(soup: BeautifulSoup) -> List[Dict[str, Any]]:
+    objects = []
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = script.string or script.get_text()
+        if not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        if isinstance(data, dict):
+            objects.append(data)
+        elif isinstance(data, list):
+            objects.extend([x for x in data if isinstance(x, dict)])
+    return objects
+
+def flatten_jsonld(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    out = []
+
+    def walk(obj: Any):
+        if isinstance(obj, dict):
+            out.append(obj)
+            for v in obj.values():
+                walk(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                walk(item)
+
+    walk(data)
+    return out
+
+def listing_from_jsonld(obj: Dict[str, Any], source_name: str, url: str) -> Optional[Listing]:
+    flat = flatten_jsonld(obj)
+    best = None
+    for node in flat:
+        node_type = node.get("@type")
+        if isinstance(node_type, list):
+            node_type = " ".join(node_type)
+
+        has_address = "address" in node
+        has_offer = "offers" in node or "price" in node
+        has_image = "image" in node
+
+        if has_address or has_offer or has_image:
+            best = node
+            break
+
+    if not best:
+        return None
+
+    address = best.get("address")
+    street = city = state = postal = None
+    if isinstance(address, dict):
+        street = address.get("streetAddress")
+        city = address.get("addressLocality")
+        state = address.get("addressRegion")
+        postal = address.get("postalCode")
+    elif isinstance(address, str):
+        street = address
+
+    offers = best.get("offers", {})
+    if isinstance(offers, list) and offers:
+        offers = offers[0]
+    if not isinstance(offers, dict):
+        offers = {}
+
+    images = []
+    image_field = best.get("image")
+    if isinstance(image_field, str):
+        images = [image_field]
+    elif isinstance(image_field, list):
+        images = [x for x in image_field if isinstance(x, str)]
+    elif isinstance(image_field, dict) and image_field.get("url"):
+        images = [image_field["url"]]
+
+    videos = []
+    video_field = best.get("video")
+    if isinstance(video_field, str):
+        videos = [video_field]
+    elif isinstance(video_field, list):
+        for item in video_field:
+            if isinstance(item, str):
+                videos.append(item)
+            elif isinstance(item, dict) and item.get("contentUrl"):
+                videos.append(item["contentUrl"])
+            elif isinstance(item, dict) and item.get("url"):
+                videos.append(item["url"])
+
+    return Listing(
+        source_name=source_name,
+        source_url=url,
+        external_id=best.get("@id") or best.get("sku"),
+        mls_id=best.get("identifier") if isinstance(best.get("identifier"), str) else None,
+        address=clean_text(street),
+        city=clean_text(city),
+        state=clean_text(state),
+        postal_code=clean_text(postal),
+        lat=parse_num(best.get("latitude") or best.get("geo", {}).get("latitude") if isinstance(best.get("geo"), dict) else None),
+        lon=parse_num(best.get("longitude") or best.get("geo", {}).get("longitude") if isinstance(best.get("geo"), dict) else None),
+        price=parse_money(offers.get("price") or best.get("price")),
+        beds=parse_num(best.get("numberOfBedrooms")),
+        baths=parse_num(best.get("numberOfBathroomsTotal") or best.get("numberOfBathrooms")),
+        sqft=parse_num(best.get("floorSize", {}).get("value") if isinstance(best.get("floorSize"), dict) else best.get("floorSize")),
+        property_type=clean_text(best.get("@type")),
+        status=clean_text(offers.get("availability") or best.get("availability")),
+        description=clean_text(best.get("description")),
+        image_urls=images,
+        video_urls=videos,
+        raw={"jsonld": best},
+    )
+
+----------------------------
+Fetching
+----------------------------
+
+class Fetcher:
+    def init(self, headers: Dict[str, str], timeout: int = 30):
+        self.session = requests.Session()
+        self.session.headers.update(headers)
+        self.timeout = timeout
+
+    def fetch(self, url: str, render_js: bool = False, wait_ms: int = 1500) -> Optional[str]:
+        if render_js:
+            return self.fetch_with_playwright(url, wait_ms=wait_ms)
+        try:
+            resp = self.session.get(url, timeout=self.timeout)
+            if resp.status_code in (403, 429):
+                print(f"[BLOCKED] {url} -> HTTP {resp.status_code}")
+                return None
+            resp.raise_for_status()
+            text = resp.text
+            lower = text.lower()
+            if "captcha" in lower or "access denied" in lower:
+                print(f"[BLOCKED] {url} -> captcha/access denied detected")
+                return None
+            return text
+        except Exception as e:
+            print(f"[ERROR] {url} -> {e}")
+            return None
+
+    def fetch_with_playwright(self, url: str, wait_ms: int = 1500) -> Optional[str]:
+        if sync_playwright is None:
+            print(f"[WARN] Playwright not installed, cannot render JS page: {url}")
+            return None
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.goto(url, wait_until="networkidle", timeout=45000)
+                page.wait_for_timeout(wait_ms)
+                html = page.content()
+                browser.close()
+                return html
+        except Exception as e:
+            print(f"[ERROR] JS fetch failed {url} -> {e}")
+            return None
+
+----------------------------
+Storage
+----------------------------
+
+class Storage:
+    def init(self, db_path: str):
+        self.conn = sqlite3.connect(db_path)
+        self.init_db()
+
+    def init_db(self):
+        cur = self.conn.cursor()
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS source_listings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dedupe_key TEXT,
+            source_name TEXT,
+            source_url TEXT UNIQUE,
+            payload_json TEXT,
+            scraped_at TEXT
+        )
+        """)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS canonical_listings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dedupe_key TEXT UNIQUE,
+            payload_json TEXT,
+            updated_at TEXT
+        )
+        """)
+        self.conn.commit()
+
+    def save_source(self, listing: Listing):
+        cur = self.conn.cursor()
+        cur.execute("""
+        INSERT OR REPLACE INTO source_listings
+        (dedupe_key, source_name, source_url, payload_json, scraped_at)
+        VALUES (?, ?, ?, ?, ?)
+        """, (
+            dedupe_key(listing),
+            listing.source_name,
+            listing.source_url,
+            json.dumps(asdict(listing), ensure_ascii=False),
+            listing.scraped_at
+        ))
+        self.conn.commit()
+
+    def save_canonical(self, key: str, payload: Dict[str, Any]):
+        cur = self.conn.cursor()
+        cur.execute("""
+        INSERT OR REPLACE INTO canonical_listings
+        (dedupe_key, payload_json, updated_at)
+        VALUES (?, ?, ?)
+        """, (
+            key,
+            json.dumps(payload, ensure_ascii=False),
+            now_iso()
+        ))
+        self.conn.commit()
+
+----------------------------
+Parsing and scraping
+----------------------------
+
+def discover_listing_links(search_soup: BeautifulSoup, site_cfg: Dict[str, Any], search_url: str) -> List[str]:
+    links = []
+
+1) Direct selectors
+    for sel in site_cfg.get("listing_link_selectors", []):
+        for a in search_soup.select(sel):
+            href = a.get("href")
+            if href:
+                links.append(urljoin(search_url, href))
+
+2) JSON-LD ItemList fallback
+    for obj in extract_jsonld_objects(search_soup):
+        if obj.get("@type") == "ItemList" and isinstance(obj.get("itemListElement"), list):
+            for item in obj["itemListElement"]:
+                if isinstance(item, dict):
+                    candidate = item.get("url")
+                    if not candidate and isinstance(item.get("item"), dict):
+                        candidate = item["item"].get("@id") or item["item"].get("url")
+                    if candidate:
+                        links.append(urljoin(search_url, candidate))
+
+    return list(dict.fromkeys(links))
+
+def parse_listing_page(soup: BeautifulSoup, site_cfg: Dict[str, Any], source_url: str, source_name: str) -> Optional[Listing]:
+Prefer JSON-LD if available
+    for obj in extract_jsonld_objects(soup):
+        listing = listing_from_jsonld(obj, source_name, source_url)
+        if listing:
+CSS fallback enrichments
+            cfg_fields = site_cfg.get("fields", {})
+            if not listing.address:
+                listing.address = first_text(soup, cfg_fields.get("address", []))
+            if not listing.city:
+                listing.city = first_text(soup, cfg_fields.get("city", []))
+            if not listing.state:
+                listing.state = first_text(soup, cfg_fields.get("state", []))
+            if not listing.postal_code:
+                listing.postal_code = first_text(soup, cfg_fields.get("postal_code", []))
+            if not listing.description:
+                listing.description = first_text(soup, cfg_fields.get("description", []))
+            if not listing.price:
+                listing.price = parse_money(first_text(soup, cfg_fields.get("price", [])))
+            if not listing.beds:
+                listing.beds = parse_num(first_text(soup, cfg_fields.get("beds", [])))
+            if not listing.baths:
+                listing.baths = parse_num(first_text(soup, cfg_fields.get("baths", [])))
+            if not listing.sqft:
+                listing.sqft = parse_num(first_text(soup, cfg_fields.get("sqft", [])))
+            listing.image_urls = list(dict.fromkeys(listing.image_urls + all_attrs(soup, site_cfg.get("image_selectors", []), "src")))
+            listing.video_urls = list(dict.fromkeys(listing.video_urls + all_attrs(soup, site_cfg.get("video_selectors", []), "src")))
+            return listing
+
+Pure CSS fallback
+    cfg_fields = site_cfg.get("fields", {})
+    listing = Listing(
+        source_name=source_name,
+        source_url=source_url,
+        address=first_text(soup, cfg_fields.get("address", [])),
+        city=first_text(soup, cfg_fields.get("city", [])),
+        state=first_text(soup, cfg_fields.get("state", [])),
+        postal_code=first_text(soup, cfg_fields.get("postal_code", [])),
+        description=first_text(soup, cfg_fields.get("description", [])),
+        price=parse_money(first_text(soup, cfg_fields.get("price", []))),
+        beds=parse_num(first_text(soup, cfg_fields.get("beds", []))),
+        baths=parse_num(first_text(soup, cfg_fields.get("baths", []))),
+        sqft=parse_num(first_text(soup, cfg_fields.get("sqft", []))),
+        lot_sqft=parse_num(first_text(soup, cfg_fields.get("lot_sqft", []))),
+        property_type=first_text(soup, cfg_fields.get("property_type", [])),
+        status=first_text(soup, cfg_fields.get("status", [])),
+        broker_name=first_text(soup, cfg_fields.get("broker_name", [])),
+        agent_name=first_text(soup, cfg_fields.get("agent_name", [])),
+        image_urls=all_attrs(soup, site_cfg.get("image_selectors", []), "src"),
+        video_urls=all_attrs(soup, site_cfg.get("video_selectors", []), "src"),
+        raw={}
+    )
+
+    if not any([listing.address, listing.description, listing.price, listing.image_urls]):
+        return None
+    return listing
+
+def format_search_url(template: str, query: Dict[str, Any]) -> str:
+    fmt = dict(query)
+    fmt["city_slug"] = slugify(query.get("city", ""))
+    fmt["state_slug"] = slugify(query.get("state", ""))
+    return template.format(**fmt)
+
+def scrape_site(fetcher: Fetcher, site_cfg: Dict[str, Any], query: Dict[str, Any], max_per_site: int) -> List[Listing]:
+    source_name = site_cfg["name"]
+    render_js = site_cfg.get("render_js", False)
+    wait_ms = int(site_cfg.get("wait_ms", 1500))
+    search_urls = [format_search_url(t, query) for t in site_cfg.get("search_urls", [])]
+    found: List[Listing] = []
+
+    for search_url in search_urls:
+        user_agent = fetcher.session.headers.get("User-Agent", "*")
+        if not allowed_by_robots(site_cfg["home_url"], search_url, user_agent):
+            print(f"[SKIP] robots.txt disallows search URL for {source_name}: {search_url}")
+            continue
+
+        html = fetcher.fetch(search_url, render_js=render_js, wait_ms=wait_ms)
+        if not html:
+            continue
+
+        soup = BeautifulSoup(html, "lxml")
+        links = discover_listing_links(soup, site_cfg, search_url)
+
+        for link in links[:max_per_site]:
+            if not allowed_by_robots(site_cfg["home_url"], link, user_agent):
+                print(f"[SKIP] robots.txt disallows listing URL for {source_name}: {link}")
+                continue
+
+            page_html = fetcher.fetch(link, render_js=render_js, wait_ms=wait_ms)
+            if not page_html:
+                continue
+
+            page_soup = BeautifulSoup(page_html, "lxml")
+            listing = parse_listing_page(page_soup, site_cfg, link, source_name)
+            if listing:
+                listing.source_search_url = search_url
+                found.append(listing)
+
+            time.sleep(site_cfg.get("delay_seconds", 1.0))
+
+    return found
+
+----------------------------
+Canonical merge
+----------------------------
+
+def merge_group(records: List[Listing]) -> Dict[str, Any]:
+    best = sorted(records, key=completeness_score, reverse=True)[0]
+
+    merged = asdict(best)
+    merged["sources"] = [r.source_url for r in records]
+    merged["source_names"] = sorted(list(set(r.source_name for r in records)))
+
+    merged["image_urls"] = list(dict.fromkeys(
+        url for r in records for url in r.image_urls if url
+    ))
+    merged["video_urls"] = list(dict.fromkeys(
+        url for r in records for url in r.video_urls if url
+    ))
+    merged["features"] = sorted(list(set(
+        feature for r in records for feature in r.features if feature
+    )))
+
+Fill missing scalar fields from other records
+    scalar_fields = [
+        "external_id", "mls_id", "address", "city", "state", "postal_code",
+        "lat", "lon", "price", "beds", "baths", "sqft", "lot_sqft",
+        "property_type", "status", "description", "broker_name", "agent_name"
+    ]
+    for field_name in scalar_fields:
+        if merged.get(field_name) in (None, "", []):
+            for r in records:
+                value = getattr(r, field_name)
+                if value not in (None, "", []):
+                    merged[field_name] = value
+                    break
+
+    merged["merged_at"] = now_iso()
+    return merged
+
+def build_canonical(listings: List[Listing]) -> Dict[str, Dict[str, Any]]:
+    groups: Dict[str, List[Listing]] = {}
+    for listing in listings:
+        key = dedupe_key(listing)
+        groups.setdefault(key, []).append(listing)
+    return {key: merge_group(items) for key, items in groups.items()}
+
+----------------------------
+Optional media download
+----------------------------
+
+def safe_filename(url: str) -> str:
+    h = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+    path = urlparse(url).path
+    ext = os.path.splitext(path)[1] or ".bin"
+    return f"{h}{ext}"
+
+def download_media(fetcher: Fetcher, canonical: Dict[str, Dict[str, Any]], out_dir: str):
+    os.makedirs(out_dir, exist_ok=True)
+
+    for key, payload in canonical.items():
+        listing_dir = os.path.join(out_dir, key.replace(":", "_"))
+        os.makedirs(listing_dir, exist_ok=True)
+
+        for url in payload.get("image_urls", []):
+            try:
+                r = fetcher.session.get(url, timeout=30, stream=True)
+                if r.status_code == 200:
+                    with open(os.path.join(listing_dir, safe_filename(url)), "wb") as f:
+                        for chunk in r.iter_content(8192):
+                            f.write(chunk)
+            except Exception:
+                pass
+
+For videos, often better to keep the URL unless explicitly permitted and needed.
+        with open(os.path.join(listing_dir, "video_urls.json"), "w", encoding="utf-8") as f:
+            json.dump(payload.get("video_urls", []), f, ensure_ascii=False, indent=2)
+
+----------------------------
+Main
+----------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Real estate multi-source listing aggregator")
+    parser.add_argument("--sites", required=True, help="Path to sites.yaml")
+    parser.add_argument("--db", default="listings.db", help="SQLite DB path")
+    parser.add_argument("--city", required=True)
+    parser.add_argument("--state", required=True)
+    parser.add_argument("--postal-code", default="")
+    parser.add_argument("--min-price", type=int, default=0)
+    parser.add_argument("--max-price", type=int, default=0)
+    parser.add_argument("--beds", type=int, default=0)
+    parser.add_argument("--max-per-site", type=int, default=20)
+    parser.add_argument("--download-media", action="store_true")
+    parser.add_argument("--media-dir", default="media")
+    args = parser.parse_args()
+
+    with open(args.sites, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    headers = cfg.get("default_headers", {
+        "User-Agent": "ListingAggregatorBot/1.0 (+contact@example.com)"
+    })
+    fetcher = Fetcher(headers=headers, timeout=30)
+    storage = Storage(args.db)
+
+    query = {
+        "city": args.city,
+        "state": args.state,
+        "postal_code": args.postal_code,
+        "min_price": args.min_price,
+        "max_price": args.max_price,
+        "beds": args.beds
+    }
+
+    all_records: List[Listing] = []
+
+    for site_cfg in cfg.get("sites", []):
+        print(f"\n=== Scraping {site_cfg['name']} ===")
+        try:
+            records = scrape_site(fetcher, site_cfg, query, args.max_per_site)
+            print(f"[INFO] {site_cfg['name']} -> {len(records)} listings")
+            for rec in records:
+                storage.save_source(rec)
+            all_records.extend(records)
+        except Exception as e:
+            print(f"[ERROR] {site_cfg['name']} failed -> {e}")
+
+    canonical = build_canonical(all_records)
+    for key, payload in canonical.items():
+        storage.save_canonical(key, payload)
+
+    if args.download_media:
+        download_media(fetcher, canonical, args.media_dir)
+
+    print(f"\nDone.")
+    print(f"Source records: {len(all_records)}")
+    print(f"Canonical listings: {len(canonical)}")
+    print(f"DB: {args.db}")
+
+if name == "main":
+    main()
+
+sites.yaml
+
+This is where you scale from 5 to 60+ sites. Most of your maintenance burden will live here.
+
+default_headers:
+  User-Agent: "ListingAggregatorBot/1.0 (+contact@example.com)"
+
+sites:
+  name: "Example National Portal"
+    home_url: "https://www.example-national-portal.com"
+    render_js: false
+    delay_seconds: 1.0
+    wait_ms: 1500
+    search_urls:
+      "https://www.example-national-portal.com/homes/{state_slug}/{city_slug}?minPrice={min_price}&maxPrice={max_price}"
+    listing_link_selectors:
+      "a.property-card"
+      "a.listing-link"
+    image_selectors:
+      "img[property='contentUrl']"
+      ".gallery img"
+    video_selectors:
+      "video source"
+      "iframe[data-video-src]"
+    fields:
+      address: ["h1.address", ".listing-address"]
+      city: [".city"]
+      state: [".state"]
+      postal_code: [".zip"]
+      price: [".price", "[data-test='price']"]
+      beds: [".beds", "[data-test='beds']"]
+      baths: [".baths", "[data-test='baths']"]
+      sqft: [".sqft", "[data-test='sqft']"]
+      lot_sqft: [".lot-size"]
+      property_type: [".property-type"]
+      status: [".listing-status"]
+      description: [".description", "[data-test='description']"]
+      broker_name: [".broker-name"]
+      agent_name: [".agent-name"]
+
+  name: "Example JS Brokerage"
+    home_url: "https://www.example-brokerage.com"
+    render_js: true
+    delay_seconds: 1.5
+    wait_ms: 2500
+    search_urls:
+      "https://www.example-brokerage.com/search?city={city_slug}&state={state}&min={min_price}&max={max_price}"
+    listing_link_selectors:
+      "a[href*='/listing/']"
+      "a.card-link"
+    image_selectors:
+      ".gallery img"
+    video_selectors:
+      "video source"
+    fields:
+      address: ["h1", ".address"]
+      city: [".city"]
+      state: [".state"]
+      postal_code: [".postal"]
+      price: [".price"]
+      beds: [".beds"]
+      baths: [".baths"]
+      sqft: [".sqft"]
+      description: [".description"]
+
+  name: "Example Regional Site"
+    home_url: "https://www.example-regional-realty.com"
+    render_js: false
+    delay_seconds: 1.0
+    search_urls:
+      "https://www.example-regional-realty.com/{state_slug}/{city_slug}/homes-for-sale"
+    listing_link_selectors:
+      "article a"
+      ".result-card a"
+    image_selectors:
+      ".listing-gallery img"
+    video_selectors:
+      "video source"
+    fields:
+      address: ["h1.address"]
+      city: [".city"]
+      state: [".state"]
+      postal_code: [".zip"]
+      price: [".price"]
+      beds: [".beds"]
+      baths: [".baths"]
+      sqft: [".sqft"]
+      description: [".remarks"]
+
+How to run it
+
+python app.py \
+  --sites sites.yaml \
+  --db listings.db \
+  --city Austin \
+  --state TX \
+  --min-price 250000 \
+  --max-price 900000 \
+  --max-per-site 25 \
+  --download-media
+
+What this gives you
+
+This app already supports the core workflow:
+
+Search many sources by city/state
+Extract:
+  listing details
+  description
+  image URLs
+  video URLs
+Store source listings
+Merge duplicates into canonical listings
+Download media optionally
+
+How to make it production-grade
+
+The scaffold above is a good foundation, but for a real nationwide product you should add the following.
+
+1. Add a source registry
+Create a separate table or YAML/CSV file with:
+
+source_name
+site_type (html, jsonld, js, api, sitemap)
+coverage_states
+coverage_metros
+priority
+requires_license
+allowed_by_terms
+last_verified_at
+
+That lets you answer:
+
+Which sources cover Arizona only
+Which sources cover Dallas metro
+Which sources are licensed feeds
+Which sources are currently blocked
+Which sources are worth retrying
+
+2. Improve deduplication
+The current dedupe key is intentionally simple.
+
+For better matching, use a weighted match on:
+
+mls_id
+normalized full address
+geocode proximity
+price similarity
+sqft similarity
+bedroom/bathroom similarity
+
+A strong merge strategy is:
+
+Exact MLS ID if available
+Else exact normalized address
+Else fuzzy address + city/state + price window
+Else geo proximity + size/price similarity
+
+3. Keep field provenance
+For the “perfect listing,” store where each field came from.
+
+Example:
+
+{
+  "price": 649000,
+  "price_source": "Source A",
+  "description": "Expanded listing remarks...",
+  "description_source": "Source B",
+  "image_urls": ["..."],
+  "image_sources": ["Source A", "Source C"]
+}
+
+That is extremely useful when listings conflict across websites.
+
+4. Prefer structured data first
+Many real estate pages expose:
+
+JSON-LD
+Open Graph metadata
+Embedded hydration JSON
+Next.js / Nuxt / Apollo state blobs
+
+Those are much more stable than brittle CSS selectors.
+
+A better extraction order is:
+
+JSON-LD
+Embedded page JSON
+API calls exposed by the page
+CSS selectors
+Manual fallback parser
+
+5. Handle JavaScript carefully
+For JS sites, only render when necessary.
+
+Use this decision tree:
+
+If page HTML already contains listing data → use normal HTTP
+If only shell HTML is returned → use Playwright
+If the site relies on XHR/GraphQL and it is public → call that endpoint directly if permitted
+If blocked by login/CAPTCHA → mark unsupported and move on
+
+That keeps your system faster and cheaper.
+
+6. Respect rate limits and robots.txt
+You explicitly mentioned bot protection. The right production behavior is:
+
+Respect robots.txt
+Use clear identification in your user agent
+Throttle per site
+Back off on 429
+Stop on CAPTCHA / access denied
+Do not rotate identities to evade blocks
+
+That is both safer and easier to maintain long term.
+
+7. Use licensed feeds wherever possible
+Because MLS is fragmented state by state, a pure scraping strategy will always be fragile.
+
+For serious coverage, mix scraping with:
+
+RESO Web API**
+IDX feeds**
+VOW feeds**
+brokerage syndication feeds
+public listing APIs where allowed
+
+That is where you’ll get the best nationwide consistency.
+
+A practical 60-source rollout plan
+
+Here’s how I would implement this in phases.
+
+Phase 1 — foundation
+Build and validate the core on 5–10 sources:
+
+2 national portals
+3 major brokerage networks
+2 regional brokerages
+1 JS-heavy source
+1 source using JSON-LD
+1 source using embedded JSON
+
+Goal:
+prove the merge model
+test dedupe quality
+validate image/video collection
+
+Phase 2 — expand to 25
+Add:
+
+major franchise brokerages
+regionally important brokerages in top metros
+specialty sites for luxury, land, and multifamily
+
+Goal:
+broaden coverage
+identify common parser patterns
+improve source registry and health monitoring
+
+Phase 3 — expand to 60
+Add:
+
+more regional brokerage sources
+public search portals with geographic specialization
+licensed state/regional feed integrations where available
+
+Goal:
+achieve broad national footprint
+reduce dependence on brittle HTML scraping
+
+What I would change in the next version of the code
+
+If you want this to become a real product, the next refactor should be:
+
+File structure
+
+real_estate_aggregator/
+├── app/
+│   ├── main.py
+│   ├── models.py
+│   ├── storage.py
+│   ├── fetcher.py
+│   ├── dedupe.py
+│   ├── merger.py
+│   ├── media.py
+│   ├── registry.py
+│   └── sources/
+│       ├── base.py
+│       ├── generic_html.py
+│       ├── generic_jsonld.py
+│       ├── generic_js.py
+│       └── api_feed.py
+├── configs/
+│   ├── sites.yaml
+│   └── states.yaml
+├── tests/
+├── requirements.txt
+└── README.md
+
+That makes it much easier to maintain 60 source adapters.
+
+What this application still does not do
+
+To be clear, this scaffold does not magically solve:
+
+anti-bot bypass
+private MLS access without permission
+CAPTCHA solving
+login-protected pages
+selector maintenance for 60 live sites
+legal review for each source’s terms
+
+It solves the application design problem and gives you the right foundation to build a compliant nationwide aggregator.
+
+Best business/technical recommendation
+
+If your end goal is a real national listing intelligence platform, the strongest approach is:
+
+Use licensed MLS/IDX/RESO data where possible**
+Supplement with brokerage/public portal scraping where permitted**
+Normalize and merge all records into one canonical listing**
+Treat scraping as one input channel, not the only channel**
+
+That gives you far better coverage than trying to brute-force 60 unrelated websites.
+
+Summary
+
+You do not want one scraper. You want a source registry + adapter framework + canonical merge engine.
+
+The code above gives you a solid Python starter that:
+
+searches multiple real estate sources
+extracts listing details, descriptions, and media
+supports HTML and JS-rendered pages
+stores raw source records
+merges duplicates into better canonical listings
+
+If you want, I can next turn this into either:
+
+a full multi-file production repo, or
+a version with FastAPI + REST endpoints + PostgreSQL so it behaves like a real internal listings platform.
