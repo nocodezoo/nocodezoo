@@ -1,0 +1,32 @@
+import subprocess
+
+# Durations for 25 slides total
+durations = (
+    [2] * 10 +   # slides 1-10
+    [1] * 5 +    # slides 11-15
+    [2] * 5 +    # slides 16-20
+    [1] * 3 +    # slides 21-23
+    [2] * 2      # slides 24-25
+)
+
+with open("slides.txt", "w") as f:
+    for i, duration in enumerate(durations, start=1):
+        filename = f"slide{i:02d}.png"
+        f.write(f"file '{filename}'\n")
+        f.write(f"duration {duration}\n")
+
+    # FFmpeg concat demuxer needs the last file repeated
+    f.write(f"file 'slide{len(durations):02d}.png'\n")
+
+cmd = [
+    "ffmpeg",
+    "-y",
+    "-f", "concat",
+    "-safe", "0",
+    "-i", "slides.txt",
+    "-vsync", "vfr",
+    "-pix_fmt", "yuv420p",
+    "output.mp4"
+]
+
+subprocess.run(cmd, check=True)
