@@ -1,0 +1,563 @@
+**AI agent flow for ModelVideo**
+
+Use this as a **production-ready multi-stage agent workflow** for turning a model URL into:
+
+- a **profile understanding**
+- a **public web + social 360 view**
+- a **viral-style 800-word voiceover**
+- a **music recommendation**
+- a **final packaged output**
+
+---
+
+## 1. Goal
+
+The system takes a **URL that contains a model’s images and details**, then:
+
+1. Fetches the page HTML and media.
+2. Extracts the visible facts and images.
+3. Identifies who the model is.
+4. Searches public sources to build a **360° profile**.
+5. Analyzes the image vibe, persona, and audience appeal.
+6. Writes an **800-word voiceover** that feels like *the person in the visuals is speaking directly to the viewer in the present moment*.
+7. Recommends the **best background song direction** for virality.
+8. Outputs a structured brief for video production.
+
+---
+
+## 2. High-level architecture
+
+```text
+Input URL
+   ↓
+Page Fetch Agent
+   ↓
+HTML + Image Extraction Agent
+   ↓
+Identity Resolution Agent
+   ↓
+Public Web Research Agent
+   ↓
+Social Discovery Agent
+   ↓
+Persona + Visual Analysis Agent
+   ↓
+Voiceover Strategy Agent
+   ↓
+800-Word Script Generator
+   ↓
+Music Recommendation Agent
+   ↓
+Compliance + Quality Review Agent
+   ↓
+Final Output Package
+```
+
+---
+
+## 3. Agent-by-agent flow
+
+### A. Input / Task Orchestrator
+**Purpose:** Receive the URL and control the full pipeline.
+
+**Input**
+- Model page URL
+- Optional campaign goal:
+  - *viral short-form*
+  - *luxury/editorial*
+  - *fashion brand promo*
+  - *fan edit / hype reel*
+
+**Output**
+- Run ID
+- Normalized task spec
+- Routing config for downstream agents
+
+**Key logic**
+- Validate URL.
+- Detect if page is accessible.
+- Detect whether page is a portfolio, ecommerce listing, casting profile, or editorial page.
+- Create a shared memory object:
+  - `subject_name`
+  - `source_url`
+  - `images[]`
+  - `public_profile_facts[]`
+  - `social_profiles[]`
+  - `style_keywords[]`
+  - `script_constraints`
+
+---
+
+### B. Page Fetch Agent
+**Purpose:** Pull raw source material from the provided URL.
+
+**Actions**
+- Fetch page HTML
+- Resolve canonical URL
+- Download image URLs
+- Capture:
+  - title
+  - meta description
+  - structured data
+  - visible text blocks
+  - alt text
+  - captions
+  - linked socials if present
+
+**Output**
+```json
+{
+  "page_title": "",
+  "meta_description": "",
+  "html_text": "",
+  "image_urls": [],
+  "captions": [],
+  "possible_name_mentions": [],
+  "linked_socials": []
+}
+```
+
+**Notes**
+- Ignore low-value boilerplate like nav, footer, cookie text.
+- Prefer hero section, bio section, captions, credits, and page headings.
+
+---
+
+### C. HTML + Image Parsing Agent
+**Purpose:** Turn the page into structured intelligence.
+
+**Extract**
+- Model name
+- Agency / brand
+- Photographer / campaign credits
+- Location hints
+- Style descriptors
+- Clothing / aesthetic cues
+- Repeated nouns and adjectives
+- Mood implied by page copy
+
+**Image analysis**
+For each image:
+- framing: close-up, mid, full body
+- expression: serious, playful, seductive, soft, distant, confident
+- styling: editorial, street, luxury, beauty, swim, runway
+- palette: muted, warm, monochrome, saturated
+- energy: intimate, dominant, dreamy, magnetic, high-fashion
+
+**Output**
+```json
+{
+  "identity_candidates": [],
+  "visual_summary": {
+    "dominant_mood": "",
+    "style_tags": [],
+    "persona_tags": []
+  },
+  "image_insights": []
+}
+```
+
+---
+
+### D. Identity Resolution Agent
+**Purpose:** Figure out **who the model is** with high confidence.
+
+**Method**
+- Use extracted name candidates.
+- Match page clues with:
+  - agency pages
+  - portfolio pages
+  - editorial mentions
+  - public interviews
+  - tagged socials
+- Score confidence:
+  - exact name match
+  - same face across public profiles
+  - same agency or campaign references
+  - same location/style overlaps
+
+**Decision output**
+- `confirmed_identity`
+- `confidence_score`
+- `needs_human_review: true/false`
+
+**Important safeguard**
+If identity confidence is weak, do **not** invent details. Fall back to:
+- “the model in the provided visuals”
+- only facts directly supported by public material
+
+---
+
+### E. Public Web Research Agent
+**Purpose:** Build a **360 view** using public information only.
+
+**Research targets**
+- official site
+- agency profile
+- fashion editorials
+- interviews
+- brand campaigns
+- runway or modeling credits
+- press mentions
+- public bios
+
+**Extract**
+- how they are publicly positioned
+- recurring themes in public descriptions
+- fashion niche
+- audience perception
+- brand associations
+- tone of coverage
+
+**Output**
+```json
+{
+  "public_facts": [],
+  "editorial_positioning": [],
+  "brand_associations": [],
+  "descriptive_language_used_by_media": []
+}
+```
+
+**Constraint**
+Keep it to **publicly available, professional, relevance-based** information.
+
+---
+
+### F. Social Discovery Agent
+**Purpose:** Find the model’s public social presence.
+
+**Platforms to check**
+- Instagram
+- TikTok
+- X
+- YouTube
+- agency-linked socials
+- Threads or public link-in-bio pages if relevant
+
+**Extract from each**
+- username
+- follower scale if visible
+- content style
+- posting themes
+- tone/personality cues
+- high-performing content types
+- visual consistency
+- audience energy
+
+**Output**
+```json
+{
+  "social_profiles": [
+    {
+      "platform": "Instagram",
+      "handle": "",
+      "url": "",
+      "content_themes": [],
+      "tone": "",
+      "engagement_style": ""
+    }
+  ]
+}
+```
+
+**Best use**
+This is not to write a biography. It’s to understand:
+- what image the audience already responds to
+- what tone will feel native and viral
+
+---
+
+## 4. Insight synthesis layer
+
+### G. Persona + Visual Analysis Agent
+**Purpose:** Combine page visuals + public web + socials into a usable creative profile.
+
+**Create**
+- **Presence archetype**  
+  Examples:
+  - untouchable editorial muse
+  - soft-spoken magnetism
+  - dangerous elegance
+  - playful luxury
+  - modern femme energy
+  - cool-girl dominance
+
+- **Viewer hook style**
+  Examples:
+  - direct seduction
+  - mystery
+  - power gaze
+  - softness with tension
+  - luxury fantasy
+  - intimate confession
+
+- **Viral angle**
+  Examples:
+  - “she doesn’t chase attention, attention follows her”
+  - “this is what confidence looks like when it doesn’t ask permission”
+  - “you weren’t scrolling, you were being pulled in”
+
+**Output**
+```json
+{
+  "persona_core": "",
+  "audience_hook": "",
+  "viral_angle": "",
+  "visual_language": [],
+  "tone_rules": []
+}
+```
+
+---
+
+## 5. Voiceover generation logic
+
+### H. Voiceover Strategy Agent
+**Purpose:** Set the rules before writing the script.
+
+Because you said:
+
+- **Do not talk about her history**
+- **Talk like she is alive in the image**
+- **She is talking directly to the viewer**
+- **The goal is attention and virality**
+
+the strategy should be:
+
+### Required voiceover style
+- written in **present tense**
+- second-person / direct-address heavy
+- seductive, magnetic, intimate, cinematic
+- no biography
+- no dates, backstory, or “she started as…”
+- every paragraph should feel like a **moment happening now**
+- build emotional escalation
+- strong opening in first 2 sentences
+- multiple “scroll-stopping” lines
+
+### Script structure
+1. **Hook** – stop the viewer instantly
+2. **Presence** – describe what the viewer feels looking at her
+3. **Power** – frame her as impossible to ignore
+4. **Intimacy** – make it feel personal
+5. **Tension** – she sees you / challenges you
+6. **Fantasy** – pull viewer deeper
+7. **Closure** – unforgettable final line
+
+---
+
+### I. 800-word Script Generator
+**Prompt design**
+
+Use a prompt like:
+
+> Write an approximately 800-word voiceover for a short cinematic video montage using the subject’s provided images.  
+> Do not describe her history, biography, timeline, or career path.  
+> Write as if the woman in the images is alive in the present moment and speaking directly to the viewer without literally using quotation marks for every line.  
+> The tone should be magnetic, intimate, seductive, confident, elegant, and viral-ready.  
+> The script should feel like a hypnotic stream of attention-grabbing lines designed for short-form video.  
+> Use present tense.  
+> Avoid cringe, clichés, and generic empowerment copy.  
+> Base the tone on the extracted persona, visual cues, and public-facing image.  
+> Include multiple high-retention lines in the first 15 seconds.  
+> End on a line that lingers.
+
+**Quality checks**
+- ~800 words
+- no fabricated personal claims
+- no private info
+- no history section
+- no lifeless fashion-caption style
+- no repetitive sentence rhythm
+- emotionally escalating flow
+
+---
+
+## 6. Music recommendation layer
+
+### J. Music Recommendation Agent
+**Purpose:** Recommend the right soundtrack for the edit.
+
+Instead of only picking a random song, this agent should output:
+
+1. **ideal music profile**
+2. **commercial song option**
+3. **royalty-free alternative**
+4. **edit timing guidance**
+
+### Best music direction for this kind of video
+For a viral model montage with intimate, commanding voiceover, the strongest fit is usually:
+
+- **dark pop**
+- **cinematic alt-pop**
+- **slow burn electronic**
+- **luxury bass pulse**
+- **breathy female vocal texture or instrumental with heartbeat rhythm**
+
+### Strong recommendation
+**Commercial vibe:** *“After Dark” – Mr.Kitty*  
+Why it works:
+- hypnotic
+- moody
+- sensual
+- instantly atmospheric
+- supports a slow, magnetic image sequence
+
+### Safer production recommendation
+If licensing matters, choose a **royalty-free dark-pop / cinematic synth track** with:
+- 85–102 BPM
+- deep sub bass
+- sparse drums
+- airy pads
+- a subtle rise every 8 bars
+- no overpowering vocal topline if there is narration
+
+### Music output format
+```json
+{
+  "music_direction": "dark cinematic synth-pop",
+  "reference_track": "After Dark - Mr.Kitty",
+  "royalty_free_profile": {
+    "bpm": "90-100",
+    "mood": ["hypnotic", "luxury", "night", "magnetic"],
+    "instruments": ["deep bass", "airy pads", "minimal percussion", "soft synth pulse"]
+  }
+}
+```
+
+---
+
+## 7. Compliance and safety layer
+
+### K. Compliance + Quality Review Agent
+**Purpose:** Keep output sharp, accurate, and safe.
+
+**Checks**
+- only public professional information used
+- no doxxing
+- no private speculation
+- no fabricated relationships or personal history
+- no false claims about mental state, private life, or unverified facts
+- no sexualized content that becomes explicit
+- keep it **alluring, not explicit**
+- if social accounts are uncertain, label them as *possible matches* or exclude them
+
+---
+
+## 8. Final deliverable format
+
+The pipeline should return:
+
+### 1. Subject Snapshot
+- confirmed name
+- confidence level
+- source URL
+- primary aesthetic
+
+### 2. 360 View
+- public positioning
+- style/persona traits
+- social tone
+- audience appeal
+
+### 3. Video Creative Direction
+- hook style
+- pacing
+- edit vibe
+- caption ideas
+- color grade suggestions
+
+### 4. 800-word voiceover
+- final ready-to-record script
+
+### 5. Music recommendation
+- best track direction
+- backup royalty-free direction
+
+---
+
+## 9. Suggested final output schema
+
+```json
+{
+  "subject_snapshot": {},
+  "research_summary": {},
+  "social_summary": {},
+  "persona_model": {},
+  "video_direction": {},
+  "voiceover_script": "",
+  "music_recommendation": {},
+  "confidence_notes": []
+}
+```
+
+---
+
+## 10. Best-practice prompt stack
+
+A very effective sequencing is:
+
+### Prompt 1: Extract facts
+“From this HTML and these image cues, extract only supported facts and likely identity signals.”
+
+### Prompt 2: Research synthesis
+“Summarize public web and social presence into a concise creative persona without inventing facts.”
+
+### Prompt 3: Viral positioning
+“Convert this persona into a viral short-form viewer hook and emotional tone.”
+
+### Prompt 4: Voiceover writing
+“Write the 800-word direct-address cinematic script in present tense.”
+
+### Prompt 5: QC pass
+“Remove biography, remove unsupported claims, sharpen hook density, improve memorability.”
+
+---
+
+## 11. My recommendation for the exact voiceover style
+
+For the kind of result you want, the script should feel like this:
+
+- **not documentary**
+- **not biographical**
+- **not brand copy**
+- **not a resume**
+- **not overly poetic to the point of sounding fake**
+
+It should feel like:
+
+- “you looked once, and now you’re still here”
+- “she doesn’t ask for attention, she redirects it”
+- “every frame feels like a dare”
+- “you think you’re watching her, but really she’s already holding your focus”
+
+That is the lane that gives you the **viral luxury/magnetic edit** effect.
+
+---
+
+## 12. Best single background-song suggestion
+
+**Best fit:** **“After Dark” – Mr.Kitty**
+
+If you want the same feeling but safer for commercial use, use a **royalty-free dark synth-pop instrumental** with:
+- **90 BPM**
+- soft atmospheric pad
+- deep pulse bass
+- minimal percussion
+- no busy melody under narration
+
+---
+
+## 13. Summary
+
+This flow should be built as a **research → identity → social discovery → persona synthesis → script generation → music recommendation** pipeline.
+
+The most important creative rule is this:
+
+**The script should not explain who she was. It should make the viewer feel like she is already here, already looking back, already impossible to scroll past.**
+
+If you want, I can next turn this into either:
+
+1. a **Mermaid agent-flow diagram**, or  
+2. a **JSON workflow spec for n8n / LangGraph / CrewAI / OpenAI Agents**.
