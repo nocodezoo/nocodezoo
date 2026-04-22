@@ -1,0 +1,758 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vybord v2.2 — Turn Property Photos into Stunning Video Walkthroughs</title>
+  <meta name="generator" content="v2.1 — mint/slate/lavender redesign + scroll fade-in">
+  <meta name="description" content="Transform MLS photos into scroll-stopping real estate video walkthroughs powered by AI. No editing required. Start free today." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root {
+      --bg: #0f0f11;
+      --bg-light: #B0E0E6;
+      --surface: #18181b;
+      --surface2: #222226;
+      --border: #2e2e33;
+      --text: #ffffff;
+      --text-muted: #c8cdd6;
+      --text-dark: #1a1a1a;
+      --text-muted-dark: #555555;
+      --accent: #778899;
+      --accent-hover: #9aa8b4;
+      --mint: #B0E0E6;
+      --slate: #778899;
+      --lavender: #E6E6FA;
+    }
+    html { color: var(--text); }
+    body { color: var(--text); background: var(--bg); }
+      --text: #ffffff;
+      --text-muted: #a1a1aa;
+      --text-dim: #71717a;
+      
+      
+      
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: var(--text); text-decoration: none; }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Poppins', sans-serif; }
+
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(15,15,17,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.35rem; letter-spacing: -0.5px; color: #ffffff; }
+    .logo span { background: linear-gradient(135deg, #B0E0E6, #778899, #E6E6FA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .nav-links { display: flex; gap: 20px; align-items: center; }
+    .powered-badge { font-size: 0.72rem; color: var(--text-dim); display: flex; align-items: center; gap: 5px; }
+    .powered-badge strong { color: var(--text-muted); }
+    .nav-links a { font-size: 0.875rem; color: var(--text-muted); transition: color 0.2s, opacity 0.2s; }
+    .nav-links a:hover { color: var(--slate); }
+    .btn-nav { background: var(--slate); color: #000 !important; padding: 8px 20px; border-radius: 8px; font-weight: 700; font-size: 0.875rem; transition: background 0.2s; }
+    .btn-nav:hover { background: var(--accent-hover) !important; color: #000 !important; }
+
+    .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 130px 24px 80px; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; top: -20%; left: 50%; transform: translateX(-50%); width: 700px; height: 700px; background: radial-gradient(circle, rgba(119,136,153,0.12) 0%, transparent 65%); pointer-events: none; }
+    .hero::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 200px; background: linear-gradient(to top, var(--bg), transparent); pointer-events: none; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(119,136,153,0.12); border: 1px solid rgba(119,136,153,0.2); color: #E6E6FA; padding: 6px 16px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 24px; position: relative; z-index: 1; }
+    .hero h1 { font-size: clamp(3.6rem, 9vw, 5.7rem); font-weight: 800; line-height: 1.08; letter-spacing: -1.5px; max-width: 820px; margin-bottom: 20px; position: relative; z-index: 1; }
+    .hero h1 .highlight { background: linear-gradient(135deg, #B0E0E6, #778899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub { font-size: clamp(1rem, 2vw, 1.15rem); color: var(--text-muted); max-width: 520px; margin-bottom: 36px; line-height: 1.7; position: relative; z-index: 1; }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; position: relative; z-index: 1; }
+    .btn-primary { background: var(--slate); color: #000; padding: 14px 30px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(119,136,153,0.2); }
+    .btn-secondary { background: var(--surface); color: var(--text); padding: 14px 28px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; border: 1px solid var(--border); transition: all 0.2s; cursor: pointer; }
+    .btn-secondary:hover { background: var(--surface2); border-color: rgba(255,255,255,0.5); }
+    .hero-note { font-size: 0.78rem; color: rgba(255,255,255,0.5); position: relative; z-index: 1; }
+
+    .demo-videos { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 720px; margin: 40px auto 0; width: 100%; position: relative; z-index: 1; }
+    .demo-video-wrap { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #000; aspect-ratio: 16/9; max-width: 100%; }
+    .demo-video-wrap video { width: 100%; height: 100%; object-fit: cover; display: block; outline: none; cursor: pointer; }
+    .demo-video-wrap:hover { border-color: rgba(119,136,153,0.32); }
+    .demo-video-wrap video::-webkit-media-controls { display: none !important; }
+    .demo-video-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 18px 16px; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%); pointer-events: none; }
+    .demo-video-label h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 2px; }
+    .demo-video-label p { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+    .demo-video-tag { position: absolute; top: 14px; left: 14px; background: rgba(119,136,153,0.85); color: #fff; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 10px; border-radius: 6px; }
+    .demo-video-wrap .mute-hint { position: absolute; bottom: 54px; right: 12px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.65rem; padding: 3px 8px; border-radius: 5px; pointer-events: none; display: flex; align-items: center; gap: 4px; }
+
+    .section { padding: 90px 24px; }
+    .section-dark { background: var(--bg); }
+    .section-light { background: var(--bg-light); }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-label { text-transform: uppercase; font-size: 0.72rem; font-weight: 700; letter-spacing: 2.5px; color: var(--slate); margin-bottom: 12px; }
+    .section-title { font-size: clamp(1.7rem, 4vw, 2.6rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 14px; line-height: 1.12; }
+    .section-sub { color: var(--text-muted); font-size: 1rem; max-width: 520px; margin-bottom: 56px; line-height: 1.75; }
+
+    /* Light section text overrides — dark text on powderblue */
+    .section-light { color: var(--text-dark); }
+    .section-light .section-label { color: var(--slate); }
+    .section-light .section-title { color: var(--text-dark); }
+    .section-light .section-sub { color: var(--text-muted-dark); }
+    .section-light a { color: var(--text-dark); }
+    .section-light .step-card { background: #ffffff; border-color: rgba(0,0,0,0.1); color: var(--text-dark); }
+    .section-light .step-card:hover { border-color: rgba(119,136,153,0.4); }
+    .section-light .step-card h3 { color: var(--text-dark); }
+    .section-light .step-card p { color: var(--text-muted-dark); }
+    .section-light .feature-card { background: #ffffff; border-color: rgba(0,0,0,0.1); color: var(--text-dark); }
+    .section-light .feature-card:hover { border-color: rgba(119,136,153,0.35); }
+    .section-light .feature-card h3 { color: var(--text-dark); }
+    .section-light .feature-card p { color: var(--text-muted-dark); }
+    .section-light .feature-icon { color: var(--slate); }
+    .section-light .step-num { color: rgba(119,136,153,0.2); }
+    .section-light .plan-card { background: #ffffff; border-color: rgba(0,0,0,0.1); color: var(--text-dark); }
+    .section-light .plan-card:hover { border-color: rgba(119,136,153,0.35); }
+    .section-light .plan-name { color: var(--text-muted-dark); }
+    .section-light .plan-price { color: var(--text-dark); }
+    .section-light .plan-desc { color: var(--text-muted-dark); }
+    .section-light .plan-features li { color: var(--text-muted-dark); }
+    .section-light .plan-btn-outline { border-color: rgba(0,0,0,0.2); color: var(--text-dark); }
+    .section-light .plan-btn-outline:hover { border-color: var(--slate); color: var(--slate); }
+    .section-light .plan-btn-accent { background: var(--slate); color: #ffffff; }
+    .section-light .plan-btn-accent:hover { background: var(--accent-hover); }
+    .section-light .plan-card.popular { border-color: var(--slate); }
+    .section-light .plan-note { color: var(--text-muted-dark); }
+    .section-light .compare th, .section-light .compare td { color: var(--text-dark); border-color: rgba(0,0,0,0.1); }
+    .section-light .compare td i.fa-check { color: #22c55e; }
+    .section-light .compare td i.fa-xmark { color: rgba(0,0,0,0.3); }
+    .section-light table.compare tr:hover td { background: rgba(119,136,153,0.04); }
+    .section-light .faq-q { color: var(--text-dark); }
+    .section-light .faq-a p { color: var(--text-muted-dark); }
+
+    .social-proof { text-align: center; padding: 80px 24px; border-top: 1px solid rgba(0,0,0,0.12); border-bottom: 1px solid rgba(0,0,0,0.12); background: var(--bg-light); color: #1a1a1a; }
+    .social-proof .proof-stat { color: var(--slate); }
+    .social-proof .proof-label { color: #555555; }
+    #293C7C; }
+    #293C7C; }
+    .proof-stat { font-family: 'Poppins', sans-serif; font-size: clamp(3.6rem, 9vw, 5.7rem); font-weight: 800; color: var(--slate); line-height: 1; margin-bottom: 6px; }
+    .proof-label { color: #555555; }
+
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .step-card { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 30px 26px; transition: border-color 0.25s, transform 0.25s; }
+    .step-card:hover { border-color: rgba(119,136,153,0.32); transform: translateY(-5px); }
+    .step-num { font-family: 'Poppins', sans-serif; font-size: 2.8rem; font-weight: 800; color: rgba(119,136,153,0.15); line-height: 1; margin-bottom: 14px; }
+    .step-icon { width: 50px; height: 50px; background: rgba(119,136,153,0.12); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #E6E6FA; margin-bottom: 16px; }
+    .step-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+    .step-card p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.7; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .feature-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 26px; transition: border-color 0.2s; }
+    .feature-card:hover { border-color: rgba(119,136,153,0.28); }
+    .feature-icon { font-size: 1.3rem; color: #E6E6FA; margin-bottom: 14px; }
+    .feature-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.7; }
+
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }
+    .plan-card { background: var(--bg); border: 1px solid var(--border); border-radius: 24px; padding: 32px 26px; position: relative; transition: transform 0.25s, border-color 0.25s; }
+    .plan-card:hover { transform: translateY(-4px); }
+    .plan-card.popular { border-color: var(--slate); box-shadow: 0 0 0 1px var(--slate), 0 20px 60px rgba(119,136,153,0.12); }
+    .popular-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--slate); color: #fff; font-size: 0.7rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 16px; border-radius: 100px; white-space: nowrap; }
+    .plan-name { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 8px; }
+    .plan-price { font-family: 'Poppins', sans-serif; font-size: 2.8rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .plan-price sup { font-size: 1.2rem; font-weight: 600; vertical-align: super; }
+    .plan-price span { font-size: 0.9rem; font-weight: 400; color: rgba(255,255,255,0.5); }
+    .plan-desc { font-size: 0.83rem; color: rgba(255,255,255,0.5); margin-bottom: 24px; min-height: 44px; }
+    .plan-features { list-style: none; margin-bottom: 28px; }
+    .plan-features li { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; }
+    .plan-features li i.fa-check { color: #22c55e; font-size: 0.75rem; }
+    .plan-features li i.fa-xmark { color: rgba(255,255,255,0.5); font-size: 0.75rem; }
+    .plan-btn { display: block; width: 100%; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.9rem; text-align: center; border: none; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+    .plan-btn-outline { border: 1.5px solid var(--border); color: var(--text); background: transparent; }
+    .plan-btn-outline:hover { border-color: #E6E6FA; color: var(--slate); }
+    .plan-btn-accent { background: var(--slate); color: #ffffff; }
+    .plan-btn-accent:hover { background: var(--accent-hover); }
+    .plan-note { text-align: center; margin-top: 20px; font-size: 0.78rem; color: rgba(255,255,255,0.5); }
+
+    .pricing-compare { margin-top: 60px; overflow-x: auto; }
+    table.compare { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.compare th, table.compare td { padding: 13px 16px; border-bottom: 1px solid var(--border); text-align: left; }
+    table.compare th { color: var(--text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px; }
+    table.compare td i { font-size: 0.75rem; }
+    table.compare td i.fa-check { color: #22c55e; }
+    table.compare td i.fa-xmark { color: rgba(255,255,255,0.5); }
+    table.compare tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .faq-list { max-width: 680px; margin: 0 auto; }
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-q { width: 100%; background: none; border: none; color: inherit; font-size: 0.95rem; font-weight: 600; font-family: 'Poppins', sans-serif; padding: 20px 0; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; transition: color 0.2s; }
+    .faq-q:hover { color: var(--slate); }
+    .faq-q i { transition: transform 0.3s; flex-shrink: 0; color: #E6E6FA; font-size: 0.8rem; }
+    .faq-q.open i { transform: rotate(45deg); }
+    .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+    .faq-a.open { max-height: 250px; }
+    .faq-a p { color: var(--text-muted); font-size: 0.875rem; line-height: 1.8; padding-bottom: 20px; }
+
+    .cta-section { text-align: center; padding: 100px 24px; position: relative; background: var(--surface); }
+    .cta-section::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 600px; height: 600px; background: radial-gradient(circle, rgba(119,136,153,0.08) 0%, transparent 65%); pointer-events: none; }
+    .cta-section h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 14px; line-height: 1.12; position: relative; z-index: 1; }
+    .cta-section p { color: var(--text-muted); font-size: 1rem; margin-bottom: 32px; max-width: 440px; margin-left: auto; margin-right: auto; position: relative; z-index: 1; }
+    .cta-form { display: flex; gap: 10px; max-width: 420px; margin: 0 auto 14px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
+    .cta-form input { flex: 1; min-width: 200px; padding: 14px 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem; outline: none; transition: border-color 0.2s; font-family: 'Inter', sans-serif; }
+    .cta-form input:focus { border-color: var(--slate); }
+    .cta-form input::placeholder { color: rgba(255,255,255,0.5); }
+    .cta-note { font-size: 0.75rem; color: rgba(255,255,255,0.5); position: relative; z-index: 1; }
+    .cta-note i { color: #E6E6FA; margin-right: 4px; }
+
+    footer { border-top: 1px solid var(--border); padding: 52px 24px 28px; background: rgba(15,15,17,0.9); }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: start; gap: 40px; flex-wrap: wrap; }
+    .footer-brand .logo { margin-bottom: 12px; }
+    .footer-brand p { font-size: 0.83rem; color: rgba(255,255,255,0.5); max-width: 240px; line-height: 1.7; }
+    .footer-col h4 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px; }
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: 8px; }
+    .footer-col ul li a { font-size: 0.875rem; color: rgba(255,255,255,0.5); transition: color 0.2s; }
+    .footer-col ul li a:hover { color: var(--slate); }
+    .footer-bottom { max-width: 1100px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: rgba(255,255,255,0.5); flex-wrap: wrap; gap: 12px; }
+    .footer-social { display: flex; gap: 16px; }
+    .footer-social a { color: rgba(255,255,255,0.5); font-size: 1rem; transition: color 0.2s; }
+    .footer-social a:hover { color: var(--slate); }
+
+    .toast { position: fixed; bottom: 28px; right: 28px; background: #22c55e; color: #fff; padding: 14px 22px; border-radius: 12px; font-weight: 700; font-size: 0.9rem; z-index: 9999; transform: translateY(140%); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 8px 30px rgba(0,0,0,0.5); display: none; }
+    .toast.show { display: block; transform: translateY(0); }
+    .toast.error { background: #ef4444; color: #ffffff; }
+
+    @media (max-width: 768px) {
+      * { overflow-x: hidden; }
+      body { overflow-x: hidden; }
+      .nav-links { display: none; }
+      .demo-videos { grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px; }
+      .demo-video-wrap { aspect-ratio: 16/9; max-height: none; }
+      .steps-grid, .features-grid, .pricing-grid { grid-template-columns: 1fr; }
+      .hero { padding: 110px 16px 60px; }
+      .section { padding: 70px 16px; }
+      .hero-badge { font-size: 0.68rem; padding: 5px 12px; }
+      h1 { font-size: clamp(1.8rem, 8vw, 3rem) !important; }
+    }
+    @media (max-width: 480px) {
+      .demo-videos { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .demo-video-wrap { aspect-ratio: 16/9; }
+    }
+
+    #videoModal { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; flex-direction:column; }
+    #videoModal.open { display:flex; }
+    #videoModal .close-btn { position:absolute; top:20px; right:24px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:1.4rem; width:44px; height:44px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10001; transition:background 0.2s; }
+    #videoModal .close-btn:hover { background:rgba(255,255,255,0.2); }
+    #videoModal .modal-box { position:relative; max-width:900px; width:95%; border-radius:16px; overflow:hidden; box-shadow:0 30px 80px rgba(0,0,0,0.8); }
+    #videoModal video { width:100%; display:block; background:#000; max-height:85vh; }
+    #videoModal .modal-label { position:absolute; bottom:0; left:0; right:0; padding:16px 20px; background:linear-gradient(to top,rgba(0,0,0,0.85),transparent); pointer-events:none; }
+    #videoModal .modal-label h4 { font-family:'Poppins',sans-serif; font-size:0.95rem; font-weight:700; color:#fff; margin:0; }
+    #videoModal .modal-label p { font-size:0.78rem; color:#a1a1aa; margin:4px 0 0; }
+    .demo-thumb { width:100%; aspect-ratio:9/16; border-radius:14px; overflow:hidden; cursor:pointer; position:relative; background:#18181b; display:flex; align-items:center; justify-content:center; transition:transform 0.25s,border-color 0.25s; }
+    .demo-thumb:hover { transform:translateY(-6px); border-color:rgba(119,136,153,0.32); }
+    .demo-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .demo-thumb .play-btn { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); transition:background 0.2s; }
+    .demo-thumb:hover .play-btn { background:rgba(0,0,0,0.5); }
+    .demo-thumb .play-btn i { font-size:2.5rem; color:#fff; filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
+    .demo-thumb .thumb-label { position:absolute; bottom:0; left:0; right:0; padding:40px 16px 14px; background:linear-gradient(to top,rgba(0,0,0,0.8),transparent); }
+    .demo-thumb .thumb-label h4 { font-size:0.85rem; font-weight:700; margin-bottom:2px; }
+    .demo-thumb .thumb-label p { font-size:0.72rem; color:#a1a1aa; }
+    .demo-thumb .thumb-tag { position:absolute; top:14px; left:14px; background:rgba(119,136,153,0.85); color:#000; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; padding:4px 10px; border-radius:6px; }
+
+    /* ===== SCROLL FADE-IN ANIMATIONS ===== */
+    .fade-in-section {
+      opacity: 0;
+      transform: translateY(22vh);
+      transition: opacity 1000ms ease-out, transform 700ms ease-out;
+      will-change: opacity, transform;
+    }
+    .fade-in-section.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Respect motion preferences — no animation for users who opt out */
+    @media (prefers-reduced-motion: reduce) {
+      .fade-in-section {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+    }
+    .step-card.fade-in-section,
+    .feature-card.fade-in-section,
+    .plan-card.fade-in-section,
+    .faq-item.fade-in-section { transform: translateY(28px); }
+    .step-card.fade-in-section.is-visible,
+    .feature-card.fade-in-section.is-visible,
+    .plan-card.fade-in-section.is-visible,
+    .faq-item.fade-in-section.is-visible { transform: translateY(0); }
+    .social-proof.fade-in-section { transform: translateY(12px); }
+    .social-proof.fade-in-section.is-visible { transform: translateY(0); }
+
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="logo"><span>Vybord</span></a>
+    <div class="nav-links" style="gap:16px;">
+      <div class="powered-badge"><i class="fa-solid fa-bolt" style="color:var(--slate);"></i> Powered by <strong>OpenClaw</strong></div>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="/login.html" class="btn-nav" style="background:rgba(255,255,255,0.08) !important;color:#fff !important;border:1px solid rgba(255,255,255,0.25) !important;">Login</a>
+      <a href="/register.html" class="btn-nav" style="background:#B0E0E6 !important;color:#1a1a2e !important;border:none !important;font-weight:600;">Sign Up Free</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge"><i class="fa-solid fa-sparkles"></i> AI-Powered Real Estate Video &nbsp;&middot;&nbsp; Built on <strong>OpenClaw</strong></div>
+  <h1>Turn MLS Photos Into <span class="highlight" style="background: linear-gradient(135deg, #778899, #9aa8b4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Scroll-Stopping Video</span> Walkthroughs</h1>
+  <p class="hero-sub">Transform listing photos into professional real estate videos powered by AI — no editing skills required. Ready to post in minutes.</p>
+  <div class="hero-actions">
+    <a href="/register.html" class="btn-primary">Start Free Today <i class="fa-solid fa-arrow-right"></i></a>
+    <a href="#how-it-works" class="btn-secondary">See How It Works</a>
+  </div>
+  <p class="hero-note"><i class="fa-solid fa-shield-halved"></i> 14-day free trial &nbsp;&middot;&nbsp; No credit card required &nbsp;&middot;&nbsp; Cancel anytime</p>
+
+  <div class="demo-videos">
+    <div class="demo-video-wrap" style="cursor:pointer;" onclick="openModal('demo1_18_final.mp4','Exterior &amp; Living Spaces','Pool, fitness center, lanai &amp; more')">
+      <video autoplay muted loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;">
+        <source src="demo1_18_final.mp4" type="video/mp4" />
+      </video>
+      <div class="demo-video-tag">Demo 1</div>
+      <div class="demo-video-label">
+        <h4>Exterior &amp; Living Spaces</h4>
+        <p>Tap to unmute &amp; play</p>
+      </div>
+      <div class="mute-hint"><i class="fa-solid fa-play"></i> Click to play</div>
+    </div>
+    <div class="demo-video-wrap" style="cursor:pointer;" onclick="openModal('demo_kb_18.mp4','Property Walkthrough','Luxury real estate video style')">
+      <video autoplay muted loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;">
+        <source src="demo_kb_18.mp4" type="video/mp4" />
+      </video>
+      <div class="demo-video-tag">Demo 2</div>
+      <div class="demo-video-label">
+        <h4>Property Walkthrough</h4>
+        <p>Tap to unmute &amp; play</p>
+      </div>
+      <div class="mute-hint"><i class="fa-solid fa-play"></i> Click to play</div>
+    </div>
+  </div>
+</section>
+
+<div class="social-proof">
+  <div class="proof-stat">300+</div>
+  <div class="proof-label" style="color:#555555; font-size:2.1rem !important;">Trusted by Real Estate Professionals</div>
+</div>
+
+<section class="section section-dark" id="how-it-works">
+  <div class="container">
+    <p class="section-label">How It Works</p>
+    <h2 class="section-title">Upload. Brand. Post.</h2>
+    <p class="section-sub">Three steps from listing photos to a professional video your clients will love.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+        <h3>Upload Photos</h3>
+        <p>Drop your MLS listing photos (JPG or PNG) or paste a share link. Our AI handles the rest — no on-site shoot or editing software needed.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-icon"><i class="fa-solid fa-palette"></i></div>
+        <h3>Brand It</h3>
+        <p>Pick your color theme, add agent branding, MLS details, and logos. Customize text overlays with precise placement control per scene.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-icon"><i class="fa-solid fa-cloud-arrow-down"></i></div>
+        <h3>Export & Post</h3>
+        <p>Download HD videos or share via direct links with full tracking. Choose from 16:9, 9:16, or 1:1 aspect ratios — perfect for every platform.</p>
+      </div>
+    </div>
+
+    
+
+<section class="section section-light" id="features">
+  <div class="container">
+    <p class="section-label">Features</p>
+    <h2 class="section-title">Everything You Need to Stand Out</h2>
+    <p class="section-sub">Professional video production without the professional production overhead.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <h3>Smart AI Auto-Captions</h3>
+        <p>Automatically generate captions for all your uploaded photos. No manual typing required — every frame gets perfectly timed text.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-camera-retro"></i></div>
+        <h3>Auto Camera Moves</h3>
+        <p>Vybord applies smooth pans, dolly-ins, and reveal shots automatically. Choose from multiple camera styles and timings per scene.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-sliders"></i></div>
+        <h3>Full Creative Control</h3>
+        <p>Reorder photos, change music, update branding, and regenerate videos as many times as you need. No limits, no surprises.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-palette"></i></div>
+        <h3>Personalized Colors</h3>
+        <p>Personalize UI color themes to match your brand identity. Your videos, your look — every single time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-download"></i></div>
+        <h3>Download & Share</h3>
+        <p>Download HD videos or share via Vybord links with full performance tracking built in. Full control over every post.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-music"></i></div>
+        <h3>Background Music Library</h3>
+        <p>Pick from a curated library of professional music tracks. Every video gets the right vibe, automatically matched to the mood.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-dark">
+  <div class="container">
+    <p class="section-label">Who It's For</p>
+    <h2 class="section-title">Built for Growth-Minded Real Estate Pros</h2>
+    <div class="steps-grid" style="margin-top: 40px;">
+      <div class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-house"></i></div>
+        <h3>Listing Agents</h3>
+        <p>More views, more showings, more offers. Turn every listing into a scroll-stopping video that gets real results.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-camera"></i></div>
+        <h3>Photographers</h3>
+        <p>Deliver video alongside your photos without extra post-production work. Same turnaround, double the impact.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-building"></i></div>
+        <h3>Brokerages & Teams</h3>
+        <p>Standardize on-brand video across every listing. Agent branding and MLS details baked in automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-light" id="pricing">
+  <div class="container">
+    <p class="section-label">Pricing</p>
+    <h2 class="section-title">Simple, Transparent Pricing</h2>
+    <p class="section-sub">No confusing credit systems. Clear monthly plans with exactly what you need.</p>
+    <div class="pricing-grid">
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price"><sup>$</sup>0 <span>/month</span></div>
+        <p class="plan-desc">Perfect for trying out Vybord. Create your first videos risk-free.</p>
+        <ul class="plan-features">
+          <li><i class="fa-solid fa-check"></i> 3 videos per month</li>
+          <li><i class="fa-solid fa-check"></i> Up to 3 photos per video</li>
+          <li><i class="fa-solid fa-check"></i> AI-generated captions</li>
+          <li><i class="fa-solid fa-check"></i> Background music library</li>
+          <li><i class="fa-solid fa-check"></i> Multiple aspect ratios</li>
+          <li><i class="fa-solid fa-xmark"></i> <span style="color:var(--text-dim)">No watermark removal</span></li>
+        </ul>
+        <button class="plan-btn plan-btn-outline" onclick="handlePlanClick('free')">Try Free</button>
+      </div>
+      <div class="plan-card popular">
+        <div class="popular-badge">Most Popular</div>
+        <div class="plan-name">Standard</div>
+        <div class="plan-price"><sup>$</sup>44 <span>/month</span></div>
+        <p class="plan-desc">For agents who need consistent, professional video every month.</p>
+        <ul class="plan-features">
+          <li><i class="fa-solid fa-check"></i> 5 videos per month</li>
+          <li><i class="fa-solid fa-check"></i> Up to 10 photos per video</li>
+          <li><i class="fa-solid fa-check"></i> No watermark</li>
+          <li><i class="fa-solid fa-check"></i> AI-generated captions</li>
+          <li><i class="fa-solid fa-check"></i> Background music library</li>
+          <li><i class="fa-solid fa-check"></i> Add-on credits available</li>
+        </ul>
+        <button class="plan-btn plan-btn-accent" onclick="handlePlanClick('standard')">Choose Standard</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Premium</div>
+        <div class="plan-price"><sup>$</sup>89 <span>/month</span></div>
+        <p class="plan-desc">For teams and power users who need maximum output and full branding.</p>
+        <ul class="plan-features">
+          <li><i class="fa-solid fa-check"></i> 12 videos per month</li>
+          <li><i class="fa-solid fa-check"></i> Up to 10 photos per video</li>
+          <li><i class="fa-solid fa-check"></i> No watermark</li>
+          <li><i class="fa-solid fa-check"></i> Agent branding &amp; MLS details</li>
+          <li><i class="fa-solid fa-check"></i> Priority support</li>
+          <li><i class="fa-solid fa-check"></i> Add-on credits available</li>
+        </ul>
+        <button class="plan-btn plan-btn-outline" onclick="handlePlanClick('premium')">Choose Premium</button>
+      </div>
+    </div>
+    <p class="plan-note">All plans include a 14-day free trial. No credit card required. Cancel anytime.</p>
+
+    <div class="pricing-compare">
+      <table class="compare">
+        <thead>
+          <tr><th>Feature</th><th>Free</th><th>Standard</th><th>Premium</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Videos per month</td><td>3</td><td>5</td><td>12</td></tr>
+          <tr><td>Photos per video</td><td>Up to 3</td><td>Up to 10</td><td>Up to 10</td></tr>
+          <tr><td>AI-generated captions</td><td><i class="fa-solid fa-check"></i></td><td><i class="fa-solid fa-check"></i></td><td><i class="fa-solid fa-check"></i></td></tr>
+          <tr><td>Background music library</td><td><i class="fa-solid fa-check"></i></td><td><i class="fa-solid fa-check"></i></td><td><i class="fa-solid fa-check"></i></td></tr>
+          <tr><td>Watermark</td><td>Yes</td><td>Removed</td><td>Removed</td></tr>
+          <tr><td>Agent branding &amp; MLS details</td><td><i class="fa-solid fa-xmark"></i></td><td><i class="fa-solid fa-xmark"></i></td><td><i class="fa-solid fa-check"></i></td></tr>
+          <tr><td>Add-on credits</td><td><i class="fa-solid fa-xmark"></i></td><td><i class="fa-solid fa-check"></i></td><td><i class="fa-solid fa-check"></i></td></tr>
+          <tr><td>Priority support</td><td><i class="fa-solid fa-xmark"></i></td><td><i class="fa-solid fa-xmark"></i></td><td><i class="fa-solid fa-check"></i></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section section-dark" id="faq">
+  <div class="container">
+    <p class="section-label">FAQ</p>
+    <h2 class="section-title">Questions? We've Got Answers.</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">What do I need to create a video?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>Just upload your listing photos (JPG/PNG) or paste a share link. Our AI takes it from there — no on-site shoot or editing software required.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">How long does a video take to render?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>In just a few minutes your video will be ready. You'll get a notification as soon as it's done — no waiting around.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Can I choose aspect ratio and music?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>Yes! Choose from multiple aspect ratios (16:9, 9:16, 1:1) and select from our library of professional music tracks that fit the mood of your listing.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Will there be a watermark on my video?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>Free plans include a watermark on your videos. You can remove it by upgrading to Standard or Premium — or unlock individual videos for $9 each.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Can I make changes to videos?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>Yes. You can reorder photos, change music, update branding, and regenerate videos as many times as you need.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">What if I need more videos per month?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>You can purchase additional video credits starting at $9.99 each, with discounts available on multi-credit packs, or upgrade your plan anytime.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Can I cancel anytime? Am I locked in?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>Absolutely. Cancel anytime with no penalties. Your videos remain accessible even after cancellation.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Who owns the finished video?<i class="fa-solid fa-plus"></i></button>
+        <div class="faq-a"><p>You own all rights to your videos. Use them for marketing, social media, or any other purpose without restrictions.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- POWERED BY OPENCLAW -->
+<section class="section section-dark">
+  <div class="container" style="text-align:center;">
+    <div class="section-label">Behind Every Frame</div>
+    <h2 class="section-title">Powered by OpenClaw</h2>
+    <p class="section-sub" style="margin-left:auto;margin-right:auto;max-width:600px;">Every video created with Vybord is powered by <strong style="color:var(--text);">OpenClaw</strong> — the AI automation platform that transforms static listing photos into scroll-stopping video content. Built on OpenClaw, for real estate professionals who move fast.</p>
+    <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap;margin-top:40px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:48px;height:48px;background:rgba(119,136,153,0.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--slate);"><i class="fa-solid fa-brain"></i></div>
+        <span style="font-size:0.85rem;color:var(--text-muted);">AI-Powered by<br/><strong style="color:var(--text);">OpenClaw</strong></span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:48px;height:48px;background:rgba(119,136,153,0.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--slate);"><i class="fa-solid fa-bolt"></i></div>
+        <span style="font-size:0.85rem;color:var(--text-muted);">Automated<br/><strong style="color:var(--text);">OpenClaw</strong> Workflow</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:48px;height:48px;background:rgba(119,136,153,0.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--slate);"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <span style="font-size:0.85rem;color:var(--text-muted);">Smart Captions via<br/><strong style="color:var(--text);">OpenClaw</strong></span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:48px;height:48px;background:rgba(119,136,153,0.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--slate);"><i class="fa-solid fa-gears"></i></div>
+        <span style="font-size:0.85rem;color:var(--text-muted);">Built &amp; Run on<br/><strong style="color:var(--text);">OpenClaw</strong></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section" id="get-started">
+  <h2>Ready to Transform Your Property Marketing?</h2>
+  <p>Join thousands of real estate agents who are already creating stunning videos with Vybord.</p>
+  <form class="cta-form" onsubmit="handleSubmit(event)">
+    <input type="email" id="email-input" placeholder="Enter your email address" required />
+    <button type="submit" class="btn-primary">Get Started Free</button>
+  </form>
+  <p class="cta-note"><i class="fa-solid fa-shield-halved"></i> 14-day free trial &nbsp;&middot;&nbsp; No credit card required &nbsp;&middot;&nbsp; Cancel anytime</p>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="logo"><span>Vybord</span></div>
+      <p>AI-powered real estate video for agents who want results. Built on <strong style="color:var(--text-muted);">OpenClaw</strong>.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Careers</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2026 Vybord. Powered by OpenClaw. All rights reserved.</span>
+    <div class="footer-social">
+      <a href="#"><i class="fa-brands fa-instagram"></i></a>
+      <a href="#"><i class="fa-brands fa-tiktok"></i></a>
+      <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+      <a href="#"><i class="fa-brands fa-youtube"></i></a>
+      <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function toggleFaq(el) {
+    const answer = el.nextElementSibling;
+    const isOpen = answer.classList.contains('open');
+    document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+    document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'));
+    if (!isOpen) {
+      answer.classList.add('open');
+      el.classList.add('open');
+    }
+  }
+
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => { t.className = 'toast'; }, 3500);
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById('email-input').value;
+    if (!email || !email.includes('@')) {
+      showToast('Please enter a valid email address.', true);
+      return;
+    }
+    showToast('You\'re on the list! We\'ll be in touch soon.');
+    document.getElementById('email-input').value = '';
+  }
+
+  function handlePlanClick(plan) {
+    const email = document.getElementById('email-input') ? document.getElementById('email-input').value : '';
+    const section = document.getElementById('get-started');
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      showToast(plan.charAt(0).toUpperCase() + plan.slice(1) + ' plan selected — enter your email to continue!');
+    }, 600);
+  }
+</script>
+
+
+<!-- VIDEO MODAL -->
+<div id="videoModal">
+  <button class="close-btn" onclick="closeModal()">&times;</button>
+  <div class="modal-box">
+    <video id="modalVideo" controls playsinline></video>
+    <div class="modal-label">
+      <h4 id="modalTitle"></h4>
+      <p id="modalSub"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal(src, title, sub) {
+  var modal = document.getElementById('videoModal');
+  var vid = document.getElementById('modalVideo');
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalSub').textContent = sub;
+  vid.src = src;
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  vid.play().catch(function(){});
+}
+function closeModal() {
+  var vid = document.getElementById('modalVideo');
+  vid.pause(); vid.src = '';
+  document.getElementById('videoModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if(e.key==='Escape') closeModal(); });
+document.getElementById('videoModal').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+</script>
+
+<!-- SCROLL FADE-IN OBSERVER -->
+<script>
+(function() {
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  var fadeTargets = [
+    '.hero-badge', '.hero h1', '.hero-sub',
+    '.hero-actions', '.hero-note', '.demo-videos',
+    '.social-proof', '.section-label', '.section-title',
+    '.section-sub'
+  ];
+
+  // Hero children
+  document.querySelectorAll('.hero > *').forEach(function(el) {
+    if (!el.classList.contains('demo-videos')) {
+      el.classList.add('fade-in-section');
+    }
+  });
+
+  // Cards & items
+  document.querySelectorAll('.step-card, .feature-card, .plan-card, .faq-item').forEach(function(el) {
+    el.classList.add('fade-in-section');
+  });
+
+  // Section headers (per container)
+  document.querySelectorAll('.section .section-label, .section .section-title, .section .section-sub').forEach(function(el) {
+    el.classList.add('fade-in-section');
+  });
+
+  // CTA section
+  document.querySelectorAll('.cta-section > *').forEach(function(el) {
+    el.classList.add('fade-in-section');
+  });
+
+  // Observe all marked elements
+  document.querySelectorAll('.fade-in-section').forEach(function(el) {
+    observer.observe(el);
+  });
+})();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"dcf759942ee247c591f1a012dae4936e","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
