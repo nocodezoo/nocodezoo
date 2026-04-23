@@ -1,0 +1,2 @@
+RELAY_URL=https://executives-francis-depend-hope.trycloudflare.com
+RELAY_SECRET=vybord-music-relay-2026

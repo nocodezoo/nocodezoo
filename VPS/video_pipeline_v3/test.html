@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vybord · Quick Test</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .header .logo { font-size: 1.1rem; font-weight: 700; color: #fff; }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+  .header-right .email { color: #6b7280; font-size: 0.85rem; }
+  .header-right a { color: #6b7280; font-size: 0.85rem; text-decoration: none; }
+  .header-right a:hover { color: #fff; }
+  .btn-sm { padding: 7px 14px; border-radius: 8px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #DDE4ED; min-height: 100vh; }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #6b7280; font-size: 0.85rem; margin-bottom: 24px; }
+
+  .url-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  .url-row input { flex: 1; padding: 12px 14px; border-radius: 8px; border: 1px solid #374151; background: #111827; color: #fff; font-size: 1rem; outline: none; }
+  .url-row input:focus { border-color: #60a5fa; }
+  .btn { padding: 12px 20px; border-radius: 8px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+  .btn-secondary { background: #374151; color: #d1d5db; }
+  .btn-success { background: linear-gradient(135deg, #059669, #10b981); color: #fff; }
+  .btn-danger { background: #dc2626; color: #fff; }
+
+  .status-box { padding: 12px 16px; border-radius: 8px; margin-top: 12px; font-size: 0.9rem; display: none; }
+  .status-box.info { background: rgba(59,130,246,0.15); border: 1px solid #3b82f6; color: #93c5fd; }
+  .status-box.err { background: rgba(220,38,38,0.15); border: 1px solid #dc2626; color: #fca5a5; }
+  .status-box.ok { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #6ee7b7; }
+
+  .stats { display: flex; gap: 24px; margin: 16px 0; font-size: 0.9rem; color: #9ca3af; }
+  .stats strong { color: #fff; }
+
+  /* Image grid */
+  .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 16px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+  .img-grid:empty { display: none; }
+  .img-card { position: relative; border-radius: 8px; overflow: hidden; border: 3px solid transparent; cursor: pointer; transition: border-color 0.15s, opacity 0.15s; background: #111827; }
+  .img-card.selected { border-color: #60a5fa; box-shadow: 0 0 12px rgba(96,165,250,0.3); }
+  .img-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+  .img-card .img-num { position: absolute; top: 6px; left: 8px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+  .img-card .check-badge { position: absolute; top: 6px; right: 8px; width: 22px; height: 22px; border-radius: 50%; background: #60a5fa; display: none; align-items: center; justify-content: center; font-size: 0.75rem; color: #fff; font-weight: 700; }
+  .img-card.selected .check-badge { display: flex; }
+  .img-card.dimmed { opacity: 0.35; }
+
+  .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+  .actions .count { color: #9ca3af; font-size: 0.9rem; margin-left: 8px; }
+  .divider { width: 1px; height: 28px; background: #374151; margin: 0 4px; }
+
+  /* Preview panel */
+  .preview-bar { position: sticky; bottom: 0; left: 0; right: 0; background: #1a1d27; border-top: 1px solid #2a2d3a; padding: 16px 24px; display: none; z-index: 100; }
+  .preview-bar.show { display: block; }
+  .preview-bar-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; gap: 16px; }
+  .preview-bar .count-label { color: #9ca3af; font-size: 0.9rem; }
+  .preview-bar .count-label strong { color: #fff; }
+
+  .hidden { display: none; }
+  a { color: #60a5fa; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">Vybord · Quick Test</div>
+    <div class="header-right">
+      <span class="email" id="user-email" style="display:none;"></span>
+      <a href="/profile.html" id="profile-btn" style="display:none;">My Videos</a>
+      <a href="/auth.html" id="login-btn" href="#">Sign In</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h1>⚡ Quick Test</h1>
+    <p class="subtitle">Single-step listing → images → generate video</p>
+
+    <div class="url-row">
+      <input type="text" id="listing-url" placeholder="https://www.zillow.com/homed/..." value="https://juanmiamihomes.com/miami-properties/1000-biscayne-blvd-5101-one-thousand-museum-condo-miami-fl-33132-mls-a11911770-1/">
+      <button class="btn btn-primary" id="fetch-btn" onclick="fetchAndShow()">🔍 Fetch Images</button>
+    </div>
+
+    <div class="stats hidden" id="stats">
+      <span id="listing-address" style="color:#fff;font-weight:600;margin-right:auto"></span>
+      <span>Images: <strong id="stat-total">0</strong></span>
+      <span>Selected: <strong id="stat-sel">0</strong> / <strong>25</strong></span>
+    </div>
+
+    <div class="img-grid" id="img-grid"></div>
+
+    <div id="status" class="status-box"></div>
+
+    <div class="actions hidden" id="actions">
+      <button class="btn btn-secondary" onclick="selectAll()">Select All</button>
+      <button class="btn btn-secondary" onclick="deselectAll()">Deselect All</button>
+      <span class="count" id="sel-count"></span>
+      <div class="divider"></div>
+      <button class="btn btn-success" id="gen-btn" onclick="generateVideo()" disabled>🚀 Generate Video</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Sticky bottom bar -->
+<div class="preview-bar" id="preview-bar">
+  <div class="preview-bar-inner">
+    <span class="count-label"><strong id="bar-sel">0</strong> images selected</span>
+    <button class="btn btn-success" onclick="generateVideo()">🚀 Generate Video</button>
+    <button class="btn btn-danger" onclick="deselectAll()">✕ Clear</button>
+  </div>
+</div>
+
+<script>
+var _images = [];     // {url, selected}
+var _listingData = null;  // {address, price, beds, baths, sqft, images}
+var _jobId = null;
+var MAX = 25;
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+async function initAuth() {
+    // Prefer cookie, fall back to localStorage token
+    var token = null;
+    try { token = localStorage.getItem('vyb_token'); } catch(e) {}
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    try {
+        var r = await fetch('/api/me', { credentials: 'include', headers: headers });
+        if (r.ok) {
+            var me = await r.json();
+            var em = document.getElementById('user-email');
+            if (em && me.email) { em.textContent = me.email; em.style.display = 'inline'; }
+            var pb = document.getElementById('profile-btn');
+            if (pb) pb.style.display = 'inline';
+            var lb = document.getElementById('login-btn');
+            if (lb) lb.style.display = 'none';
+        }
+    } catch(e) {}
+}
+
+function setStatus(msg, type) {
+  var el = document.getElementById('status');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'status-box ' + (type || 'info');
+  el.textContent = msg;
+}
+
+function updateStats() {
+  var sel = _images.filter(function(i) { return i.selected; });
+  document.getElementById('stat-sel').textContent = sel.length;
+  document.getElementById('sel-count').textContent = sel.length + ' selected';
+  document.getElementById('bar-sel').textContent = sel.length;
+  var bar = document.getElementById('preview-bar');
+  if (sel.length > 0) bar.classList.add('show'); else bar.classList.remove('show');
+  var genBtn = document.getElementById('gen-btn');
+  if (genBtn) genBtn.disabled = sel.length === 0;
+}
+
+function renderGrid() {
+  var grid = document.getElementById('img-grid');
+  grid.innerHTML = '';
+  _images.forEach(function(img, idx) {
+    var card = document.createElement('div');
+    card.className = 'img-card' + (img.selected ? ' selected' : '');
+    if (!img.selected && _images.some(function(i) { return i.selected; })) {
+      // dim non-selected when something is selected — only if not already selecting
+    }
+    card.innerHTML = '<img src="' + img.url + '" alt="Image ' + (idx+1) + '" loading="lazy">' +
+      '<span class="img-num">' + (idx+1) + '</span>' +
+      '<span class="check-badge">✓</span>';
+    card.onclick = function() { toggleImg(idx); };
+    grid.appendChild(card);
+  });
+}
+
+function toggleImg(idx) {
+  var sel = _images.filter(function(i) { return i.selected; });
+  if (_images[idx].selected) {
+    _images[idx].selected = false;
+  } else {
+    if (sel.length >= MAX) {
+      setStatus('⚠️ Max ' + MAX + ' images. Deselect some first.', 'err');
+      return;
+    }
+    _images[idx].selected = true;
+  }
+  // Dim non-selected cards when at max
+  var anySelected = _images.some(function(i) { return i.selected; });
+  document.querySelectorAll('.img-card').forEach(function(card, i) {
+    if (anySelected && !_images[i].selected) card.classList.add('dimmed');
+    else card.classList.remove('dimmed');
+  });
+  renderGrid();
+  updateStats();
+}
+
+function selectAll() {
+  var sel = _images.filter(function(i) { return i.selected; });
+  _images.forEach(function(i) { i.selected = false; });
+  _images.slice(0, 25).forEach(function(i) { i.selected = true; });
+  renderGrid();
+  updateStats();
+}
+
+function deselectAll() {
+  _images.forEach(function(i) { i.selected = false; });
+  renderGrid();
+  updateStats();
+}
+
+// ── Resolve relative URLs
+function resolveUrl(u, base) {
+  if (!u || !base) return u;
+  if (/^data:|blob:|http:\/\/|https:\/\/|\/\//.test(u)) return u;
+  if (u.startsWith('/')) {
+    var m = base.match(/^(https?:\/\/[^\/]+)/);
+    return m ? m[1] + u : u;
+  }
+  return base.replace(/\/[^\/]*$/, '/') + u;
+}
+
+// ── Parse listing metadata + images from HTML
+function parseListingData(html, baseUrl) {
+  var data = { images: [], address: '', price: '', beds: '', baths: '', sqft: '', description: '' };
+
+  // 1. Try JSON-LD (RealEstateListing schema)
+  try {
+    var jsonld = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
+    for (var i = 0; i < jsonld.length; i++) {
+      try {
+        var obj = JSON.parse(jsonld[i].replace(/<[^>]+>/g, ''));
+        // Handle @graph arrays
+        var items = obj['@graph'] || [obj];
+        for (var k = 0; k < items.length; k++) {
+          var item = items[k];
+          var typ = (item['@type'] || '').toLowerCase();
+          if (typ === 'realestate listing' || typ === 'product' || typ === 'residence' || typ === 'house' || typ === 'place') {
+            if (!data.address && item.address) {
+              var ad = item.address;
+              data.address = [ad.streetAddress, ad.addressLocality, ad.addressRegion, ad.postalCode].filter(Boolean).join(', ');
+            }
+            if (!data.price && item.price) data.price = String(item.price).replace(/[^0-9,]/g, '');
+            if (!data.beds && item.numberOfBedrooms) data.beds = String(item.numberOfBedrooms) + ' bed';
+            if (!data.baths && item.numberOfBathrooms) data.baths = String(item.numberOfBathrooms) + ' bath';
+            if (!data.sqft && item.floorSize) data.sqft = String(item.floorSize).replace(/[^0-9,]/g, '') + ' sq ft';
+            if (!data.images.length && item.image) {
+              if (Array.isArray(item.image)) data.images = item.image.slice(0, 30);
+              else data.images = [item.image];
+            }
+          }
+        }
+        // Also check top-level
+        if (!data.address && obj.address) {
+          var ad = obj.address;
+          data.address = [ad.streetAddress, ad.addressLocality, ad.addressRegion, ad.postalCode].filter(Boolean).join(', ');
+        }
+        if (!data.price && obj.price) data.price = String(obj.price).replace(/[^0-9,]/g, '');
+        if (!data.beds && obj.numberOfBedrooms) data.beds = String(obj.numberOfBedrooms) + ' bed';
+        if (!data.baths && obj.numberOfBathrooms) data.baths = String(obj.numberOfBathrooms) + ' bath';
+      } catch(e) {}
+    }
+  } catch(e) {}
+
+  // 2. Address from og:title meta tag
+  if (!data.address) {
+    var ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+    if (!ogTitle) ogTitle = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
+    if (ogTitle) {
+      var title = ogTitle[1].replace(/\s*\|\s*/g, ' ').trim();
+      // Remove suffix like " | SOME AGENT"
+      var barIdx = title.lastIndexOf('|');
+      if (barIdx > 0) title = title.substring(0, barIdx).trim();
+      // Clean leading #unit numbers
+      title = title.replace(/^#\d+\s*/, '');
+      data.address = title;
+    }
+  }
+
+  // 3. Price from HTML text patterns like "List Price : $23,800,000"
+  if (!data.price) {
+    var priceMatch = html.match(/(?:list\s*price|sale\s*price|asking\s*price)[^$]*\$([0-9,]+)/i);
+    if (priceMatch) data.price = priceMatch[1];
+    else {
+      var priceMatch2 = html.match(/\$([0-9,]{1,3}(?:,?[0-9]{3}){1,})/);
+      if (priceMatch2) data.price = priceMatch2[1];
+    }
+  }
+
+  // 4. Beds/Baths from HTML text
+  if (!data.beds) {
+    var bedsMatch = html.match(/(\d+)\s*(?:bed(?:room)?s?|br|bed\s*(?:suite|s))/i);
+    if (bedsMatch) data.beds = bedsMatch[1] + ' bed';
+  }
+  if (!data.baths) {
+    var bathsMatch = html.match(/(\d+(?:\/2)?)\s*(?:bath(?:room)?s?|ba)/gi);
+    if (bathsMatch) {
+      // Sum fractional baths like "5/6" → take integer part, or last count
+      var baths = bathsMatch[bathsMatch.length - 1];
+      var bathsNum = baths.match(/(\d+)/);
+      if (bathsNum) data.baths = bathsNum[1] + ' bath';
+    }
+  }
+
+  // 5. Sqft from HTML text
+  if (!data.sqft) {
+    var sqftMatch = html.match(/([0-9,]+)\s*(?:sq\s*ft|sqft|sq\.\s*ft|square\s*feet)/i);
+    if (sqftMatch) data.sqft = sqftMatch[1].replace(/,/g, '') + ' sq ft';
+  }
+
+  // 6. Description — og:description, JSON-LD description, or first long paragraph
+  if (!data.description) {
+    var ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+    if (!ogDesc) ogDesc = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["']/i);
+    if (ogDesc) data.description = ogDesc[1].replace(/\s+/g, ' ').trim();
+  }
+  if (!data.description) {
+    // Try JSON-LD description field
+    var jsonDesc = html.match(/"description"\s*:\s*"([^"]{50,})"/i);
+    if (jsonDesc) data.description = jsonDesc[1].replace(/\s+/g, ' ').trim();
+  }
+  if (!data.description || data.description.length < 50) {
+    // Fallback: first paragraph over 80 chars
+    var paragraphs = html.match(/<p[^>]*>([\s\S]{80,500}?)<\/p>/gi) || [];
+    for (var pi = 0; pi < paragraphs.length; pi++) {
+      var txt = paragraphs[pi].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      if (txt.length > 80 && !txt.startsWith('{')) {
+        data.description = txt;
+        break;
+      }
+    }
+  }
+
+  // 7. Collect image URLs
+  var imgSeen = {};
+  // JSON-LD images first
+  if (data.images.length) {
+    data.images.forEach(function(u) { imgSeen[String(u).split('?')[0].toLowerCase()] = true; });
+  }
+  // All https image URLs in HTML
+  var allUrls = html.match(/https?:\/\/[^"'\s)>]+\.(jpg|jpeg|png|webp)[^"')]*/gi) || [];
+  allUrls.forEach(function(u) {
+    var resolved = resolveUrl(u.trim(), baseUrl);
+    var normKey = resolved.split('?')[0].toLowerCase();
+    if (!normKey.includes('favicon') && !normKey.includes('logo') && !normKey.includes('icon') && !normKey.includes('wp-content/uploads')) {
+      imgSeen[normKey] = imgSeen[normKey] || resolved;
+    }
+  });
+  var unique = [];
+  var seenKeys = {};
+  Object.keys(imgSeen).forEach(function(k) {
+    if (!seenKeys[k] && k.match(/\.(jpg|jpeg|png|webp)/i)) {
+      seenKeys[k] = true;
+      unique.push(imgSeen[k]);
+    }
+  });
+  // Sort by length descending = largest/resolution first
+  unique.sort(function(a, b) { return b.length - a.length; });
+  data.images = unique;
+
+  return data;
+}
+
+
+// ── Step 1: Fetch HTML and parse images
+async function fetchAndShow() {
+  var urlInput = document.getElementById('listing-url');
+  var url = urlInput ? urlInput.value.trim() : '';
+  if (!url) { setStatus('⚠️ Enter a listing URL first.', 'err'); return; }
+
+  var btn = document.getElementById('fetch-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Fetching...';
+  setStatus('Fetching listing page...', 'info');
+
+  try {
+    var res = await fetch('/api/fetch-html', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    });
+    var html = await res.text();
+    if (!html || html.length < 200) {
+      setStatus('⚠️ Empty or very short response from that URL.', 'err');
+      btn.disabled = false; btn.textContent = '🔍 Fetch Images'; return;
+    }
+
+    var listingData = parseListingData(html, url);
+    if (!listingData || listingData.images.length === 0) {
+      setStatus('⚠️ No images found at that URL. Try a different listing.', 'err');
+      btn.disabled = false; btn.textContent = '🔍 Fetch Images'; return;
+    }
+
+    // Limit to first 25 for display
+    _images = listingData.images.slice(0, 50).map(function(u) { return { url: u, selected: false }; });
+    _listingData = listingData;
+
+    var addrEl = document.getElementById('listing-address');
+    if (addrEl) addrEl.textContent = listingData.address || url;
+    document.getElementById('stat-total').textContent = _images.length;
+    document.getElementById('stats').classList.remove('hidden');
+    document.getElementById('actions').classList.remove('hidden');
+    renderGrid();
+    updateStats();
+    setStatus('✅ Found ' + _images.length + ' images — click to select up to ' + MAX, 'ok');
+  } catch(e) {
+    setStatus('⚠️ Fetch failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Fetch Images';
+  }
+}
+
+// ── Step 2: Generate video
+async function generateVideo() {
+  var selected = _images.filter(function(i) { return i.selected; });
+  if (selected.length === 0) { setStatus('⚠️ Select at least one image.', 'err'); return; }
+
+  var genBtn = document.getElementById('gen-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ Starting...'; }
+
+  setStatus('Creating job and uploading images to review page...', 'info');
+
+  try {
+    var res = await fetch('/api/generate', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address: (_listingData && _listingData.address) ? _listingData.address : ((document.getElementById('listing-url') || {value:''}).value.trim() || 'Test Listing'),
+        images: selected.map(function(i) { return i.url; }),
+        voice: 'CwhRBWXzGAHq8TQ4Fs17',
+        script: (_listingData && _listingData.description) || 'Beautiful property with stunning features and exceptional quality.',
+        description: (_listingData && _listingData.description) || '',
+        music: 'none',
+        musicUrl: '',
+        ratio: '16:9',
+        beds: (_listingData && _listingData.beds) || '',
+        baths: (_listingData && _listingData.baths) || '',
+        sqft: (_listingData && _listingData.sqft) || '',
+        price: (_listingData && _listingData.price) || '',
+        noPipeline: true
+      })
+    });
+
+    if (!res.ok) {
+      var err = await res.text();
+      setStatus('⚠️ Build error ' + res.status + ': ' + err.slice(0, 200), 'err');
+      if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Video'; }
+      return;
+    }
+
+    var data = await res.json();
+    if (data.error) {
+      setStatus('⚠️ ' + data.error, 'err');
+      if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Video'; }
+      return;
+    }
+
+    _jobId = data.job_id;
+    setStatus('✅ Job ' + _jobId + ' created! Redirecting to review...', 'ok');
+    setTimeout(function() {
+      window.location.href = '/review.html?job=' + _jobId;
+    }, 1200);
+
+  } catch(e) {
+    setStatus('⚠️ Network error: ' + e.message, 'err');
+    if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Video'; }
+  }
+}
+
+initAuth();
+</script>
+</body>
+</html>

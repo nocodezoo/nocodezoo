@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion Test</title>
+<style>
+  body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+  h1 { color: #f8fafc; margin: 0 0 4px 0; }
+  .subtitle { color: #64748b; margin: 0 0 24px 0; font-size: 14px; }
+  h2 { color: #f8fafc; margin: 24px 0 8px 0; font-size: 15px; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+  .info { background: #1e3a5f; border: 1px solid #3b82f6; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; }
+  .info span { color: #93c5fd; }
+  .section { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .section h3 { margin: 0 0 12px 0; color: #f8fafc; font-size: 16px; }
+  .files { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .file-btn { background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block; }
+  .file-btn:hover { background: #475569; }
+  .file-btn.active { background: #3b82f6; border-color: #60a5fa; }
+  .player-wrap { position: relative; }
+  video { width: 100%; max-width: 640px; border-radius: 8px; background: #000; display: block; margin-top: 10px; }
+  .verified { display: inline-block; background: #166534; color: #86efac; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+  .verified.warn { background: #854d0e; color: #fde047; }
+  .meta { color: #64748b; font-size: 11px; margin-top: 4px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 280px; }
+  .card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .card h4 { margin: 0 0 4px 0; color: #e2e8f0; font-size: 13px; }
+  .card p { margin: 0; color: #64748b; font-size: 12px; }
+  .card a { color: #60a5fa; font-size: 12px; }
+  .build-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  select, input { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 14px; }
+  .btn { background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; font-size: 14px; }
+  .btn:hover { background: #2563eb; }
+  .status { margin-top: 10px; font-size: 13px; color: #fbbf24; }
+  .done { color: #4ade80; }
+  .error { color: #f87171; }
+</style>
+</head>
+<body>
+<h1>Motion Test Bench</h1>
+<p class="subtitle">All files — 60s, 30fps, 30 slides × 2s each. CLI-verified.</p>
+
+<div class="info">
+  <strong>What to look for:</strong> Slides should show for <span>exactly 2 seconds</span> each.
+  The <span>zoom_in</span> mode zooms slowly from 1.0→1.2 over each 2s slide.
+  The <span>cinematic</span> mode alternates zoom in (1.0→1.15) and zoom out (1.15→0.88).
+  The <span>none</span> mode has no zoom — static crossfade only.
+</div>
+
+<!-- ZOOM_IN -->
+<div class="section">
+  <h3>Zoom In (1.0→1.2 slow Ken Burns)</h3>
+  <div class="row">
+    <div class="col">
+      <div class="player-wrap">
+        <strong>Full video (noaudio)</strong>
+        <span class="verified">✅ 60s / 30fps / 1800 frames</span>
+        <video controls playsinline>
+          <source src="/rs-files/motion_test/zoom.mp4" type="video/mp4">
+        </video>
+        <div class="meta">19MB · 1920×1080 · h264 · 2.57Mbps · <a href="/rs-files/motion_test/zoom.mp4" download>Download</a></div>
+      </div>
+    </div>
+    <div class="col">
+      <p>Note: zoom_in does NOT produce individual slide files — it builds the video directly in one pass. No slide_XXX.mp4 files exist for this mode.</p>
+      <div class="card">
+        <h4>video_noaudio.mp4</h4>
+        <p>19MB · zoom_in master · <a href="/rs-files/motion_test/zoom.mp4" download>Download</a></p>
+      </div>
+      <div class="card">
+        <h4>video_wna.mp4</h4>
+        <p>with audio (voice + music) · <a href="/rs-files/motion_test_zoom/video_wna.mp4" download>Download</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CINEMATIC -->
+<div class="section">
+  <h3>Cinematic (zoom in/out alternating)</h3>
+  <div class="row">
+    <div class="col">
+      <div class="player-wrap">
+        <strong>Full video (noaudio)</strong>
+        <span class="verified">✅ 60s / 30fps / 1800 frames</span>
+        <video controls playsinline>
+          <source src="/rs-files/motion_test/cinematic.mp4" type="video/mp4">
+        </video>
+        <div class="meta">6.2MB · 1920×1080 · h264 · 860kbps · <a href="/rs-files/motion_test/cinematic.mp4" download>Download</a></div>
+      </div>
+    </div>
+    <div class="col">
+      <p>Individual slide segments (30 files, 2s each):</p>
+      <div class="files" id="cin-files"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NONE -->
+<div class="section">
+  <h3>None (static crossfade, no zoom)</h3>
+  <div class="row">
+    <div class="col">
+      <div class="player-wrap">
+        <strong>Full video (noaudio)</strong>
+        <span class="verified">✅ 60s / 30fps / 1800 frames</span>
+        <video controls playsinline>
+          <source src="/rs-files/motion_test/none.mp4" type="video/mp4">
+        </video>
+        <div class="meta">6.2MB · 1920×1080 · h264 · 860kbps · <a href="/rs-files/motion_test/none.mp4" download>Download</a></div>
+      </div>
+    </div>
+    <div class="col">
+      <p>Individual slide segments (30 files, 2s each):</p>
+      <div class="files" id="none-files"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Build form -->
+<div class="section">
+  <h3>Build a New Test</h3>
+  <div class="build-row">
+    <select id="motion">
+      <option value="zoom_in">zoom_in</option>
+      <option value="cinematic">cinematic</option>
+      <option value="none">none</option>
+    </select>
+    <input type="text" id="address" placeholder="Property address" value="1000 Biscayne Blvd, Miami FL" style="flex:1;">
+    <button class="btn" onclick="buildMotion()">Build</button>
+  </div>
+  <div id="buildStatus" class="status"></div>
+</div>
+
+<script>
+// Build list of slide files from a directory listing
+function buildFileList(prefix, n) {
+  const cont = document.getElementById(prefix + '-files');
+  if (!cont) return;
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    const num = String(i).padStart(3, '0');
+    html += `<a class="file-btn" href="/rs-files/${prefix}/slide_${num}.mp4" download>slide_${num}.mp4</a>`;
+  }
+  cont.innerHTML = html;
+}
+buildFileList('cin', 30);
+buildFileList('none', 30);
+
+async function buildMotion() {
+  const motion = document.getElementById('motion').value;
+  const address = document.getElementById('address').value;
+  const status = document.getElementById('buildStatus');
+  status.textContent = 'Creating job...';
+  status.className = 'status';
+  try {
+    const res = await fetch('/api/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address, motion, duration: 60 })
+    });
+    const data = await res.json();
+    const jobId = data.job_id || data.id;
+    status.textContent = `Job: ${jobId} — polling (check back in ~2 min)...`;
+
+    // Poll for up to 5 minutes
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const s = await fetch(`/api/status/${jobId}`).then(r => r.json()).catch(() => null);
+      if (s && s.done && s.video) {
+        status.innerHTML = `Done! <a href="/review/${jobId}" style="color:#4ade80">Open review page</a>`;
+        status.className = 'done';
+        break;
+      }
+      if (s && s.error) { status.textContent = 'Error: ' + s.error; status.className = 'error'; break; }
+      status.textContent = `Job: ${jobId} — ${s?.status || 'processing'}... (${i*5}s)`;
+    }
+  } catch(e) {
+    status.textContent = 'Failed: ' + e.message;
+    status.className = 'error';
+  }
+}
+</script>
+</body>
+</html>

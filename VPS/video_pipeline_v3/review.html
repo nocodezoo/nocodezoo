@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review — Vybord v3.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #6366f1;
+            --accent2: #8b5cf6;
+            --accent3: #a78bfa;
+            --green: #10b981;
+            --text: #DDE4ED;
+            --muted: #9ca3af;
+            --card: #1a1d27;
+            --border: #2a2d3a;
+            --input-bg: #111827;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f1117;
+            color: var(--text);
+            min-height: 100vh;
+        }
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .content { position: relative; z-index: 1; }
+        .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .section-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; }
+        .step-badge { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; color: #fff; }
+        .step-title { font-size: 1.1rem; font-weight: 700; color: #fff; }
+        .form-input { background: var(--input-bg); border: 1px solid #374151; border-radius: 8px; padding: 0.8rem 1rem; color: #fff; width: 100%; font-size: 0.9rem; transition: border-color 0.2s; }
+        .form-input:focus { border-color: var(--accent); outline: none; }
+        .form-input::placeholder { color: var(--muted); }
+        .opt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+        .opt-btn { padding: 0.6rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; color: var(--muted); background: var(--card); }
+        .opt-btn:hover { border-color: var(--accent); color: #fff; }
+        .opt-btn.sel { border-color: var(--accent); background: rgba(99,102,241,0.15); color: #fff; }
+        .color-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+        .swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; flex-shrink: 0; }
+        .swatch:hover { border-color: var(--muted); }
+        .swatch.sel { border-color: #fff; }
+        .range-val { font-size: 0.8rem; color: var(--muted); min-width: 2rem; text-align: right; }
+        input[type=range] { -webkit-appearance: none; height: 6px; background: var(--border); border-radius: 3px; width: 100%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 50%; cursor: pointer; }
+        select.form-input { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.8rem center; padding-right: 2.2rem; color: #fff; }
+        .btn-generate { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 1.1rem; font-weight: 700; border: none; border-radius: 1rem; cursor: pointer; transition: opacity 0.2s; }
+        .btn-generate:hover { opacity: 0.85; }
+        .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-secondary { padding: 0.7rem 1.2rem; background: #374151; color: #d1d5db; border: 1px solid #4b5563; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-secondary:hover { background: #4b5563; }
+        .status-box { margin-top: 1rem; padding: 1rem; border-radius: 8px; font-size: 0.88rem; display: none; background: var(--card); border: 1px solid var(--border); color: var(--muted); }
+        .status-box.ok { background: rgba(5,150,105,0.15); border-color: #059669; color: #6ee7b7; }
+        .status-box.err { background: rgba(220,38,38,0.15); border-color: #dc2626; color: #fca5a5; }
+        .status-box.running { background: rgba(99,102,241,0.15); border-color: var(--accent); color: #a5b4fc; }
+        .voice-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.82rem; color: var(--muted); background: var(--card); }
+        .voice-btn:hover { border-color: var(--accent); color: #fff; }
+        .progress-wrap { margin-top: 0.6rem; }
+        .progress-bar-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .progress-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 1.5s ease; position: relative; overflow: hidden; }
+.progress-bar-fill::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: pbar-shine 1.8s infinite; }
+@keyframes pbar-shine { 0% { left: -100%; } 100% { left: 100%; } }
+        .progress-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; text-align: center; }
+        .voice-btn.sel { border-color: var(--accent); background: rgba(99,102,241,0.15); color: #fff; }
+        .section-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.75rem; font-weight: 600; }
+        .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; color: #fff; }
+        .logo-text { font-weight: 700; font-size: 1.1rem; }
+        .floating-shape { position: fixed; border: 1px solid rgba(99,102,241,0.12); border-radius: 50%; pointer-events: none; z-index: 0; animation: float 20s ease-in-out infinite; }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-30px)} }
+        .accent-bar { width: 40px; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; margin-bottom: 0.75rem; }
+        /* Image grid */
+        .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+        .img-card { position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; border: 2px solid transparent; transition: all 0.2s; background: var(--input-bg); }
+        .img-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+        .img-card.selected { border-color: var(--accent); box-shadow: 0 0 12px rgba(99,102,241,0.3); }
+        .img-card .img-meta { position: absolute; top: 4px; right: 4px; display: flex; gap: 4px; }
+        .img-card .sel-badge { background: var(--accent); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+        .img-card .img-num { background: rgba(0,0,0,0.65); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+        /* Pool */
+        .pool-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+        .mini-card { position: relative; width: 56px; height: 40px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .mini-card img { width: 100%; height: 100%; object-fit: cover; }
+        .mini-card .mini-num { position: absolute; bottom: 2px; right: 3px; background: rgba(0,0,0,0.6); color: white; border-radius: 3px; font-size: 9px; font-weight: 700; padding: 0 3px; }
+        /* Caption preview */
+        #caption-preview { margin-top: 10px; padding: 12px; background: #000000; border-radius: 8px; font-size: 1.5rem; border: 1px solid var(--border); }
+        #caption-preview .word-being { color: #FFFF00; }
+        #caption-preview .done-word { color: #ffffff; }
+        /* Dark header overrides */
+        header { background: #1a1d27 !important; border-bottom: 1px solid var(--border) !important; }
+        header .logo-text { color: #fff; }
+        header #user-info { color: var(--muted) !important; }
+        /* Property details dark overrides */
+        #prop-address { color: #fff !important; font-weight: 700 !important; }
+        #prop-price { color: #10b981 !important; }
+        #prop-stats { color: var(--muted); }
+        #prop-stats > div > div:last-child { color: var(--muted); }
+        /* Page title dark override */
+        h1#page-title { color: #fff !important; }
+        #page-subtitle { color: var(--muted) !important; }
+        /* Stats */
+        .stats strong { color: #fff; }
+        /* URL row dark */
+        .url-row input { background: var(--input-bg) !important; border-color: #374151 !important; color: #fff !important; }
+        /* Actions bar dark */
+        #actions-bar { background: var(--card) !important; border-top: 1px solid var(--border) !important; }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Decorative floating shapes -->
+    <div class="floating-shape" style="width:300px;height:300px;top:10%;left:-5%;animation-delay:0s;opacity:0.3"></div>
+    <div class="floating-shape" style="width:200px;height:200px;top:60%;right:-3%;animation-delay:-7s;opacity:0.2"></div>
+    <div class="floating-shape" style="width:150px;height:150px;bottom:20%;left:10%;animation-delay:-14s;opacity:0.15"></div>
+
+    <div class="content">
+        <!-- Header -->
+        <header class="sticky top-0 z-50" style="background:#1a1d27;border-bottom:1px solid #2a2d3a;">
+            <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+                <a href="/test.html" class="logo">
+                    <div class="logo-icon">V</div>
+                    <span class="logo-text gradient-text">Vybord</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span id="user-info" style="display:none;font-size:0.78rem;color:#9ca3af;"></span>
+                    <a href="/profile.html" id="profile-btn" title="My Videos" style="display:none;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;font-size:0.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                    </a>
+                    <button id="logout-btn" type="button" onclick="handleLogout()" style="background:#374151;border:1px solid #4b5563;color:#d1d5db;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.78rem;font-weight:600;cursor:pointer;display:none;">Logout</button>
+                    <span style="background:#f59e0b;color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;">v3.7</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-lg mx-auto px-4 py-6">
+
+            <!-- Page Title -->
+            <div class="mb-6">
+                <div class="accent-bar"></div>
+                <h1 id="page-title" style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,5vw,2.2rem);font-weight:600;line-height:1.2;margin-bottom:0.4rem;color:#fff;">
+                    Review Video
+                </h1>
+                <p id="page-subtitle" class="text-[#778899] text-sm">Edit and regenerate your video.</p>
+            </div>
+
+            <!-- 1. Property Details -->
+            <div class="section-card" id="section-property">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">1</div>
+                    <div class="step-title">Property Details</div>
+                </div>
+                <div id="prop-details" class="space-y-3">
+                    <div id="prop-address" style="font-weight:700;font-size:1rem;color:#fff;"></div>
+                    <div id="prop-stats" class="flex gap-4 mt-2">
+                        <div><div id="prop-price" style="font-weight:700;font-size:1.1rem;color:#00aa66;"></div><div class="section-label" style="margin:0">Price</div></div>
+                        <div><div id="prop-beds" style="font-weight:700;font-size:1.1rem;color:#fff;"></div><div class="section-label" style="margin:0">Beds</div></div>
+                        <div><div id="prop-baths" style="font-weight:700;font-size:1.1rem;color:#fff;"></div><div class="section-label" style="margin:0">Baths</div></div>
+                        <div><div id="prop-sqft" style="font-weight:700;font-size:1.1rem;color:#fff;"></div><div class="section-label" style="margin:0">Sq Ft</div></div>
+                    </div>
+                    <div id="prop-description" style="color:var(--muted);font-size:0.85rem;margin-top:0.5rem;line-height:1.4;"></div>
+                </div>
+            </div>
+
+            <!-- 2. Image Pool -->
+            <div class="section-card" id="section-images">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">2</div>
+                    <div class="step-title">Image Pool — <span id="img-total-count">0</span> images</div>
+                </div>
+                <div id="sel-hint" class="section-label" style="margin-bottom:8px;margin-top:-4px">
+                    <span id="sel-count">0</span> selected · Click to select (max 30)
+                </div>
+                <div class="img-grid" id="img-grid"></div>
+            </div>
+
+            <!-- Selected Pool -->
+            <div class="section-card" id="section-pool">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="step-title" style="font-size:0.95rem">Selected for Video — <span id="pool-count">0</span></div>
+                    <button onclick="clearSelection()" style="font-size:0.78rem;background:#374151;border:1px solid #4b5563;color:#d1d5db;border-radius:6px;padding:3px 10px;cursor:pointer;font-weight:600;">Clear All</button>
+                </div>
+                <div class="pool-grid" id="pool-grid"></div>
+            </div>
+
+            <!-- Video (persistent, shown if job already has a video) -->
+            <div class="section-card" id="section-video" style="display:none">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="step-badge">▶</div>
+                    <div class="step-title">Your Videos</div>
+                </div>
+                <div id="video-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+            </div>
+
+            <!-- 3. Narration Script -->
+            <div class="section-card" id="section-script">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="step-badge">3</div>
+                        <div class="step-title">Narration Script</div>
+                    </div>
+                    <button id="gen-script-btn" onclick="generateScript()" style="font-size:0.85rem;padding:4px 12px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">✨ Generate Script</button>
+                </div>
+                <textarea id="script" class="form-input" rows="6" placeholder="Enter your narration script..."></textarea>
+                <div class="section-label" style="margin-top:6px;margin-bottom:0;text-align:right">
+                    <span id="char-count">0</span> chars
+                    <span id="script-status" style="margin-left:12px;color:#22c55e;display:none;">✅ Generated</span>
+                </div>
+            </div>
+
+            <!-- 4. Caption Style -->
+            <div class="section-card" id="section-caption">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">4</div>
+                    <div class="step-title">Caption Style</div>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="section-label">Font Size — <span id="fs-val">55</span>px</label>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-[#778899]">20</span>
+                            <input type="range" id="font-size" min="20" max="80" value="55" oninput="updateFs(this.value)">
+                            <span class="text-xs text-[#778899]">80</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="section-label">Text Color</label>
+                        <div class="color-row">
+                            <input type="color" id="text-color" value="#FF69B4" onchange="updateTextColor(this.value)" style="width:44px;height:32px;border:none;background:none;cursor:pointer;padding:0;">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="section-label">Background</label>
+                        <div class="color-row">
+                            <input type="color" id="bg-color" value="#000000" onchange="updateBgColor(this.value)" style="width:44px;height:32px;border:none;background:none;cursor:pointer;padding:0;">
+                        </div>
+                    </div>
+                    <div id="caption-preview">
+                        <span class="word-being">Pool</span><span class="done-word"> views </span><span class="done-word">and </span><span class="done-word">sunset</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Voice -->
+            <div class="section-card" id="section-voice">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">5</div>
+                    <div class="step-title">AI Voice</div>
+                </div>
+                <div class="grid grid-cols-2 gap-2" id="voice-grid">
+                    <button type="button" class="voice-btn sel" onclick="selectVoice('CwhRBWXzGAHq8TQ4Fs17',this)">🎤 Roger</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('EXAVITQu4vr4xnSDxMaL',this)">🎤 Sarah</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('FGY2WhTYpPnrIDTdsKH5',this)">🎤 Laura</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('SOYHLrjzK2X1ezoPC6cr',this)">🎤 Harry</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('cgSgspJ2msm6clMCkdW9',this)">🎤 Jessica</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('IKne3meq5aSn9XLyUdCD',this)">🎤 Charlie</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('JBFqnCBsd6RMkjVDRZzb',this)">🎤 George</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('hpp4J3VqNfWAUOO0d1Us',this)">🎤 Bella</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('TX3LPaxmHKxFdv7VOQHJ',this)">🎤 Liam</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('bIHbv24MWmeRgasZH58o',this)">🎤 Will</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('onwK4e9ZLuTAKqWW03F9',this)">🎤 Daniel</button>
+                    <button type="button" class="voice-btn" onclick="selectVoice('pNInz6obpgDQGcFmaJgB',this)">🎤 Adam</button>
+                </div>
+            </div>
+
+            <!-- 6. Slide Motion -->
+            <div class="section-card" id="section-motion">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">6</div>
+                    <div class="step-title">Slide Motion</div>
+                </div>
+                <div class="opt-grid" id="motion-grid">
+                    <button type="button" class="opt-btn sel" onclick="selMotion(this,'none')">No Motion</button>
+                    <button type="button" class="opt-btn" onclick="selMotion(this,'zoom_in')">Zoom In</button>
+                    <button type="button" class="opt-btn" onclick="selMotion(this,'zoom_out')">Zoom Out</button>
+                    <button type="button" class="opt-btn" onclick="selMotion(this,'pan_left')">Pan Left</button>
+                    <button type="button" class="opt-btn" onclick="selMotion(this,'pan_right')">Pan Right</button>
+                    <button type="button" class="opt-btn" onclick="selMotion(this,'cinematic')">Cinematic</button>
+                </div>
+            </div>
+
+            <!-- 7. Background Music -->
+            <div class="section-card" id="section-music">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">7</div>
+                    <div class="step-title">Background Music</div>
+                </div>
+                <div class="opt-grid" id="music-grid">
+                    <button type="button" class="opt-btn sel" onclick="selMusic(this,'ambient_piano')">🎹 Ambient Piano</button>
+                    <button type="button" class="opt-btn" onclick="selMusic(this,'corporate_cinematic')">🎹 Corporate Cinematic</button>
+                    <button type="button" class="opt-btn" onclick="selMusic(this,'downtempo_nu_jazz')">🎹 Downtempo Nu Jazz</button>
+                    <button type="button" class="opt-btn" onclick="selMusic(this,'electronic_techno')">🎹 Electronic Techno</button>
+                    <button type="button" class="opt-btn" onclick="selMusic(this,'lofi_hip_hop')">🎹 Lofi Hip Hop</button>
+                    <button type="button" class="opt-btn" onclick="selMusic(this,'modern_jazz_lounge')">🎹 Modern Jazz Lounge</button>
+                </div>
+                <div class="mt-3">
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.95rem;color:#fbbf24;">
+                        <input type="checkbox" id="kanye-check" onchange="applyKanye()" style="width:18px;height:18px;accent-color:#fbbf24;">
+                        <span>Use Kanye background song 🎵</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 8. Branding -->
+            <div class="section-card" id="section-branding">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">8</div>
+                    <div class="step-title">Branding</div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="section-label">Logo (transparent PNG)</label>
+                        <input type="file" id="logo" class="form-input" accept="image/png">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="section-label">Position</label>
+                            <select id="logoPosition" class="form-input">
+                                <option value="top-left">Top Left</option>
+                                <option value="top-right">Top Right</option>
+                                <option value="bottom-left" selected>Bottom Left</option>
+                                <option value="bottom-right">Bottom Right</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="section-label">Size (%) — <span id="logo-size-val">15</span></label>
+                            <input type="range" id="logoSize" min="5" max="30" value="15" oninput="document.getElementById('logo-size-val').textContent=this.value">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. Start/End Caption -->
+            <div class="section-card" id="section-captions">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="step-badge">9</div>
+                    <div class="step-title">Start &amp; End Caption</div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="section-label">Start Text</label>
+                        <input type="text" id="startCaption" class="form-input" placeholder="e.g. Villa Serene">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="section-label">Start Duration (s)</label>
+                            <input type="number" id="startDuration" class="form-input" value="3" min="2" max="8" step="0.5">
+                        </div>
+                    </div>
+                    <div style="border-top:1px solid #2a2d3a;margin:0.5rem 0;padding-top:0.75rem">
+                        <label class="section-label">End Text</label>
+                        <input type="text" id="endCaption" class="form-input" placeholder="e.g. Call (305) 555-1234">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="section-label">End Duration (s)</label>
+                            <input type="number" id="endDuration" class="form-input" value="4" min="2" max="10" step="0.5">
+                        </div>
+                        <div>
+                            <label class="section-label">Aspect Ratio</label>
+                            <div class="opt-grid" id="ratio-grid" style="max-width:200px">
+                                <button class="opt-btn sel" data-val="16:9" onclick="setRatio(this)">16:9</button>
+                                <button class="opt-btn" data-val="9:16" onclick="setRatio(this)">9:16</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="section-label">Video Duration (s)</label>
+                            <input type="number" id="durationSecs" class="form-input" value="60" min="15" max="120" step="5">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. Bottom Buttons -->
+            <div class="flex gap-3 mt-4">
+                <button id="save-btn" onclick="saveSettings()" class="btn-secondary" style="flex:1">💾 Save Settings</button>
+                <button id="gen-btn" onclick="generateVideo()" class="btn-generate" style="flex:2">🚀 Generate Video</button>
+            </div>
+            <div id="status" class="status-box"></div>
+        </main>
+
+        <footer class="text-center py-8 text-xs text-[#DDE4ED] mt-8">
+            © 2026 Vybord · Built with OpenClaw
+        </footer>
+    </div>
+
+<script>
+// ── State
+var jobId = null;
+var sel = new Set();
+var imgFiles = [];
+var MAX = 30;
+var selectedMusic = 'none';
+var selectedRatio = '16:9';
+var selectedTextColor = 'FF69B4';
+var selectedBgColor = '000000';
+
+// ── Init
+(function() {
+    var jobIdParam = new URLSearchParams(window.location.search).get('job');
+    if (!jobIdParam) {
+        window.location.href = '/create';
+        return;
+    }
+    jobId = jobIdParam;
+    if (!jobId) {
+        window.location.href = '/create';
+        return;
+    }
+    document.title = 'Review — ' + jobId;
+
+    // Load user info and job data in parallel
+    Promise.all([
+        fetch('/api/me', { credentials: 'include' }).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+        fetch('/api/status/' + jobId, { credentials: 'include' }).then(function(r) { return r.json(); }).catch(function() { return {}; }),
+        fetch('/api/video-list/' + jobId, { credentials: 'include' }).then(function(r) { return r.json(); }).catch(function() { return {}; })
+    ]).then(function(results) {
+        var userInfo = results[0];
+        var jobData = results[1];
+        var vidData = results[2] || {};
+
+        // User info in header
+        if (userInfo.email) {
+            var ui = document.getElementById('user-info');
+            if (ui) { ui.textContent = userInfo.email; ui.style.display = 'inline'; }
+            var pb = document.getElementById('profile-btn');
+            if (pb) pb.style.display = 'flex';
+            var lb = document.getElementById('logout-btn');
+            if (lb) lb.style.display = 'inline';
+        }
+
+        // Populate from jobData (pipeline_config fields)
+        var cfg = jobData;
+        if (!cfg.address && jobData.config) cfg = jobData.config;
+
+        var addr = cfg.address || 'Listing';
+        document.getElementById('page-title').textContent = addr;
+        document.getElementById('prop-address').textContent = addr;
+        document.getElementById('prop-price').textContent = cfg.price || '—';
+        document.getElementById('prop-beds').textContent = cfg.beds || '—';
+        document.getElementById('prop-baths').textContent = cfg.baths || '—';
+        document.getElementById('prop-sqft').textContent = cfg.sqft || '—';
+        document.getElementById('prop-description').textContent = cfg.description || '';
+
+        // Script
+        var script = cfg.script || '';
+        document.getElementById('script').value = script;
+        document.getElementById('char-count').textContent = script.length;
+
+        // Caption style
+        var cap = cfg.captionStyle || {};
+        var fs = cap.fontSize || 55;
+        document.getElementById('font-size').value = fs;
+        document.getElementById('fs-val').textContent = fs;
+        // Text Color picker = highlightColor (the active/being-read word)
+        var tc = (cap.highlightColor || 'FF69B4').replace('#','');
+        selectedTextColor = tc;
+        document.getElementById('text-color').value = '#' + tc;
+        // Background picker = fontColor (the non-highlighted words)
+        var bc = (cap.fontColor || '000000').replace('#','');
+        selectedBgColor = bc;
+        document.getElementById('bg-color').value = '#' + bc;
+        // Apply loaded colors to preview spans immediately
+        document.querySelectorAll('#caption-preview .word-being').forEach(function(el) {
+            el.style.color = '#' + tc;
+        });
+        document.querySelectorAll('#caption-preview .done-word').forEach(function(el) {
+            el.style.color = '#' + bc;
+        });
+
+        // Voice
+        var voice = cfg.voice || 'Roger';
+        var voiceIdMap = { 'Roger':'CwhRBWXzGAHq8TQ4Fs17','Sarah':'EXAVITQu4vr4xnSDxMaL','Laura':'FGY2WhTYpPnrIDTdsKH5','Harry':'SOYHLrjzK2X1ezoPC6cr','Jessica':'cgSgspJ2msm6clMCkdW9','Charlie':'IKne3meq5aSn9XLyUdCD','George':'JBFqnCBsd6RMkjVDRZzb','Bella':'hpp4J3VqNfWAUOO0d1Us','Liam':'TX3LPaxmHKxFdv7VOQHJ','Will':'bIHbv24MWmeRgasZH58o','Daniel':'onwK4e9ZLuTAKqWW03F9','Adam':'pNInz6obpgDQGcFmaJgB' };
+        var voiceId = voiceIdMap[voice] || voice;
+        document.querySelectorAll('#voice-grid .voice-btn').forEach(function(b) {
+            var isSel = b.getAttribute('onclick').indexOf(voiceId) !== -1;
+            b.classList.toggle('sel', isSel);
+        });
+
+        // Music
+        var music = cfg.music || 'none';
+        selectedMusic = music;
+        document.querySelectorAll('#music-grid .opt-btn').forEach(function(b) {
+            b.classList.toggle('sel', b.getAttribute('onclick').indexOf("'" + music + "'") !== -1);
+        });
+        document.getElementById('kanye-check').checked = false;
+        selectedMusic = music;
+        var motion = cfg.motion || 'none';
+        selectedMotion = motion;
+        document.querySelectorAll('#motion-grid .opt-btn').forEach(function(b) {
+            b.classList.toggle('sel', b.getAttribute('onclick').indexOf("'" + motion + "'") !== -1);
+        });
+
+        // Ratio
+        var ratio = cfg.ratio || '16:9';
+        selectedRatio = ratio;
+        document.querySelectorAll('#ratio-grid .opt-btn').forEach(function(b) {
+            b.classList.toggle('sel', b.getAttribute('data-val') === ratio);
+        });
+
+        // Branding
+        if (cfg.logoPosition) {
+            var lp = document.getElementById('logoPosition');
+            if (lp) lp.value = cfg.logoPosition;
+        }
+        if (cfg.logoSize) {
+            var ls = cfg.logoSize;
+            var lsEl = document.getElementById('logoSize');
+            if (lsEl) lsEl.value = ls;
+            var lsVal = document.getElementById('logo-size-val');
+            if (lsVal) lsVal.textContent = ls;
+        }
+
+        // Start/End caption
+        if (cfg.startCaption) document.getElementById('startCaption').value = cfg.startCaption;
+        if (cfg.startDuration) document.getElementById('startDuration').value = cfg.startDuration;
+        if (cfg.endCaption) document.getElementById('endCaption').value = cfg.endCaption;
+        if (cfg.endDuration) document.getElementById('endDuration').value = cfg.endDuration;
+
+        // Selected images
+        var savedSel = cfg.selectedIndices || [];
+        var totalImages = cfg.imageCount || 0;
+
+        // Build image list from known filenames
+        imgFiles = [];
+        for (var i = 0; i < (totalImages || 100); i++) {
+            imgFiles.push('image_' + String(i+1).padStart(3,'0') + '.jpg');
+        }
+
+        sel = new Set(savedSel.slice(0, MAX));
+        renderImageGrid();
+        renderPool();
+
+        // Update counts
+        document.getElementById('img-total-count').textContent = totalImages || imgFiles.length;
+        document.getElementById('sel-count').textContent = sel.size;
+        document.getElementById('pool-count').textContent = sel.size;
+
+        // Show up to 3 most recent videos if job already has them
+        if (jobData && jobData.job_id) {
+            var vids = (vidData && vidData.videos) ? vidData.videos : [];
+            if (vids.length === 0) return;
+            vids = vids.slice(0, 3);
+            var vs = document.getElementById('section-video');
+            var vl = document.getElementById('video-list');
+            if (!vs || !vl) return;
+            vl.innerHTML = '';
+            vids.forEach(function(fname, i) {
+                var isFirst = (i === 0);
+                var wrap = document.createElement('div');
+                wrap.style.cssText = 'border:1px solid #2a2d3a;border-radius:8px;overflow:hidden;background:#000';
+                var label = document.createElement('div');
+                label.style.cssText = 'font-size:0.78rem;font-weight:600;color:#9ca3af;padding:6px 10px;background:#1a1d27';
+                label.textContent = isFirst ? '▶ Latest' : '📋 Version ' + (vids.length - i);
+                var vid = document.createElement('video');
+                vid.controls = true;
+                vid.style.cssText = 'width:100%;display:block;max-height:420px;' + (isFirst ? '' : 'max-height:240px;');
+                vid.preload = 'none';
+                var src = document.createElement('source');
+                src.src = '/videos/' + jobId + '/' + fname;
+                src.type = 'video/mp4';
+                vid.appendChild(src);
+                wrap.appendChild(label);
+                wrap.appendChild(vid);
+                var dlBtn = document.createElement('a');
+                dlBtn.href = '/videos/' + jobId + '/' + fname;
+                dlBtn.download = fname;
+                dlBtn.textContent = '⬇ Download';
+                dlBtn.style.cssText = 'display:inline-block;margin:8px 10px;padding:6px 16px;background:#22c55e;color:white;border-radius:6px;text-decoration:none;font-size:0.85rem;font-weight:600;';
+                wrap.appendChild(dlBtn);
+                vl.appendChild(wrap);
+            });
+            vs.style.display = 'block';
+            vs.scrollIntoView({ behavior: 'smooth' });
+        }
+
+    }).catch(function(err) {
+        console.error('Load error:', err);
+    });
+})();
+
+// ── Image grid
+function renderImageGrid() {
+    var grid = document.getElementById('img-grid');
+    grid.innerHTML = '';
+    imgFiles.forEach(function(fname, i) {
+        var card = document.createElement('div');
+        card.className = 'img-card' + (sel.has(i) ? ' selected' : '');
+        card.dataset.index = i;
+        card.onclick = function() { toggleImg(i); };
+        var img = document.createElement('img');
+        img.src = '/images/' + jobId + '/' + fname;
+        img.alt = 'Img ' + (i+1);
+        img.onerror = function() { this.style.display = 'none'; };
+        var meta = document.createElement('div');
+        meta.className = 'img-meta';
+        if (sel.has(i)) {
+            meta.innerHTML = '<span class="sel-badge">' + (Array.from(sel).indexOf(i)+1) + '</span>';
+        } else {
+            meta.innerHTML = '<span></span><span class="img-num">' + (i+1) + '</span>';
+        }
+        card.appendChild(img);
+        card.appendChild(meta);
+        grid.appendChild(card);
+    });
+}
+
+function toggleImg(i) {
+    if (sel.has(i)) {
+        sel.delete(i);
+    } else {
+        if (sel.size >= MAX) { setStatus('Maximum ' + MAX + ' images allowed.', 'err'); return; }
+        sel.add(i);
+    }
+    renderImageGrid();
+    renderPool();
+    document.getElementById('sel-count').textContent = sel.size;
+    document.getElementById('pool-count').textContent = sel.size;
+}
+
+function clearSelection() {
+    sel = new Set();
+    renderImageGrid();
+    renderPool();
+    document.getElementById('sel-count').textContent = 0;
+    document.getElementById('pool-count').textContent = 0;
+}
+
+function renderPool() {
+    var pool = document.getElementById('pool-grid');
+    pool.innerHTML = '';
+    Array.from(sel).forEach(function(idx, di) {
+        var fname = imgFiles[idx];
+        if (!fname) return;
+        var card = document.createElement('div');
+        card.className = 'mini-card';
+        var img = document.createElement('img');
+        img.src = '/images/' + jobId + '/' + fname;
+        img.onerror = function() { this.style.display = 'none'; };
+        var num = document.createElement('span');
+        num.className = 'mini-num';
+        num.textContent = di + 1;
+        card.appendChild(img);
+        card.appendChild(num);
+        pool.appendChild(card);
+    });
+}
+
+// ── Caption style
+function updateTextColor(val) {
+    selectedTextColor = val.replace('#', '');
+    // Text Color = highlight color → applies to the active/being-read word
+    document.querySelectorAll('#caption-preview .word-being').forEach(function(el) {
+        el.style.color = val;
+    });
+}
+function updateBgColor(val) {
+    selectedBgColor = val.replace('#', '');
+    // Background = non-highlighted text color → applies to done/finished words
+    document.querySelectorAll('#caption-preview .done-word').forEach(function(el) {
+        el.style.color = val;
+    });
+}
+function updateFs(val) {
+    document.getElementById('fs-val').textContent = val;
+}
+function selColor(el, color, key) {
+    color = color.replace('#', '');  // normalize: always strip #
+    if (key === 'textColor') selectedTextColor = color;
+    else selectedBgColor = color;
+    el.parentElement.querySelectorAll('.swatch').forEach(function(s) { s.classList.remove('sel'); });
+    el.classList.add('sel');
+}
+function rgbToHex(rgb) {
+    if (!rgb || rgb.startsWith('#')) return rgb || '';
+    var m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (!m) return rgb;
+    return '#' + [m[1],m[2],m[3]].map(function(x) { return parseInt(x).toString(16).padStart(2,'0'); }).join('');
+}
+
+// ── Voice
+var selectedVoice = 'Roger';  // default matches first button in the grid
+function selectVoice(id, btn) {
+    selectedVoice = id;
+    document.querySelectorAll('#voice-grid .voice-btn').forEach(function(b) { b.classList.remove('sel'); });
+    btn.classList.add('sel');
+}
+
+// ── Music
+var selectedMusicUrl = '';
+var selectedMotion = 'none';
+function selMusic(btn, val) {
+    selectedMusic = val;
+    selectedMusicUrl = '';
+    document.getElementById('kanye-check').checked = false;
+    document.querySelectorAll('#music-grid .opt-btn').forEach(function(b) { b.classList.remove('sel'); });
+    btn.classList.add('sel');
+}
+function applyKanye() {
+    var checked = document.getElementById('kanye-check').checked;
+    if (checked) {
+        selectedMusic = 'none';
+        selectedMusicUrl = '';
+        document.querySelectorAll('#music-grid .opt-btn').forEach(function(b) { b.classList.remove('sel'); });
+    } else {
+        selectedMusic = 'none';
+    }
+}
+function selMotion(btn, val) {
+    selectedMotion = val;
+    document.querySelectorAll('#motion-grid .opt-btn').forEach(function(b) { b.classList.remove('sel'); });
+    btn.classList.add('sel');
+}
+
+function setRatio(btn) {
+    selectedRatio = btn.getAttribute('data-val');
+    document.querySelectorAll('#ratio-grid .opt-btn').forEach(function(b) { b.classList.remove('sel'); });
+    btn.classList.add('sel');
+}
+
+// ── Script textarea char count
+document.getElementById('script').addEventListener('input', function(e) {
+    document.getElementById('char-count').textContent = e.target.value.length;
+});
+
+// ── Status helper
+function setStatus(msg, type) {
+    var el = document.getElementById('status');
+    if (!el) return;
+    el.style.display = 'block';
+    el.className = 'status-box ' + (type || 'info');
+    el.textContent = msg;
+}
+
+// ── Generate Script
+function generateScript() {
+    var btn = document.getElementById('gen-script-btn');
+    var status = document.getElementById('script-status');
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    if (status) status.style.display = 'none';
+    function pollScript() {
+        fetch('/api/script/generate/' + jobId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({})
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.generating) {
+                // Still generating — keep polling
+                setTimeout(pollScript, 2000);
+                return;
+            }
+            btn.disabled = false;
+            btn.textContent = '✨ Generate Script';
+            if (data.success && data.script) {
+                document.getElementById('script').value = data.script;
+                document.getElementById('char-count').textContent = data.script.length;
+                if (status) status.style.display = 'inline';
+            } else {
+                alert('Script generation failed: ' + (data.error || 'unknown error'));
+            }
+        }).catch(function(e) {
+            btn.disabled = false;
+            btn.textContent = '✨ Generate Script';
+            if (status) status.style.display = 'none';
+        });
+    }
+    pollScript();
+}
+
+// ── Save Settings
+function saveSettings() {
+    var saveBtn = document.getElementById('save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    var logoBase64 = '';
+    var logoFile = document.getElementById('logo').files[0];
+    function submit(logoData) {
+        var payload = {
+            address: document.getElementById('prop-address').textContent || document.getElementById('page-title').textContent,
+            script: document.getElementById('script').value,
+            selectedIndices: Array.from(sel),
+            captionStyle: {
+                fontSize: parseInt(document.getElementById('font-size').value) || 55,
+                highlightColor: selectedTextColor.replace('#', ''),
+                fontColor: selectedBgColor.replace('#', '')
+            },
+            voice: getSelectedVoice(),
+            music: selectedMusic,
+            musicUrl: selectedMusicUrl,
+            motion: selectedMotion,
+            logo: logoData,
+            logoPosition: document.getElementById('logoPosition').value,
+            logoSize: parseInt(document.getElementById('logoSize').value) || 15,
+            startCaption: document.getElementById('startCaption').value,
+            startDuration: parseFloat(document.getElementById('startDuration').value) || 3,
+            endCaption: document.getElementById('endCaption').value,
+            endDuration: parseFloat(document.getElementById('endDuration').value) || 4,
+            ratio: selectedRatio,
+        };
+        fetch('/api/save-settings/' + jobId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Save Settings';
+            if (data.success) setStatus('Settings saved!', 'ok');
+            else setStatus(data.error || 'Save failed', 'err');
+        }).catch(function() {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Save Settings';
+        });
+    }
+    if (logoFile) {
+        var reader = new FileReader();
+        reader.onload = function(e) { submit(e.target.result); };
+        reader.readAsDataURL(logoFile);
+    } else {
+        submit('');
+    }
+}
+
+// ── Get selected voice ID
+function getSelectedVoice() {
+    var selBtn = document.querySelector('#voice-grid .voice-btn.sel');
+    if (!selBtn) return 'Roger';
+    var onclick = selBtn.getAttribute('onclick') || '';
+    var m = onclick.match(/'([^']+)'/);
+    return m ? m[1] : 'Roger';
+}
+
+// ── Generate Video
+function generateVideo() {
+    var btn = document.getElementById('gen-btn');
+    var status = document.getElementById('status');
+    if (sel.size === 0) { setStatus('Select at least 1 image.', 'err'); return; }
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating...';
+    status.style.display = 'none';
+
+    var logoBase64 = '';
+    var logoFile = document.getElementById('logo').files[0];
+    function submit(logoData) {
+        var payload = {
+            address: document.getElementById('prop-address').textContent || document.getElementById('page-title').textContent,
+            script: document.getElementById('script').value,
+            sourceJobId: jobId,
+            price: document.getElementById('prop-price').textContent || '',
+            beds: document.getElementById('prop-beds').textContent || '',
+            baths: document.getElementById('prop-baths').textContent || '',
+            sqft: document.getElementById('prop-sqft').textContent || '',
+            description: document.getElementById('prop-description').textContent || '',
+            selectedIndices: Array.from(sel),
+            captionStyle: {
+                fontSize: parseInt(document.getElementById('font-size').value) || 55,
+                highlightColor: selectedTextColor.replace('#', ''),
+                fontColor: selectedBgColor.replace('#', '')
+            },
+            voice: getVoiceNameFromId(getSelectedVoice()),
+            music: selectedMusic,
+            musicUrl: selectedMusicUrl,
+            motion: selectedMotion,
+            logo: logoData,
+            logoPosition: document.getElementById('logoPosition').value,
+            logoSize: parseInt(document.getElementById('logoSize').value) || 15,
+            startCaption: document.getElementById('startCaption').value,
+            startDuration: parseFloat(document.getElementById('startDuration').value) || 3,
+            endCaption: document.getElementById('endCaption').value,
+            endDuration: parseFloat(document.getElementById('endDuration').value) || 4,
+            ratio: selectedRatio,
+            duration: parseInt(document.getElementById('durationSecs')?.value) || 60,
+        };
+        setStatus('Starting build...', 'running');
+        fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.success) {
+                var newJobId = data.job_id;
+                setStatus('Building video (~45s)...', 'running');
+                status.innerHTML = '<span id=status-text>Building video (~45s)...</span><div class=progress-wrap><div class=progress-bar-track id=pbar-track><div class=progress-bar-fill id=pbar-fill style=width:0%;transition:width 1.5s ease></div></div></div>';
+                pollVideo(newJobId, btn);
+            } else {
+                setStatus('Error: ' + (data.error || 'unknown'), 'err');
+                btn.disabled = false;
+                btn.textContent = '🚀 Generate Video';
+            }
+        }).catch(function(e) {
+            setStatus('Error: ' + e.message, 'err');
+            btn.disabled = false;
+            btn.textContent = '🚀 Generate Video';
+        });
+    }
+
+    if (logoFile) {
+        var reader = new FileReader();
+        reader.onload = function(e) { submit(e.target.result); };
+        reader.readAsDataURL(logoFile);
+    } else {
+        submit('');
+    }
+}
+
+function pollVideo(newJobId, btn) {
+    var status = document.getElementById('status');
+    var pollInterval = setInterval(function() {
+        fetch('/api/status/' + newJobId, { credentials: 'include' })
+            .then(function(r) { return r.json(); })
+            .then(function(s) {
+                var st = document.getElementById('status-text'); if (st) st.textContent = s.status || 'Building...';
+                var pfill = document.getElementById('pbar-fill');
+                if (pfill && s.progress != null) {
+                    pfill.style.width = Math.min(100, s.progress) + '%';
+                }
+                if (s.done) {
+                    clearInterval(pollInterval);
+                    btn.disabled = false;
+                    btn.textContent = '🚀 Generate Video';
+                    status.className = 'status-box ok';
+                    status.innerHTML = '<span id=status-text>Video ready!</span>';
+                    // Update URL so refresh stays on the correct job
+                    history.replaceState(null, '', '?job=' + newJobId);
+                    // Show video
+                    var videoSection = document.getElementById('video-section');
+                    if (!videoSection) {
+                        var container = document.querySelector('main');
+                        var vd = document.createElement('div');
+                        vd.id = 'video-section';
+                        vd.className = 'section-card';
+                        vd.innerHTML = '<div class="step-title mb-3">Your Video</div><video id="preview-video" controls autoplay style="width:100%;max-width:640px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.4);"><source src="/videos/' + newJobId + '/' + (s.video || '') + '" type="video/mp4">Your browser does not support video.</video><a href="/videos/' + newJobId + '/' + (s.video || '') + '" download style="display:inline-block;margin-top:10px;padding:8px 20px;background:#22c55e;color:white;border-radius:6px;text-decoration:none;font-weight:600;">⬇ Download Video</a>';
+                        container.appendChild(vd);
+                        vd.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        document.getElementById('preview-video').src = '/videos/' + newJobId + '/' + (s.video || '');
+                    }
+                }
+            }).catch(function() {});
+    }, 3000);
+}
+
+// ── Voice ID → name map (inverse of the selection map)
+var voiceIdToName = { 'CwhRBWXzGAHq8TQ4Fs17':'Roger','EXAVITQu4vr4xnSDxMaL':'Sarah','FGY2WhTYpPnrIDTdsKH5':'Laura','SOYHLrjzK2X1ezoPC6cr':'Harry','cgSgspJ2msm6clMCkdW9':'Jessica','IKne3meq5aSn9XLyUdCD':'Charlie','JBFqnCBsd6RMkjVDRZzb':'George','hpp4J3VqNfWAUOO0d1Us':'Bella','TX3LPaxmHKxFdv7VOQHJ':'Liam','bIHbv24MWmeRgasZH58o':'Will','onwK4e9ZLuTAKqWW03F9':'Daniel','pNInz6obpgDQGcFmaJgB':'Adam' };
+function getVoiceNameFromId(id) {
+    return voiceIdToName[id] || id;
+}
+
+// ── Logout
+async function handleLogout() {
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var c = cookies[i].trim();
+        if (c.indexOf('vyb_token=') === 0) {
+            document.cookie = c.split('=')[0] + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure';
+        }
+    }
+    location.href = '/create?t=' + Date.now();
+}
+</script>
+</body>
+</html>

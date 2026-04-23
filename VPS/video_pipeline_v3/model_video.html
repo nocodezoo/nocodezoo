@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>ModelVideo — Vybord v3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #B0E0E6; --accent2: #E6E6FA; --green: #00aa66; --text: #1a1a2e; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #FFFFFF; color: var(--text); min-height: 100vh; }
+        .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .section-card { background: #F5F7FA; border: 1px solid #DDE4ED; border-radius: 1.25rem; padding: 1.5rem; margin-bottom: 1.25rem; }
+        .form-input { background: #FFFFFF; border: 1px solid #DDE4ED; border-radius: 0.75rem; padding: 0.8rem 1rem; color: var(--text); width: 100%; font-size: 0.9rem; transition: border-color 0.2s; font-family: 'DM Sans', sans-serif; }
+        .form-input:focus { border-color: var(--accent); outline: none; }
+        .form-input::placeholder { color: #94a3b8; }
+        .btn-primary { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--text); font-size: 1.05rem; font-weight: 700; border: none; border-radius: 1rem; cursor: pointer; transition: opacity 0.2s; font-family: 'DM Sans', sans-serif; }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .status-box { margin-top: 1rem; padding: 1rem; border-radius: 0.75rem; font-size: 0.88rem; display: none; background: #F5F7FA; border: 1px solid #DDE4ED; color: var(--text); }
+        .status-box.ok { border-color: var(--green); color: var(--green); }
+        .status-box.err { border-color: #dc2626; color: #dc2626; }
+        .status-box.running { border-color: var(--accent); background: rgba(176,224,230,0.1); color: #1a1a2e; }
+        .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; }
+        .logo-text { font-weight: 700; font-size: 1.1rem; }
+        .accent-bar { width: 40px; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; margin-bottom: 0.75rem; }
+        .result-section { display: none; }
+        .tag { display: inline-block; padding: 0.2rem 0.6rem; background: rgba(176,224,230,0.2); border-radius: 9999px; font-size: 0.72rem; color: #1a1a2e; margin: 0.15rem; }
+        .info-row { display: flex; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: 600; color: #64748b; min-width: 100px; }
+        .progress-wrap { margin-top: 0.5rem; }
+        .progress-track { height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 1s ease; }
+        .script-preview { max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 0.82rem; color: #374151; line-height: 1.6; padding: 0.75rem; background: #fff; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
+        .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div style="position:fixed;top:8px;right:12px;display:flex;align-items:center;gap:8px;z-index:999;">
+        <a href="/create" style="font-size:11px;background:#f5f7fa;border:1px solid #dde4ed;color:#778899;border-radius:6px;padding:2px 8px;text-decoration:none;font-weight:600;">&larr; Create</a>
+        <span style="background:#f59e0b;color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;">v3</span>
+    </div>
+
+    <div style="max-width:640px;margin:0 auto;padding:1.5rem 1rem;">
+        <!-- Header -->
+        <div style="margin-bottom:1.5rem;">
+            <div class="accent-bar"></div>
+            <h1 style="font-size:1.6rem;font-weight:700;">ModelVideo</h1>
+            <p style="color:#778899;font-size:0.88rem;margin-top:0.25rem;">Turn any model page into a cinematic video — paste a URL, get a viral package.</p>
+        </div>
+
+        <!-- Input Card -->
+        <div class="section-card">
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;display:block;margin-bottom:0.5rem;">Model Page URL</label>
+                <input type="text" id="model-url" class="form-input" placeholder="https://www.models.com/models/amber-johana/" value="">
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;display:block;margin-bottom:0.5rem;">Job ID <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional — leave blank for auto)</span></label>
+                <input type="text" id="job-id" class="form-input" placeholder="mv_abc123 (leave blank for auto-generated)">
+            </div>
+            <button id="generate-btn" class="btn-primary" onclick="submitJob()">Generate Video Package</button>
+
+            <div id="status" class="status-box"></div>
+            <div id="progress-area" style="display:none;margin-top:1rem;">
+                <div id="status-text" style="font-size:0.85rem;margin-bottom:0.4rem;"></div>
+                <div class="progress-wrap">
+                    <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- In-progress Preview (shows while video is being built) -->
+        <div id="preview-panel" class="section-card" style="display:none;">
+            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.75rem;color:#778899;">Video being built — preview</div>
+
+            <div style="margin-bottom:0.7rem;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.25rem;">Model</div>
+                <div id="preview-name" style="font-size:0.9rem;font-weight:600;color:#1a1a2e;">—</div>
+            </div>
+
+            <div style="margin-bottom:0.7rem;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.25rem;">Source</div>
+                <a id="preview-url" href="#" target="_blank" style="font-size:0.78rem;color:#6b8fba;word-break:break-all;text-decoration:none;">—</a>
+            </div>
+
+            <div style="margin-bottom:0.7rem;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.25rem;">Persona</div>
+                <div id="preview-persona" style="font-size:0.82rem;color:#374151;">—</div>
+            </div>
+
+            <div style="margin-bottom:0.7rem;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.25rem;">Style Tags</div>
+                <div id="preview-tags"></div>
+            </div>
+
+            <div style="margin-bottom:0.7rem;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.25rem;">Script Preview</div>
+                <div id="preview-script" class="script-preview" style="max-height:100px;">—</div>
+            </div>
+
+            <div style="margin-bottom:0;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.25rem;">Voice</div>
+                <div id="preview-voice" style="font-size:0.82rem;color:#374151;">—</div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="result-section section-card">
+            <div style="font-weight:700;font-size:1rem;margin-bottom:1rem;">Video Ready</div>
+
+            <div id="video-area" style="margin-bottom:1rem;"></div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.5rem;">Job ID</div>
+                <div id="result-job-id" style="font-family:monospace;font-size:0.82rem;color:#1a1a2e;padding:0.4rem 0.6rem;background:#fff;border-radius:0.4rem;border:1px solid #e2e8f0;"></div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.5rem;">Persona</div>
+                <div id="result-persona" style="font-size:0.85rem;color:#374151;"></div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.5rem;">Style Tags</div>
+                <div id="result-tags"></div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.5rem;">Music</div>
+                <div id="result-music" style="font-size:0.85rem;color:#374151;"></div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.5rem;">Voiceover Script</div>
+                <div id="result-script" class="script-preview"></div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:#778899;font-weight:600;margin-bottom:0.5rem;">Extracted Images</div>
+                <div id="result-gallery" class="gallery-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    var currentJobId = null;
+    var pollInterval = null;
+
+    function showStatus(msg, type) {
+        var el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = 'status-box ' + (type || '');
+        el.style.display = 'block';
+    }
+
+    function showProgress(msg, pct) {
+        var area = document.getElementById('progress-area');
+        area.style.display = 'block';
+        document.getElementById('status-text').textContent = msg;
+        document.getElementById('progress-fill').style.width = (pct || 0) + '%';
+    }
+
+    function setStatus(msg, type, pct) {
+        showStatus(msg, type);
+        showProgress(msg, pct);
+    }
+
+    function submitJob() {
+        var url = document.getElementById('model-url').value.trim();
+        var jobId = document.getElementById('job-id').value.trim();
+        if (!url) { showStatus('Please enter a model page URL', 'err'); return; }
+
+        var btn = document.getElementById('generate-btn');
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+        showStatus('', '');
+        document.getElementById('progress-area').style.display = 'none';
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('preview-panel').style.display = 'none';
+
+        fetch('/api/model-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url, job_id: jobId || undefined })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) {
+                showStatus('Error: ' + (data.error || 'Unknown error'), 'err');
+                btn.disabled = false;
+                btn.textContent = 'Generate Video Package';
+                return;
+            }
+            currentJobId = data.job_id;
+            showStatus('Job queued at position ' + data.position + ' — building video...', 'running');
+            // Show the preview panel immediately
+            var previewPanel = document.getElementById('preview-panel');
+            previewPanel.style.display = 'block';
+            // Pre-fill URL
+            var previewUrl = document.getElementById('preview-url');
+            previewUrl.href = url;
+            previewUrl.textContent = url;
+            pollJob(data.job_id, btn);
+        })
+        .catch(function(e) {
+            showStatus('Request failed: ' + e.message, 'err');
+            btn.disabled = false;
+            btn.textContent = 'Generate Video Package';
+        });
+    }
+
+    function pollJob(jobId, btn) {
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(function() {
+            fetch('/api/status/' + jobId, { credentials: 'include' })
+                .then(function(r) { return r.json(); })
+                .then(function(s) {
+                    if (s.status) {
+                        var pct = s.progress != null ? s.progress : 0;
+                        setStatus(s.status, 'running', pct);
+                    }
+
+                    // Live-fill preview panel as data arrives from the worker
+                    if (s.model_name || s.address) {
+                        var nameEl = document.getElementById('preview-name');
+                        if (nameEl) nameEl.textContent = s.model_name || s.address || '—';
+                    }
+                    if (s.persona_core) {
+                        var persEl = document.getElementById('preview-persona');
+                        if (persEl) persEl.textContent = s.persona_core + (s.audience_hook ? ' — ' + s.audience_hook : '');
+                    }
+                    if (s.style_tags && s.style_tags.length) {
+                        var tagsEl = document.getElementById('preview-tags');
+                        if (tagsEl) tagsEl.innerHTML = s.style_tags.map(function(t) { return '<span class="tag">' + t + '</span>'; }).join('');
+                    }
+                    if (s.script) {
+                        var scrEl = document.getElementById('preview-script');
+                        if (scrEl) scrEl.textContent = s.script.substring(0, 400) + (s.script.length > 400 ? '\n\n[...]' : '');
+                    }
+                    if (s.voice) {
+                        var voiceEl = document.getElementById('preview-voice');
+                        if (voiceEl) voiceEl.textContent = s.voice;
+                    }
+
+                    if (s.done) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        showStatus('Video ready!', 'ok');
+                        document.getElementById('preview-panel').style.display = 'none';
+                        showResults(jobId, s);
+                        btn.disabled = false;
+                        btn.textContent = 'Generate Video Package';
+                    }
+                })
+                .catch(function() {});
+        }, 3000);
+    }
+
+    function showResults(jobId, s) {
+        var results = document.getElementById('results');
+        results.style.display = 'block';
+
+        document.getElementById('result-job-id').textContent = jobId;
+
+        // Video
+        var videoArea = document.getElementById('video-area');
+        if (s.video) {
+            videoArea.innerHTML =
+                '<video controls autoplay style="width:100%;max-width:480px;border-radius:0.75rem;box-shadow:0 4px 20px rgba(0,0,0,0.15);"><source src="/videos/' + jobId + '/' + s.video + '" type="video/mp4">Your browser does not support video.</video>' +
+                '<a href="/videos/' + jobId + '/' + s.video + '" download style="display:inline-block;margin-top:0.5rem;padding:0.5rem 1.2rem;background:#22c55e;color:white;border-radius:0.5rem;text-decoration:none;font-weight:600;font-size:0.85rem;">Download Video</a>';
+        } else {
+            videoArea.innerHTML = '<p style="color:#778899;font-size:0.85rem;">Video file: /videos/' + jobId + '/video_final.mp4</p>';
+        }
+
+        // Fetch full brief from the pipeline config
+        fetch('/api/status/' + jobId, { credentials: 'include' })
+            .then(function(r) { return r.json(); })
+            .then(function(s) {
+                // persona
+                var personaEl = document.getElementById('result-persona');
+                if (s.persona_core) {
+                    personaEl.innerHTML = '<strong>' + s.persona_core + '</strong><br><span style="color:#64748b;">' + (s.audience_hook || '') + '</span>';
+                } else {
+                    personaEl.textContent = 'Loaded from job config';
+                }
+
+                // tags
+                var tagsEl = document.getElementById('result-tags');
+                if (s.style_tags && s.style_tags.length) {
+                    tagsEl.innerHTML = s.style_tags.map(function(t) { return '<span class="tag">' + t + '</span>'; }).join('');
+                }
+
+                // music
+                var musicEl = document.getElementById('result-music');
+                if (s.music) {
+                    musicEl.textContent = (s.music.genre || s.music || '') + (s.music.mood ? ' — ' + s.music.mood : '');
+                }
+
+                // script
+                var scriptEl = document.getElementById('result-script');
+                if (s.script) {
+                    scriptEl.textContent = s.script.substring(0, 800) + (s.script.length > 800 ? '\n\n[...]' : '');
+                }
+            })
+            .catch(function() {});
+
+        // Gallery: try to load images from listing_src
+        var galleryEl = document.getElementById('result-gallery');
+        galleryEl.innerHTML = '<p style="grid-column:1/-1;color:#94a3b8;font-size:0.78rem;">Images in /tmp/rs_uploads/' + jobId + '/listing_src/</p>';
+    }
+    </script>
+</body>
+</html>

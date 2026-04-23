@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vybord — AI Video Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #6366f1;
+            --accent2: #8b5cf6;
+            --green: #10b981;
+            --text: #DDE4ED;
+            --muted: #9ca3af;
+            --card: #1a1d27;
+            --border: #2a2d3a;
+            --input-bg: #111827;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #0f1117;
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+        }
+        .logo-icon {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+        }
+        .feature-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(99,102,241,0.12);
+            border-color: var(--accent);
+        }
+        .accent-bar {
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 2px;
+            margin-bottom: 0.75rem;
+        }
+        a { color: #60a5fa; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        /* Floating shapes */
+        .floating-shape {
+            position: fixed;
+            border: 1px solid rgba(99,102,241,0.12);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: float 20s ease-in-out infinite;
+        }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-30px)} }
+    </style>
+</head>
+<body>
+
+    <!-- Decorative floating shapes -->
+    <div class="floating-shape" style="width:300px;height:300px;top:5%;right:-5%;animation-delay:0s;opacity:0.25;"></div>
+    <div class="floating-shape" style="width:200px;height:200px;top:55%;left:-4%;animation-delay:-7s;opacity:0.18;"></div>
+    <div class="floating-shape" style="width:150px;height:150px;bottom:15%;right:8%;animation-delay:-14s;opacity:0.12;"></div>
+
+    <!-- Nav -->
+    <nav style="background:#1a1d27;border-bottom:1px solid #2a2d3a;" class="sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/create" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;">
+                <div class="logo-icon w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-base">V</div>
+                <span class="text-xl font-bold gradient-text">Vybord</span>
+                <span style="background:rgba(99,102,241,0.2);color:#a78bfa;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">v3.7</span>
+            </a>
+            <div class="flex items-center gap-3">
+                <span id="nav-user" style="display:none;font-size:0.78rem;color:#9ca3af;"></span>
+                <button id="nav-logout" onclick="handleLogout()" style="display:none;background:#374151;border:1px solid #4b5563;color:#d1d5db;border-radius:6px;padding:0.15rem 0.6rem;font-size:0.72rem;font-weight:600;cursor:pointer;">Logout</button>
+                <a href="/auth.html" style="color:#9ca3af;font-size:0.85rem;font-weight:500;text-decoration:none;" class="hover:text-white transition">Sign In</a>
+                <a href="/auth.html" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:0.85rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.35);">Get Started Free</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="relative z-10 max-w-5xl mx-auto px-4 pt-20 pb-24 text-center">
+        <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:999px;padding:0.4rem 1rem;margin-bottom:1.5rem;">
+            <span style="width:8px;height:8px;background:#10b981;border-radius:50%;animation:pulse 2s infinite;"></span>
+            <span style="font-size:0.8rem;color:#a78bfa;font-weight:600;">v3.7 Architecture</span>
+        </div>
+        <h1 style="font-family:'Playfair Display',serif;font-size:clamp(2.5rem,7vw,4rem);font-weight:600;line-height:1.1;margin-bottom:1rem;color:#fff;">
+            AI Video Builder<br>
+            <span class="gradient-text">Real Estate Edition</span>
+        </h1>
+        <p style="font-size:1.1rem;color:#9ca3af;max-width:520px;margin:0 auto 2.5rem;">
+            Paste a property listing URL. Get a polished, captioned real estate video in minutes. Free to start.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;justify-content:center;align-items:center;margin-bottom:1rem;">
+            <a href="/auth.html" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:1rem;font-weight:600;padding:0.9rem 2rem;border-radius:12px;text-decoration:none;box-shadow:0 8px 30px rgba(99,102,241,0.4);">Start Free — No Credit Card</a>
+            <a href="/auth.html" style="color:#9ca3af;font-size:0.9rem;font-weight:500;text-decoration:none;border:1px solid #374151;padding:0.7rem 1.8rem;border-radius:12px;background:#1a1d27;">Sign In</a>
+        </div>
+        <p style="font-size:0.8rem;color:#6b7280;margin-top:0.5rem;">5 videos/month free · Upgrade anytime</p>
+    </section>
+
+    <!-- How it works -->
+    <section style="background:#1a1d27;border-top:1px solid #2a2d3a;border-bottom:1px solid #2a2d3a;padding:5rem 0;">
+        <div class="relative z-10 max-w-5xl mx-auto px-4">
+            <div class="accent-bar" style="margin:0 auto 0.75rem;"></div>
+            <h2 style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:600;color:#fff;text-align:center;margin-bottom:3rem;">How it works</h2>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;">
+                <div class="feature-card">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.2rem;margin-bottom:1rem;">1</div>
+                    <h3 style="font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:0.5rem;">Paste Listing URL</h3>
+                    <p style="font-size:0.85rem;color:#9ca3af;line-height:1.6;">Drop in a property URL from any major real estate site. We extract the images, description, and key details automatically.</p>
+                </div>
+                <div class="feature-card">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.2rem;margin-bottom:1rem;">2</div>
+                    <h3 style="font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:0.5rem;">AI Picks the Best Shots</h3>
+                    <p style="font-size:0.85rem;color:#9ca3af;line-height:1.6;">Our AI selects the most compelling property images and builds a cinematic slideshow with smooth Ken Burns zoom effects.</p>
+                </div>
+                <div class="feature-card">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.2rem;margin-bottom:1rem;">3</div>
+                    <h3 style="font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:0.5rem;">Auto Captions + Voiceover</h3>
+                    <p style="font-size:0.85rem;color:#9ca3af;line-height:1.6;">Burned-in captions and a natural AI voiceover are added automatically. Download and share immediately.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="relative z-10 max-w-5xl mx-auto px-4 py-20">
+        <div class="accent-bar" style="margin:0 auto 0.75rem;"></div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:600;color:#fff;text-align:center;margin-bottom:3rem;">Everything you need</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.25rem;">
+            <div class="feature-card" style="text-align:center;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">🎬</div>
+                <h3 style="font-weight:700;color:#fff;margin-bottom:0.4rem;font-size:0.95rem;">Auto Captions</h3>
+                <p style="font-size:0.8rem;color:#9ca3af;line-height:1.5;">Professional captions baked into the video. No post-editing needed.</p>
+            </div>
+            <div class="feature-card" style="text-align:center;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">🎙️</div>
+                <h3 style="font-weight:700;color:#fff;margin-bottom:0.4rem;font-size:0.95rem;">AI Voiceover</h3>
+                <p style="font-size:0.8rem;color:#9ca3af;line-height:1.5;">Natural-sounding TTS narration reads your listing description aloud.</p>
+            </div>
+            <div class="feature-card" style="text-align:center;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">📸</div>
+                <h3 style="font-weight:700;color:#fff;margin-bottom:0.4rem;font-size:0.95rem;">Smart Image Extraction</h3>
+                <p style="font-size:0.8rem;color:#9ca3af;line-height:1.5;">Pulls images from any listing URL automatically. No manual uploads.</p>
+            </div>
+            <div class="feature-card" style="text-align:center;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">✂️</div>
+                <h3 style="font-weight:700;color:#fff;margin-bottom:0.4rem;font-size:0.95rem;">Ken Burns Effect</h3>
+                <p style="font-size:0.8rem;color:#9ca3af;line-height:1.5;">Cinematic pan and zoom on every slide. Makes static images feel alive.</p>
+            </div>
+            <div class="feature-card" style="text-align:center;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">🎵</div>
+                <h3 style="font-weight:700;color:#fff;margin-bottom:0.4rem;font-size:0.95rem;">Background Music</h3>
+                <p style="font-size:0.8rem;color:#9ca3af;line-height:1.5;">Royalty-free ambient piano tracks included. Mute option available.</p>
+            </div>
+            <div class="feature-card" style="text-align:center;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">⚡</div>
+                <h3 style="font-weight:700;color:#fff;margin-bottom:0.4rem;font-size:0.95rem;">Ready in Minutes</h3>
+                <p style="font-size:0.8rem;color:#9ca3af;line-height:1.5;">From URL to finished video in under 5 minutes. No software to install.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section style="background:#1a1d27;border-top:1px solid #2a2d3a;border-bottom:1px solid #2a2d3a;padding:5rem 0;">
+        <div class="relative z-10 max-w-5xl mx-auto px-4">
+            <div class="accent-bar" style="margin:0 auto 0.75rem;"></div>
+            <h2 style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:600;color:#fff;text-align:center;margin-bottom:0.5rem;">Simple pricing</h2>
+            <p style="text-align:center;color:#9ca3af;font-size:0.9rem;margin-bottom:3rem;">Start free. Upgrade when you need more.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.25rem;max-width:900px;margin:0 auto;">
+                <div style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:16px;padding:1.5rem;text-align:center;">
+                    <h3 style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:0.5rem;">Free</h3>
+                    <div style="font-size:2.2rem;font-weight:700;color:#fff;margin-bottom:1rem;">$0<span style="font-size:0.8rem;font-weight:400;color:#9ca3af;">/mo</span></div>
+                    <ul style="list-style:none;padding:0;text-align:left;margin-bottom:1.5rem;font-size:0.82rem;color:#9ca3af;line-height:1.8;">
+                        <li>✓ &nbsp;5 videos/month</li>
+                        <li>✓ &nbsp;All core features</li>
+                        <li>✓ &nbsp;Auto captions</li>
+                        <li>✓ &nbsp;AI voiceover</li>
+                    </ul>
+                    <a href="/auth.html" style="display:block;text-align:center;padding:0.6rem;border:1px solid #374151;border-radius:10px;color:#d1d5db;font-weight:600;font-size:0.85rem;background:#111827;text-decoration:none;">Get Started Free</a>
+                </div>
+                <div style="background:#1a1d27;border:2px solid #6366f1;border-radius:16px;padding:1.5rem;text-align:center;position:relative;box-shadow:0 0 30px rgba(99,102,241,0.15);">
+                    <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 14px;border-radius:999px;">Most Popular</div>
+                    <h3 style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:0.5rem;">Pro</h3>
+                    <div style="font-size:2.2rem;font-weight:700;color:#fff;margin-bottom:1rem;">$19<span style="font-size:0.8rem;font-weight:400;color:#9ca3af;">/mo</span></div>
+                    <ul style="list-style:none;padding:0;text-align:left;margin-bottom:1.5rem;font-size:0.82rem;color:#9ca3af;line-height:1.8;">
+                        <li>✓ &nbsp;30 videos/month</li>
+                        <li>✓ &nbsp;Everything in Free</li>
+                        <li>✓ &nbsp;Priority processing</li>
+                        <li>✓ &nbsp;Custom branding</li>
+                    </ul>
+                    <a href="/auth.html" style="display:block;text-align:center;padding:0.6rem;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:600;font-size:0.85rem;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.3);">Get Pro</a>
+                </div>
+                <div style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:16px;padding:1.5rem;text-align:center;">
+                    <h3 style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:0.5rem;">Unlimited</h3>
+                    <div style="font-size:2.2rem;font-weight:700;color:#fff;margin-bottom:1rem;">$49<span style="font-size:0.8rem;font-weight:400;color:#9ca3af;">/mo</span></div>
+                    <ul style="list-style:none;padding:0;text-align:left;margin-bottom:1.5rem;font-size:0.82rem;color:#9ca3af;line-height:1.8;">
+                        <li>✓ &nbsp;Unlimited videos</li>
+                        <li>✓ &nbsp;Everything in Pro</li>
+                        <li>✓ &nbsp;White label</li>
+                        <li>✓ &nbsp;API access</li>
+                    </ul>
+                    <a href="/auth.html" style="display:block;text-align:center;padding:0.6rem;border:1px solid #374151;border-radius:10px;color:#d1d5db;font-weight:600;font-size:0.85rem;background:#111827;text-decoration:none;">Go Unlimited</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="relative z-10 max-w-5xl mx-auto px-4 py-20 text-center">
+        <div class="accent-bar" style="margin:0 auto 0.75rem;"></div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:600;color:#fff;margin-bottom:0.75rem;">Ready to create?</h2>
+        <p style="color:#9ca3af;margin-bottom:2rem;font-size:0.95rem;">Start with 5 free videos. No credit card required.</p>
+        <a href="/auth.html" style="display:inline-block;padding:0.9rem 2.5rem;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:600;font-size:1rem;text-decoration:none;box-shadow:0 8px 30px rgba(99,102,241,0.4);">Get Started Free</a>
+    </section>
+
+    <!-- Footer -->
+    <footer style="border-top:1px solid #2a2d3a;padding:2rem 0;">
+        <div class="relative z-10 max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <div class="logo-icon w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs">V</div>
+                <span class="font-bold gradient-text">Vybord</span>
+                <span style="font-size:0.75rem;color:#6b7280;margin-left:0.25rem;">v3.7 powered by</span>
+            </div>
+            <p style="font-size:0.8rem;color:#6b7280;">© 2026 Vybord. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <style>
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    </style>
+
+    <script>
+    async function checkNavAuth() {
+        try {
+            const r = await fetch('/api/me', {credentials: 'include'});
+            if (r.ok) {
+                const u = await r.json();
+                document.getElementById('nav-user').textContent = u.email || '';
+                document.getElementById('nav-user').style.display = 'inline';
+                document.getElementById('nav-logout').style.display = 'inline';
+            }
+        } catch(e) {}
+    }
+    async function handleLogout() {
+        try { await fetch('/api/auth/logout', {method:'POST', credentials:'include'}); } catch(e) {}
+        location.href = '/?t=' + Date.now();
+    }
+    checkNavAuth();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Videos — Vybord v3.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'DM Sans', sans-serif; background: #F5F7FA; }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-background-fill-color: transparent; }
+        .card { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; overflow: hidden; }
+        .job-card { transition: transform 0.15s, box-shadow 0.15s; }
+        .job-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+        .status-badge { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+        .status-completed { background: #dcfce7; color: #16a34a; }
+        .status-processing { background: #fef9c3; color: #a16207; }
+        .status-failed { background: #fee2e2; color: #dc2626; }
+        .video-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 0.5rem; background: #000; }
+        .date-label { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #778899; }
+        .empty-state svg { margin: 0 auto 1rem; opacity: 0.4; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .overlay.open { display: flex; }
+        .overlay.page-mode { background: transparent; position: static; min-height: 100vh; padding: 0; align-items: stretch; }
+        .overlay.page-mode .modal { max-width: 100%; max-height: none; border-radius: 0; }
+        .modal { background: white; border-radius: 1.25rem; width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; }
+        .spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #667eea; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 3rem auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="overlay page-mode" id="profile-overlay">
+    <div class="modal" id="profile-modal">
+        <!-- Video Modal (inside overlay) -->
+        <div id="video-modal" style="display:none;position:relative;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid #e2e8f0;">
+                <span id="video-modal-title" style="font-weight:700;font-size:0.95rem;color:#1a1a2e;"></span>
+                <button onclick="closeVideoModal()" style="background:#f1f5f9;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+            <div style="background:#000;position:relative;" id="video-modal-player">
+                <video id="modal-video" controls autoplay style="width:100%;max-height:70vh;display:block;"></video>
+            </div>
+            <div id="video-playlist" style="padding:0.75rem 1.25rem;display:flex;gap:0.5rem;flex-wrap:wrap;border-top:1px solid #e2e8f0;"></div>
+            <div style="padding:0.75rem 1.25rem;display:flex;justify-content:flex-end;">
+                <a id="modal-download-btn" href="" download style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:#22c55e;color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:0.85rem;">⬇ Download</a>
+            </div>
+        </div>
+
+        <!-- Profile Modal -->
+        <div id="profile-inner">
+        <!-- Header -->
+        <div class="sticky top-0 bg-white border-b border-[#E2E8F0] px-6 py-4 flex items-center justify-between rounded-t-[1.25rem]">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">V</div>
+                <div>
+                    <h2 class="font-bold text-[#1a1a2e]" style="font-size: 1rem;">My Videos</h2>
+                    <p class="text-xs text-[#94a3b8]" id="user-email"></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/review.html" class="text-sm text-[#667eea] hover:underline font-medium">← New Video</a>
+                <button onclick="logout()" class="text-sm text-[#dc2626] hover:underline font-medium">Sign Out</button>
+                <button onclick="closeProfile()" class="w-8 h-8 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] flex items-center justify-center text-[#64748b] font-bold text-lg transition">×</button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6" id="profile-content">
+            <div class="spinner" id="loading-spinner"></div>
+            <div id="videos-list"></div>
+            <div class="empty-state" id="empty-state" style="display:none;">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.899L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+                <p class="text-lg font-medium text-[#64748b]">No videos yet</p>
+                <p class="text-sm mt-1">Generate your first video and it'll show up here</p>
+                <a href="/review.html" class="inline-block mt-4 px-5 py-2 rounded-lg text-white text-sm font-semibold" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">Create a Video</a>
+            </div>
+        </div>
+        </div><!-- /profile-inner -->
+    </div><!-- /profile-modal -->
+</div><!-- /overlay -->
+
+<script>
+async function loadProfile() {
+    document.getElementById('loading-spinner').style.display = 'block';
+
+    try {
+        const r = await fetch('/api/profile/videos', { credentials: 'include' });
+        if (r.status === 401) {
+            window.location.href = '/auth.html';
+            return;
+        }
+        const data = await r.json();
+        document.getElementById('loading-spinner').style.display = 'none';
+
+        const me = await fetch('/api/me', { credentials: 'include' }).then(x => x.json()).catch(() => ({}));
+        if (me.email) {
+            document.getElementById('user-email').textContent = me.email;
+        }
+
+        const list = document.getElementById('videos-list');
+        const empty = document.getElementById('empty-state');
+
+        if (!data.videos || data.videos.length === 0) {
+            list.style.display = 'none';
+            empty.style.display = 'block';
+            return;
+        }
+
+        empty.style.display = 'none';
+
+        // Group by date
+        const byDate = {};
+        data.videos.forEach(v => {
+            const d = v.created_at ? v.created_at.split('T')[0] : 'Unknown';
+            if (!byDate[d]) byDate[d] = [];
+            byDate[d].push(v);
+        });
+
+        let html = '';
+        Object.keys(byDate).sort((a,b) => b.localeCompare(a)).forEach(date => {
+            const label = formatDate(date);
+            html += `<div class="mb-6">
+                <div class="date-label mb-3 flex items-center gap-2">
+                    <span>${label}</span>
+                    <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+                </div>
+                <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">`;
+            byDate[date].forEach(v => {
+                const statusClass = v.status === 'completed' ? 'status-completed' :
+                                    v.status === 'failed' ? 'status-failed' : 'status-processing';
+                const statusLabel = v.status === 'completed' ? '✓ Done' :
+                                    v.status === 'failed' ? '✕ Failed' : '◌ In Progress';
+                const hasVideo = v.videos && v.videos.length > 0;
+                const videoSrc = hasVideo ? `/videos/${v.job_id}/${v.videos[0]}` : '';
+                const thumbOrPlaceholder = hasVideo
+                    ? `<img src="${videoSrc}?thumb=1" class="video-thumb" alt="${v.address || v.job_id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                       <div class="video-thumb hidden items-center justify-center bg-[#1a1d27] text-white text-xs">No preview</div>`
+                    : `<div class="video-thumb flex items-center justify-center bg-[#1a1d27] text-white text-xs">No video</div>`;
+                html += `<div class="card job-card" style="position:relative;" data-videos='${JSON.stringify(v.videos || []).replace(/'/g, "&#39;")}' data-job="${v.job_id}" data-address="${(v.address || '').replace(/'/g, "&#39;")}">
+                    <div class="relative">
+                        ${thumbOrPlaceholder}
+                        ${hasVideo ? `<button class="play-btn" onclick="event.stopPropagation();openVideoModal('${v.job_id}', '${(v.videos[0] || '').replace(/'/g, "&#39;")}', ${JSON.stringify(v.videos || []).replace(/'/g, "&#39;")})" style="position:absolute;inset:0;width:100%;height:100%;background:rgba(0,0,0,0.35);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0.5rem;z-index:5;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                        </button>` : ''}
+                        <span class="status-badge ${statusClass}" style="position:absolute;top:6px;right:6px;">${statusLabel}</span>
+                        <button class="delete-btn" title="Delete" onclick="event.stopPropagation();deleteJob('${v.job_id}')" style="position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:#fff;font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;">✕</button>
+                    </div>
+                    <div class="p-3">
+                        <div class="font-semibold text-[#1a1a2e] text-sm truncate" style="font-size:0.82rem;">${v.address || 'Listing'}</div>
+                        <div class="flex items-center justify-between mt-1">
+                            <span class="text-xs text-[#94a3b8]">${v.job_id}</span>
+                            ${hasVideo ? `<button onclick="event.stopPropagation();downloadVideo('${v.job_id}', '${(v.videos[0] || '').replace(/'/g, "&#39;")}', '${(v.address || 'video').replace(/'/g, "&#39;")}')" style="background:none;border:none;cursor:pointer;color:#667eea;font-size:0.75rem;font-weight:600;padding:0;text-decoration:underline;">⬇ Download</button>` : ''}
+                        </div>
+                        ${v.videos && v.videos.length > 1 ? `<div class="text-xs text-[#94a3b8] mt-1">${v.videos.length} videos</div>` : ''}
+                    </div>
+                </div>`;
+            });
+            html += '</div></div>';
+        });
+
+        list.innerHTML = html;
+    } catch(e) {
+        document.getElementById('loading-spinner').style.display = 'none';
+        document.getElementById('videos-list').innerHTML = '<div class="text-center text-red-500 py-8">Failed to load videos. Try refreshing.</div>';
+    }
+}
+
+function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    if (d.getTime() === today.getTime()) return 'Today';
+    if (d.getTime() === yesterday.getTime()) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function openJob(jobId) {
+    window.location.href = '/review.html?job=' + jobId;
+}
+
+async function deleteJob(jobId) {
+    if (!confirm('Delete this video job?')) return;
+    var token = null;
+    try { token = localStorage.getItem('vyb_token'); } catch(e) {}
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var r = await fetch('/api/profile/videos/' + jobId, { method: 'DELETE', credentials: 'include', headers: headers });
+    if (r.ok) {
+        // Remove card from DOM
+        var cards = document.querySelectorAll('.job-card');
+        cards.forEach(function(c) {
+            var btn = c.querySelector('button[onclick*="deleteJob"]');
+            if (btn && btn.getAttribute('onclick').includes(jobId)) c.remove();
+        });
+        // Refresh if no cards left
+        if (document.querySelectorAll('.job-card').length === 0) loadProfile();
+    } else {
+        var err = await r.json().catch(function() { return { error: 'Delete failed' }; });
+        alert('Could not delete: ' + (err.error || r.statusText));
+    }
+}
+
+function openVideoModal(jobId, videoFile, videos) {
+    var videoList = videos;
+    var currentIdx = 0;
+    var currentFile = videoFile;
+
+    var overlay = document.getElementById('profile-overlay');
+    var videoModal = document.getElementById('video-modal');
+    var profileInner = document.getElementById('profile-inner');
+
+    if (!profileInner) {
+        // profile-inner might not exist yet if it's the first load
+        profileInner = document.getElementById('profile-modal');
+    }
+
+    profileInner.style.display = 'none';
+    videoModal.style.display = 'block';
+    overlay.classList.add('open');
+
+    var videoEl = document.getElementById('modal-video');
+    var titleEl = document.getElementById('video-modal-title');
+    var dlBtn = document.getElementById('modal-download-btn');
+    var playlistEl = document.getElementById('video-playlist');
+
+    var src = '/videos/' + jobId + '/' + currentFile;
+    videoEl.src = src;
+    dlBtn.href = src;
+    dlBtn.download = (document.querySelector('.job-card[data-job="' + jobId + '"]') || {}).dataset.address || videoFile;
+    titleEl.textContent = 'Video';
+
+    // Build playlist if multiple videos
+    playlistEl.innerHTML = '';
+    if (Array.isArray(videoList) && videoList.length > 1) {
+        videoList.forEach(function(vf, idx) {
+            var btn = document.createElement('button');
+            btn.textContent = (idx + 1);
+            btn.style.cssText = 'padding:4px 10px;border-radius:6px;border:1px solid ' + (idx === 0 ? '#667eea' : '#e2e8f0') + ';background:' + (idx === 0 ? '#667eea;color:white' : 'white;color:#64748b') + ';cursor:pointer;font-size:0.75rem;font-weight:600;';
+            btn.onclick = (function(vf, idx) {
+                return function() {
+                    currentFile = vf;
+                    currentIdx = idx;
+                    videoEl.src = '/videos/' + jobId + '/' + vf;
+                    dlBtn.href = '/videos/' + jobId + '/' + vf;
+                    videoEl.play();
+                    // Update playlist buttons
+                    playlistEl.querySelectorAll('button').forEach(function(b, i) {
+                        b.style.borderColor = (i === idx ? '#667eea' : '#e2e8f0');
+                        b.style.background = (i === idx ? '#667eea;color:white' : 'white;color:#64748b');
+                    });
+                };
+            })(vf, idx);
+            playlistEl.appendChild(btn);
+        });
+    }
+}
+
+function closeVideoModal() {
+    var overlay = document.getElementById('profile-overlay');
+    var videoModal = document.getElementById('video-modal');
+    var profileInner = document.getElementById('profile-inner');
+    var videoEl = document.getElementById('modal-video');
+
+    if (videoEl) videoEl.pause();
+    if (videoModal) videoModal.style.display = 'none';
+    if (profileInner) profileInner.style.display = '';
+    if (overlay) overlay.classList.remove('open');
+}
+
+function downloadVideo(jobId, videoFile, address) {
+    var dl = document.createElement('a');
+    dl.href = '/videos/' + jobId + '/' + videoFile;
+    dl.download = (address || 'video').replace(/[^a-zA-Z0-9_\-\s]/g, '') + '.mp4';
+    dl.click();
+}
+
+function closeProfile() {
+    // Go back to previous page or home
+    if (document.referrer && document.referrer.includes(window.location.host)) {
+        history.back();
+    } else {
+        window.location.href = '/review.html';
+    }
+}
+
+async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    window.location.href = '/auth.html';
+}
+
+// Close on overlay click (outside modal) — only for popup mode (non-page-mode)
+document.getElementById('profile-overlay').addEventListener('click', function(e) {
+    if (e.target === this && !document.getElementById('profile-overlay').classList.contains('page-mode')) {
+        if (document.getElementById('video-modal').style.display !== 'none') {
+            closeVideoModal();
+        } else {
+            closeProfile();
+        }
+    }
+});
+
+// Close on Escape — always closes video modal if open; closes profile only in popup mode
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.getElementById('video-modal').style.display !== 'none') {
+            closeVideoModal();
+        } else if (!document.getElementById('profile-overlay').classList.contains('page-mode')) {
+            closeProfile();
+        }
+    }
+});
+
+loadProfile();
+</script>
+</body>
+</html>

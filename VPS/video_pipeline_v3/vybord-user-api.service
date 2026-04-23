@@ -1,0 +1,17 @@
+[Unit]
+Description=Vybord User API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/video_pipeline
+EnvironmentFile=/opt/video_pipeline/.env
+ExecStart=/usr/bin/python3 /opt/video_pipeline/main.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
