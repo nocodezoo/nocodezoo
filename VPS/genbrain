@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>brain.md — Universal AI Cognitive Brain Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary:    #0d1117;
+    --bg-secondary:  #161b22;
+    --bg-tertiary:   #1c2128;
+    --bg-hover:      #21262d;
+    --border:        #30363d;
+    --border-subtle: #21262d;
+    --text-primary:  #e6edf3;
+    --text-secondary:#8b949e;
+    --text-muted:    #6e7681;
+    --accent:        #22d3ee;
+    --accent-dim:    rgba(34,211,238,0.12);
+    --accent-glow:   rgba(34,211,238,0.25);
+    --green:         #3fb950;
+    --amber:         #d29922;
+    --purple:        #a371f7;
+    --red:           #f85149;
+    --code-bg:       #161b22;
+    --code-text:     #c9d1d9;
+    --sidebar-width: 280px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg-primary);
+    z-index: 10;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .sidebar-logo-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo-icon svg { color: var(--accent); }
+
+  .sidebar-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'Fira Mono', monospace;
+  }
+
+  .sidebar-subtitle {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .sidebar-nav { padding: 16px 0 32px; }
+
+  .nav-section-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 20px 4px;
+    margin-top: 8px;
+  }
+
+  .nav-item {
+    display: block;
+    padding: 5px 20px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.15s ease;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+
+  .nav-item:hover {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-left-color: var(--accent);
+  }
+
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--accent-dim);
+    font-weight: 500;
+  }
+
+  .nav-item.depth-2 { padding-left: 20px; font-weight: 500; color: var(--text-primary); }
+  .nav-item.depth-3 { padding-left: 32px; }
+  .nav-item.depth-4 { padding-left: 44px; font-size: 0.75rem; }
+
+  /* ── Main Content ── */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 48px 64px;
+    max-width: 920px;
+  }
+
+  /* ── Top Bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .breadcrumb {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: 'Fira Mono', monospace;
+  }
+
+  .breadcrumb span { color: var(--accent); }
+
+  .topbar-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(34,211,238,0.3);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-family: 'Fira Mono', monospace;
+    white-space: nowrap;
+  }
+
+  /* ── Typography ── */
+  .content h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .content h1 .accent { color: var(--accent); }
+
+  .content .doc-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: 'Fira Mono', monospace;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .content .doc-meta .dot { color: var(--border); }
+
+  .content h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 56px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.01em;
+    scroll-margin-top: 24px;
+  }
+
+  .content h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 36px;
+    margin-bottom: 14px;
+    scroll-margin-top: 24px;
+  }
+
+  .content h3 code {
+    font-size: 1rem;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(34,211,238,0.2);
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+
+  .content p {
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    line-height: 1.8;
+  }
+
+  .content p strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .content ul, .content ol {
+    margin: 0 0 16px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .content ul li {
+    color: var(--text-secondary);
+    padding: 4px 0 4px 20px;
+    position: relative;
+    line-height: 1.7;
+  }
+
+  .content ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.7;
+  }
+
+  .content ul li strong { color: var(--text-primary); }
+
+  /* ── Inline code ── */
+  .content p code, .content li code, .content td code {
+    font-family: 'Fira Mono', monospace;
+    font-size: 0.85em;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: var(--accent);
+  }
+
+  /* ── Blockquote ── */
+  .content blockquote {
+    background: var(--accent-dim);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 20px;
+    margin: 24px 0;
+    position: relative;
+  }
+
+  .content blockquote p {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.925rem;
+  }
+
+  .content blockquote p strong {
+    color: var(--accent);
+  }
+
+  /* ── Horizontal rule ── */
+  .content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  /* ── Code Blocks ── */
+  .code-block-wrapper {
+    margin: 20px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+  }
+
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-block-lang {
+    font-size: 0.7rem;
+    font-family: 'Fira Mono', monospace;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .code-block-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .code-block-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot-red    { background: #ff5f57; }
+  .dot-amber  { background: #ffbd2e; }
+  .dot-green  { background: #28c840; }
+
+  .code-block-body {
+    padding: 20px;
+    overflow-x: auto;
+  }
+
+  .code-block-body pre {
+    margin: 0;
+  }
+
+  .code-block-body code {
+    font-family: 'Fira Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--code-text);
+    display: block;
+    white-space: pre;
+  }
+
+  /* ── Syntax Highlighting ── */
+  .tok-keyword  { color: #ff7b72; }
+  .tok-string   { color: #a5d6ff; }
+  .tok-comment  { color: #8b949e; font-style: italic; }
+  .tok-type     { color: #ffa657; }
+  .tok-fn       { color: #d2a8ff; }
+  .tok-prop     { color: #79c0ff; }
+  .tok-num      { color: #79c0ff; }
+  .tok-op       { color: #ff7b72; }
+  .tok-punct    { color: #c9d1d9; }
+  .tok-path     { color: #a5d6ff; }
+  .tok-arrow    { color: var(--accent); }
+  .tok-bash-cmd { color: #3fb950; }
+  .tok-bash-flag { color: #ffa657; }
+  .tok-bash-comment { color: #8b949e; font-style: italic; }
+
+  /* ── Flow Diagram ── */
+  .flow-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+    font-family: 'Fira Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--code-text);
+    line-height: 1.8;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .flow-arrow { color: var(--accent); }
+  .flow-label { color: #d2a8ff; font-weight: 500; }
+  .flow-node  { color: #ffa657; }
+  .flow-desc  { color: var(--text-muted); }
+
+  /* ── Tables ── */
+  .table-wrapper {
+    overflow-x: auto;
+    margin: 24px 0;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .content thead tr {
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .content th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .content td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  .content tbody tr:last-child td { border-bottom: none; }
+
+  .content tbody tr:hover td { background: var(--bg-hover); }
+
+  .method-badge {
+    display: inline-block;
+    font-family: 'Fira Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .method-get  { background: rgba(63,185,80,0.15);  color: #3fb950; border: 1px solid rgba(63,185,80,0.3); }
+  .method-post { background: rgba(121,192,255,0.15); color: #79c0ff; border: 1px solid rgba(121,192,255,0.3); }
+
+  .mode-badge {
+    display: inline-block;
+    font-family: 'Fira Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    color: var(--accent);
+  }
+
+  .anti-pattern-bad  { color: var(--red);   font-size: 0.8rem; }
+  .anti-pattern-good { color: var(--green);  font-size: 0.8rem; }
+
+  /* ── Directory Tree ── */
+  .tree-line { color: var(--text-muted); }
+  .tree-file { color: #c9d1d9; }
+  .tree-dir  { color: #79c0ff; }
+  .tree-arrow { color: var(--text-muted); }
+  .tree-desc { color: #8b949e; }
+  .tree-highlight { color: var(--accent); font-weight: 600; }
+
+  /* ── Section Callouts ── */
+  .callout {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+
+  .callout.accent-border { border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; }
+
+  /* ── Footer ── */
+  .doc-footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: 'Fira Mono', monospace;
+  }
+
+  .doc-footer .updated { color: var(--accent); }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { padding: 32px 24px; }
+  }
+
+  @media (max-width: 600px) {
+    .main { padding: 24px 16px; }
+    .content h1 { font-size: 1.7rem; }
+  }
+
+  /* ── Section glow on heading hover ── */
+  .content h2:hover, .content h3:hover {
+    color: var(--accent);
+    cursor: default;
+    transition: color 0.2s;
+  }
+
+  /* ── Anchor link helper ── */
+  .anchor-wrap { text-decoration: none; color: inherit; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+        </div>
+        <div>
+          <div class="sidebar-title">brain.md</div>
+          <div class="sidebar-subtitle">AI Cognitive Overlay</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a class="nav-item depth-2 active" href="#what-this-is" onclick="setActive(this)">What This Is</a>
+      <a class="nav-item depth-2" href="#the-core-idea" onclick="setActive(this)">The Core Idea</a>
+      <div class="nav-section-label">Architecture</div>
+      <a class="nav-item depth-2" href="#repository-structure" onclick="setActive(this)">Repository Structure</a>
+      <a class="nav-item depth-2" href="#the-one-file" onclick="setActive(this)">brain.config.ts</a>
+      <a class="nav-item depth-2" href="#brain-first-flow" onclick="setActive(this)">Brain-First Flow</a>
+      <div class="nav-section-label">Core Modules</div>
+      <a class="nav-item depth-3" href="#lib-runner" onclick="setActive(this)">lib/runner.ts</a>
+      <a class="nav-item depth-3" href="#lib-exec" onclick="setActive(this)">lib/exec.ts</a>
+      <a class="nav-item depth-3" href="#lib-logger" onclick="setActive(this)">lib/logger.ts</a>
+      <a class="nav-item depth-3" href="#job-settings" onclick="setActive(this)">JobSettings Interface</a>
+      <div class="nav-section-label">Reference</div>
+      <a class="nav-item depth-2" href="#job-directory" onclick="setActive(this)">Job Directory Structure</a>
+      <a class="nav-item depth-2" href="#api-endpoints" onclick="setActive(this)">API Endpoints</a>
+      <a class="nav-item depth-2" href="#brain-panel" onclick="setActive(this)">Brain Panel</a>
+      <a class="nav-item depth-2" href="#anti-patterns" onclick="setActive(this)">Known Anti-Patterns</a>
+      <a class="nav-item depth-2" href="#service-management" onclick="setActive(this)">Service Management</a>
+    </nav>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══ -->
+  <main class="main">
+    <div class="topbar">
+      <span class="breadcrumb">docs / <span>brain.md</span></span>
+      <span class="topbar-badge">LAST UPDATED: 2026-04-24</span>
+    </div>
+
+    <div class="content">
+
+      <!-- H1 -->
+      <h1><span class="accent">brain.md</span></h1>
+      <div class="doc-meta">
+        <span>Universal AI Cognitive Brain Overlay</span>
+        <span class="dot">·</span>
+        <span>Knowledge-First Architecture</span>
+        <span class="dot">·</span>
+        <span>Any Terminal Process</span>
+      </div>
+
+      <hr />
+
+      <!-- ── WHAT THIS IS ── -->
+      <h2 id="what-this-is">WHAT THIS IS</h2>
+
+      <p>
+        <code>brain</code> is a <strong>knowledge-first execution layer</strong> that sits in front of any terminal process. Before a command runs, before logs are read, before any file is opened — the brain performs a <strong>visual orientation check</strong>: it maps the incoming event to a known stage, surfaces the exact code reference, and tells you <em>what is likely happening</em> before you have to look.
+      </p>
+
+      <p>The result:</p>
+      <ul>
+        <li>Answers come faster (you already know where to look)</li>
+        <li>Code is easier to read (you know what you're looking for)</li>
+        <li>Debugging is narrowed to a single node before you open a file</li>
+      </ul>
+
+      <blockquote>
+        <p><strong>One rule:</strong> Everything that happens in the system passes through the brain first.</p>
+      </blockquote>
+
+      <!-- ── THE CORE IDEA ── -->
+      <h2 id="the-core-idea">THE CORE IDEA</h2>
+
+      <p>Without a brain:</p>
+      <div class="code-block-wrapper">
+        <div class="code-block-header">
+          <span class="code-block-lang">flow</span>
+          <div class="code-block-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+        </div>
+        <div class="code-block-body">
+          <pre><code><span class="tok-arrow">Event</span> <span style="color:#6e7681">→</span> <span class="tok-string">Read all logs</span> <span style="color:#6e7681">→</span> <span class="tok-string">Guess the stage</span> <span style="color:#6e7681">→</span> <span class="tok-string">Search codebase</span> <span style="color:#6e7681">→</span> <span class="tok-string">Answer</span></code></pre>
+        </div>
+      </div>
+
+      <p>With a brain:</p>
+      <div class="code-block-wrapper">
+        <div class="code-block-header">
+          <span class="code-block-lang">flow</span>
+          <div class="code-block-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+        </div>
+        <div class="code-block-body">
+          <pre><code><span class="tok-arrow">Event</span> <span style="color:var(--accent)">→</span> <span style="color:#3fb950">Brain matches stage</span> <span style="color:var(--accent)">→</span> <span style="color:#3fb950">Surfaces CodeRef</span> <span style="color:var(--accent)">→</span> <span style="color:#3fb950">Focused answer</span></code></pre>
+        </div>
+      </div>
+
+      <p>The brain does not execute anything. It <strong>intercepts, maps, and orients</strong> — then hands off to the actual runner.</p>
+
+      <!-- ── REPOSITORY STRUCTURE ── -->
+      <h2 id="repository-structure">REPOSITORY STRUCTURE</h2>
+
+      <div class="code-block-wrapper">
+        <div class="code-block-header">
+          <span class="code-block-lang">directory tree</span>
+          <div class="code-block-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+        </div>
+        <div class="code-block-body">
+          <pre><code><span class="tree-dir">brain/</span>
+<span class="tree-line">├── </span><span class="tree-dir">app/</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">page.tsx</span>                  <span class="tree-arrow">→</span> <span class="tree-desc">home: renders the live brain map</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">layout.tsx</span>                <span class="tree-arrow">→</span> <span class="tree-desc">root layout, dark theme, global fonts</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">globals.css</span>               <span class="tree-arrow">→</span> <span class="tree-desc">CSS variables and dark theme base</span>
+<span class="tree-line">│   └── </span><span class="tree-dir">run/</span>
+<span class="tree-line">│       └── </span><span class="tree-file">page.tsx</span>              <span class="tree-arrow">→</span> <span class="tree-desc">job execution UI (trigger, monitor, inspect)</span>
+<span class="tree-line">├── </span><span class="tree-dir">components/</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">BrainMap.tsx</span>              <span class="tree-arrow">→</span> <span class="tree-desc">animated SVG node graph (config-driven)</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">BrainPanel.tsx</span>            <span class="tree-arrow">→</span> <span class="tree-desc">knowledge overlay panel (toggle: Cmd+B)</span>
+<span class="tree-line">│   └── </span><span class="tree-file">RunPage.tsx</span>               <span class="tree-arrow">→</span> <span class="tree-desc">full job form + live stage tracker ("use client")</span>
+<span class="tree-line">├── </span><span class="tree-dir">config/</span>
+<span class="tree-line">│   └── </span><span class="tree-highlight">brain.config.ts</span>           <span class="tree-arrow">→</span> <span style="color:var(--accent)">THE ONLY FILE YOU EDIT per application</span>
+<span class="tree-line">├── </span><span class="tree-dir">lib/</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">runner.ts</span>                 <span class="tree-arrow">→</span> <span class="tree-desc">generic terminal execution lifecycle</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">exec.ts</span>                   <span class="tree-arrow">→</span> <span class="tree-desc">universal subprocess wrapper</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">logger.ts</span>                 <span class="tree-arrow">→</span> <span class="tree-desc">structured file logger (never /dev/tty)</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">job-store.ts</span>              <span class="tree-arrow">→</span> <span class="tree-desc">job state (id, stage, status, output)</span>
+<span class="tree-line">│   └── </span><span class="tree-file">stage-bus.ts</span>              <span class="tree-arrow">→</span> <span class="tree-desc">broadcasts stage transitions to the UI</span>
+<span class="tree-line">├── </span><span class="tree-dir">pipeline/</span>
+<span class="tree-line">│   └── </span><span class="tree-file">{stage}.ts</span>                <span class="tree-arrow">→</span> <span class="tree-desc">one file per stage defined in brain.config.ts</span>
+<span class="tree-line">├── </span><span class="tree-dir">app/api/</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">run/route.ts</span>              <span class="tree-arrow">→</span> <span class="tree-desc">POST: create job</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">status/[jobId]/route.ts</span>   <span class="tree-arrow">→</span> <span class="tree-desc">GET: poll stage + status</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">result/[jobId]/route.ts</span>   <span class="tree-arrow">→</span> <span class="tree-desc">GET: fetch output</span>
+<span class="tree-line">│   ├── </span><span class="tree-file">cancel/[jobId]/route.ts</span>   <span class="tree-arrow">→</span> <span class="tree-desc">POST: kill job</span>
+<span class="tree-line">│   └── </span><span class="tree-file">upload/route.ts</span>           <span class="tree-arrow">→</span> <span class="tree-desc">POST: receive input files</span>
+<span class="tree-line">├── </span><span class="tree-dir">public/</span>
+<span class="tree-line">├── </span><span class="tree-file">AGENTS.md</span>                     <span class="tree-arrow">→</span> <span class="tree-desc">agent/AI assistant rules for this repo</span>
+<span class="tree-line">├── </span><span class="tree-file">package.json</span>
+<span class="tree-line">└── </span><span class="tree-file">tsconfig.json</span>                 <span class="tree-arrow">→</span> <span class="tree-desc">path alias @/* → ./*</span></code></pre>
+        </div>
+      </div>
+
+      <p><strong>The key structural principle:</strong> <code>pipeline/</code> has exactly one file per stage declared in <code>brain.config.ts</code>. <code>app/api/</code> has exactly the routes the <code>RunPage</code> needs. Nothing else.</p>
+
+      <!-- ── THE ONE FILE ── -->
+      <h2 id="the-one-file">THE ONE FILE YOU EDIT: <code>brain.config.ts</code></h2>
+
+      <p>Every component — the brain map, the panel, the runner, the stage tracker — reads from this file. You never hardcode domain knowledge anywhere else.</p>
+
+      <div class="code-block-wrapper">
+        <div class="code-block-header">
+          <span class="code-block-lang">typescript — config/brain.config.ts</span>
+          <div class="code-block-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+        </div>
+        <div class="code-block-body">
+          <pre><code><span class="tok-keyword">export const</span> <span class="tok-prop">BrainConfig</span> <span class="tok-op">=</span> <span class="tok-punct">{</span>
+
+  <span class="tok-comment">// ── Identity ──────────────────────────────────────────────────────────────</span>
+  <span class="tok-prop">appName</span><span class="tok-punct">:</span>    <span class="tok-string">"my-app"</span><span class="tok-punct">,</span>
+  <span class="tok-prop">serverPort</span><span class="tok-punct">:</span> <span class="tok-num">3000</span><span class="tok-punct">,</span>
+  <span class="tok-prop">workDir</span><span class="tok-punct">:</span>    <span class="tok-string">"/opt/my-app"</span><span class="tok-punct">,</span>
+  <span class="tok-prop">logFile</span><span class="tok-punct">:</span>    <span class="tok-string">"/tmp/my-app-brain.log"</span><span class="tok-punct">,</span>
+
+  <span class="tok-comment">// ── Pipeline Stages (in execution order) ─────────────────────────────────</span>
+  <span class="tok-comment">// These become: pipeline/{stage.id}.ts files</span>
+  <span class="tok-comment">// These become: the live stage tracker nodes in the UI</span>
+  <span class="tok-comment">// These become: the updateStage() calls in runner.ts</span>
+  <span class="tok-prop">stages</span><span class="tok-punct">:</span> <span class="tok-punct">[</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"init"</span><span class="tok-punct">,</span>    <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"INIT"</span><span class="tok-punct">,</span>    <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Bootstrap, config, env validation"</span> <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"input"</span><span class="tok-punct">,</span>   <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"INPUT"</span><span class="tok-punct">,</span>   <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Accept, validate, and parse inputs"</span> <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"process"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"PROCESS"</span><span class="tok-punct">,</span> <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Core work — the main execution unit"</span> <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"output"</span><span class="tok-punct">,</span>  <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"OUTPUT"</span><span class="tok-punct">,</span>  <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Write result, emit artifact, call downstream"</span> <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"cleanup"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"CLEANUP"</span><span class="tok-punct">,</span> <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Temp removal, close connections, finalize job"</span> <span class="tok-punct">},</span>
+  <span class="tok-punct">],</span>
+
+  <span class="tok-comment">// ── Brain Map Branches ────────────────────────────────────────────────────</span>
+  <span class="tok-comment">// These become the visual node clusters on BrainMap.tsx</span>
+  <span class="tok-prop">branches</span><span class="tok-punct">:</span> <span class="tok-punct">[</span>
+    <span class="tok-punct">{</span>
+      <span class="tok-prop">id</span><span class="tok-punct">:</span>    <span class="tok-string">"runtime"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"Runtime"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">color</span><span class="tok-punct">:</span> <span class="tok-string">"#3b82f6"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">nodes</span><span class="tok-punct">:</span> <span class="tok-punct">[</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"rt-env"</span><span class="tok-punct">,</span>  <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"ENV CONFIG"</span><span class="tok-punct">,</span>   <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"config/brain.config.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"rt-run"</span><span class="tok-punct">,</span>  <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"RUNNER"</span><span class="tok-punct">,</span>        <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"lib/runner.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"rt-exec"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"EXEC WRAPPER"</span><span class="tok-punct">,</span>  <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"lib/exec.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"rt-log"</span><span class="tok-punct">,</span>  <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"LOGGER"</span><span class="tok-punct">,</span>        <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"lib/logger.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"rt-err"</span><span class="tok-punct">,</span>  <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"ERROR HANDLER"</span><span class="tok-punct">,</span> <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"lib/errors.ts"</span> <span class="tok-punct">},</span>
+      <span class="tok-punct">],</span>
+    <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span>
+      <span class="tok-prop">id</span><span class="tok-punct">:</span>    <span class="tok-string">"api"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"API"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">color</span><span class="tok-punct">:</span> <span class="tok-string">"#10b981"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">nodes</span><span class="tok-punct">:</span> <span class="tok-punct">[</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"api-run"</span><span class="tok-punct">,</span>    <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"CREATE JOB"</span><span class="tok-punct">,</span>   <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"app/api/run/route.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"api-status"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"POLL STATUS"</span><span class="tok-punct">,</span>  <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"app/api/status/[jobId]/route.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"api-result"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"FETCH RESULT"</span><span class="tok-punct">,</span> <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"app/api/result/[jobId]/route.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"api-cancel"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"CANCEL JOB"</span><span class="tok-punct">,</span>  <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"app/api/cancel/[jobId]/route.ts"</span> <span class="tok-punct">},</span>
+        <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"api-upload"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"UPLOAD INPUT"</span><span class="tok-punct">,</span> <span class="tok-prop">ref</span><span class="tok-punct">:</span> <span class="tok-string">"app/api/upload/route.ts"</span> <span class="tok-punct">},</span>
+      <span class="tok-punct">],</span>
+    <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span>
+      <span class="tok-prop">id</span><span class="tok-punct">:</span>    <span class="tok-string">"pipeline"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"Pipeline"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">color</span><span class="tok-punct">:</span> <span class="tok-string">"#f59e0b"</span><span class="tok-punct">,</span>
+      <span class="tok-prop">nodes</span><span class="tok-punct">:</span> <span class="tok-punct">[</span>
+        <span class="tok-comment">// auto-generated from stages[] above — one node per stage</span>
+      <span class="tok-punct">],</span>
+    <span class="tok-punct">},</span>
+  <span class="tok-punct">],</span>
+
+  <span class="tok-comment">// ── Interceptor Nodes ─────────────────────────────────────────────────────</span>
+  <span class="tok-comment">// Always rendered at the top of BrainMap — the three universal brain functions</span>
+  <span class="tok-prop">interceptors</span><span class="tok-punct">:</span> <span class="tok-punct">[</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"intercept-query"</span><span class="tok-punct">,</span>   <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"QUERY INTERCEPTOR"</span><span class="tok-punct">,</span>  <span class="tok-prop">color</span><span class="tok-punct">:</span> <span class="tok-string">"#facc15"</span><span class="tok-punct">,</span> <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Catches incoming events before any execution"</span> <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"intercept-context"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"CONTEXT MATCHER"</span><span class="tok-punct">,</span>    <span class="tok-prop">color</span><span class="tok-punct">:</span> <span class="tok-string">"#a855f7"</span><span class="tok-punct">,</span> <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Maps the event to a known stage and CodeRef"</span> <span class="tok-punct">},</span>
+    <span class="tok-punct">{</span> <span class="tok-prop">id</span><span class="tok-punct">:</span> <span class="tok-string">"intercept-answer"</span><span class="tok-punct">,</span>  <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-string">"ANSWER SYNTHESIZER"</span><span class="tok-punct">,</span> <span class="tok-prop">color</span><span class="tok-punct">:</span> <span class="tok-string">"#22d3ee"</span><span class="tok-punct">,</span> <span class="tok-prop">description</span><span class="tok-punct">:</span> <span class="tok-string">"Returns the matched result instantly to the UI"</span> <span class="tok-punct">},</span>
+  <span class="tok-punct">],</span>
+
+<span class="tok-punct">}</span></code></pre>
+        </div>
+      </div>
+
+      <!-- ── BRAIN-FIRST FLOW ── -->
+      <h2 id="brain-first-flow">BRAIN-FIRST FLOW (Full)</h2>
+
+      <div class="code-block-wrapper">
+        <div class="code-block-header">
+          <span class="code-block-lang">execution flow</span>
+          <div class="code-block-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+        </div>
+        <div class="code-block-body">
+<pre><code><span style="color:#e6edf3;font-weight:600;">System Event</span> <span style="color:#8b949e;">(user action, API call, scheduled trigger)</span>
+  <span style="color:var(--accent)">│</span>
+  <span style="color:var(--accent)">▼</span>
+<span style="color:#facc15;font-weight:600;">QUERY INTERCEPTOR</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Receives the raw event</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Classifies it: which command? which input type? which job?</span>
+  <span style="color:var(--accent)">│</span>
+  <span style="color:var(--accent)">▼</span>
+<span style="color:#a855f7;font-weight:600;">CONTEXT MATCHER</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Maps event → known pipeline stage</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Identifies owning branch (Runtime / API / Pipeline)</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#3fb950;">Surfaces exact CodeRef — before any log is read</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#3fb950;">Highlights active node on BrainMap in real time</span>
+  <span style="color:var(--accent)">│</span>
+  <span style="color:var(--accent)">▼</span>
+<span style="color:#3b82f6;font-weight:600;">RUNNER</span> <span style="color:#8b949e;">(lib/runner.ts)</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Executes stages in order</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Each stage calls updateStage() → stage-bus.ts → BrainMap lights up</span>
+  <span style="color:var(--accent)">│</span>
+  <span style="color:var(--accent)">▼</span>
+<span style="color:#3b82f6;font-weight:600;">EXEC WRAPPER</span> <span style="color:#8b949e;">(lib/exec.ts)</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Spawns the actual terminal process (any command, any tool)</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Streams stdout/stderr to logger.ts</span>
+  <span style="color:var(--accent)">│</span>
+  <span style="color:var(--accent)">▼</span>
+<span style="color:#22d3ee;font-weight:600;">ANSWER SYNTHESIZER</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Collects stage results + structured logs</span>
+  <span style="color:var(--accent)">→</span> <span style="color:#8b949e;">Returns output payload to RunPage UI</span>
+  <span style="color:var(--accent)">│</span>
+  <span style="color:var(--accent)">▼</span>
+<span style="color:#3fb950;font-weight:600;">User sees:</span> <span style="color:#8b949e;">result + which stages ran + any error + the exact CodeRef to open</span></code></pre>
+        </div>
+      </div>
+
+      <!-- ── LIB/RUNNER.TS ── -->
+      <h2 id="lib-runner"><code>lib/runner.ts</code> — Generic Execution Lifecycle</h2>
+
+      <div class="code-block-wrapper">
+        <div class="code-block-header">
+          <span class="code-block-lang">typescript — lib/runner.ts</span>
+          <div class="code-block-dots"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+        </div>
+        <div class="code-block-body">
+          <pre><code><span class="tok-keyword">async function</span> <span class="tok-fn">runJob</span><span class="tok-punct
+The rendered doc is now in the panel. Here's a summary of what changed and why, so it's clear what the thinking was:
+
+---
+
+**What was stripped out entirely:**
+- All references to Vybord, Python, FFmpeg, `pyff`, `do_build()`, music genres, video processing, or any domain-specific terminology
+- The bloated API endpoint list that was clearly Vybord-specific (like `/api/me`, `/api/auth/logout`, `/api/asset-proxy`, `/review/{jobId}`)
+- The `CreatePage.tsx` / `VybordSettings` interface naming
+- The hardcoded branch knowledge nodes that mapped to FFmpeg commands
+
+**What was rebuilt around the actual intent:**
+- `brain.config.ts` is now explicitly **the single file you edit** — every other component is fully config-driven with zero hardcoded domain knowledge
+- The repo structure follows a clean rule: `pipeline/` has **one file per stage in config**, `app/api/` has **exactly the routes RunPage needs**, nothing extra
+- The three interceptor nodes (`QUERY INTERCEPTOR → CONTEXT MATCHER → ANSWER SYNTHESIZER`) are now framed as the **universal brain functions**, not app-specific concepts
+- `lib/exec.ts` is framed explicitly as command-agnostic — it doesn't know or care what it's running
+- The `/dev/tty` logger anti-pattern is called out as a **structural rule**, not a pyff-specific fix
+
+---
+
+**What you'd still need to build from this doc:**
+- The actual `BrainMap.tsx` and `BrainPanel.tsx` component code that reads dynamically from `brain.config.ts`
+- The `stage-bus.ts` real-time broadcast implementation
+- The `RunPage.tsx` generic form that derives its fields from config
+
+Would you like me to generate the full component code for `BrainMap.tsx`, `BrainPanel.tsx`, and `stage-bus.ts` — all fully driven by `brain.config.ts` with no hardcoded domain logic?
