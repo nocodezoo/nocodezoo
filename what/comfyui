@@ -1,0 +1,55 @@
+Objective: Construct a ComfyUI workflow that transforms a single static 2D image into a 3D parallax video sequence utilizing a simulated "Dolly Push" (Z-axis translation) camera movement via depth map generation and 3D spatial warping.
+
+Required Custom Node Suites
+To successfully execute this workflow, you must install the following custom node suites via the ComfyUI Manager:
+ComfyUI-Depth-Anything-V2 or ComfyUI-Marigold: For high-fidelity, high-resolution depth map extraction.
+ComfyUI-Deforum or ComfyUI-KJNodes: Provides the mathematical 3D projection and camera math required to warp the image based on depth.
+ComfyUI-VideoHelperSuite (VHS): For compiling the generated frame sequence into a final MP4, WebM, or GIF format.
+ComfyUI-Frame-Interpolation (Optional): To smooth the final animation using RIFE or VFI networks.
+
+Node Architecture & Execution Steps
+
+1. Image Ingestion and Preparation
+Initialize the workflow by loading the source image. Use the Load Image node to bring your static image into the workspace. Pass this image through an Image Scale to Bounding Box node to ensure the resolution is optimized for video rendering (e.g., 1920x1080 or 1080x1920) without exceeding your VRAM limitations.
+
+2. Depth Map Generation
+The core of the parallax effect relies on an accurate depth map. Route the prepared image into a Depth Anything V2 or Marigold Depth node. These models evaluate the 2D image and output a grayscale map where white represents objects closest to the camera and black represents the furthest background elements. This grayscale map acts as the Z-axis geometry for the 3D projection.
+
+3. 3D Camera Projection Setup
+This is where the standard Ken Burns effect becomes a 3D parallax effect. Feed both the original RGB image and the generated depth map into a 3D transformation node. If using ComfyUI-Deforum, set the animation mode to 3D. You will bypass the diffusion generation aspects of Deforum and strictly use its image-warping capabilities.
+
+4. Configuring the Dolly Push (Translation Z)
+To simulate the Dolly Push, you must animate the camera along the Z-axis. In your animation parameters, locate the Translation Z (or Zoom in some basic warp nodes) setting. You will input a mathematical string or keyframe sequence that steadily increases the Z-value over the desired frame count, pushing the virtual camera "into" the depth map.
+
+5. Rendering and Video Compilation
+Execute the sequence generation. The warp node will output a batch of images where foreground objects scale faster than background objects, creating true depth parallax. Finally, route this image batch into a Video Combine node (from VideoHelperSuite). Set the frame rate (e.g., 24 or 30 fps) and format (H.264 MP4), then execute the prompt to render the final video.
+
+Dolly Push Parameter Configuration
+
+Use the following table as a baseline for configuring your camera movement. These values assume a standard 120-frame video (roughly 4 to 5 seconds).
+
+| Parameter | Recommended Value / Formula | Explanation |
+| :--- | :--- | :--- |
+| Total Frames | 120 | Determines the length of the video clip. |
+| Translation Z | 0:(0), 119:(5) | Keyframed movement. Starts at 0, pushes in 5 units by the last frame. |
+| Translation X / Y | 0:(0) | Keep at 0 to ensure a pure forward Dolly Push without lateral panning. |
+| Rotation 3D X/Y/Z | 0:(0) | Keep at 0 to prevent the camera from tilting or rolling during the push. |
+| FOV (Field of View) | 75 | A standard FOV mimics a mid-range cinematic lens, reducing edge distortion. |
+| Depth Warp Strength | 1.0 to 1.5 | Multiplier for the depth map intensity. Lower values reduce stretching. |
+
+Technical Explanations
+
+Simple Explanation:
+A normal Ken Burns effect just scales a flat image up, like zooming in on a photograph. A 3D parallax Dolly Push cuts the photograph into invisible layers based on what is near and far. When the virtual camera moves forward, the things closest to you move past the screen faster than the mountains in the background, creating a realistic illusion of an actual 3D space.
+
+Detailed Explanation:
+The workflow relies on monocular depth estimation neural networks to calculate a dense Z-buffer (depth map) from a single RGB matrix. By projecting the 2D RGB pixels onto a 3D mesh generated from this Z-buffer, the ComfyUI workspace effectively creates a 2.5D point cloud. When the translation matrix of the virtual camera is animated along the Z-axis (Dolly Push), the renderer calculates the new spatial coordinates for every pixel. Parallax naturally occurs because the Euclidean distance between the camera and foreground vertices decreases at a different relative rate than the distance to the background vertices, resulting in differential pixel displacement.
+
+Common Pitfalls and Mitigation
+
+Edge Stretching / Tearing:* As the camera pushes past foreground objects, the software must guess what is behind them. Extreme Dolly Pushes will cause the pixels on the edges of foreground objects to "smear" or stretch. *Mitigation: Keep the Z-axis translation subtle, or use an Inpaint node pipeline to generate the missing background pixels before rendering the video.
+Flickering Depth Maps:* If you use a generative video model to create the frames, the depth map might fluctuate per frame. *Mitigation: Extract the depth map from the first frame only and use mathematical warping for the rest of the sequence rather than generative AI frame-by-frame rendering.
+Low Framerate Choppiness:* A pure math warp might look slightly jagged if the step increments are too high. *Mitigation: Render at a lower frame count (e.g., 12 fps) and run the output batch through a VFI Frame Interpolation node to smoothly hallucinate the in-between frames, boosting it to a buttery 60 fps.
+
+Summary
+To create a 3D Ken Burns parallax Dolly Push in ComfyUI, you must ingest a static image and immediately process it through a depth estimation model like Depth Anything V2. By combining the original image and the resulting depth map inside a 3D translation node suite (like Deforum), you can animate a virtual camera moving forward along the Z-axis. This generates a sequence of warped frames demonstrating true depth parallax, which is finally compiled into a playable video file using the VideoHelperSuite.
