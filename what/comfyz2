@@ -1,0 +1,45 @@
+To achieve a deep, lifelike Dolly push for real estate without the image breaking apart, you must transition from a simple "depth warp" to a Layered Inpainting Workflow. Pushing far into a single 2D image reveals occluded areas (the unseen space behind furniture, pillars, or kitchen islands), which causes unnatural pixel stretching. To zoom deeply and maintain photorealism, your ComfyUI workflow must dynamically hallucinate and fill in the missing background data as the camera moves forward.
+
+Required Workflow Modifications
+
+To execute this advanced real estate technique, you need to add specific tools to your ComfyUI environment to handle layer separation and background generation.
+
+ComfyUI-segment_anything (SAM):** To precisely mask and separate foreground elements (like a dining table) from the room's background.
+Stable Diffusion Inpainting Model:** Use an SDXL-Inpaint checkpoint or ControlNet-Inpaint to generate the missing textures behind your foreground objects.
+DepthFlow or Multi-Layer 3D Nodes:** Specialized nodes that handle layered 3D rendering and edge-blending better than standard single-layer Deforum warps.
+
+Execution Steps for Deep Lifelike Zooms
+
+1. Layer Separation and Masking
+Instead of sending the whole image to the 3D renderer, first route your real estate photo into a SAM Masking node. Identify the prominent foreground objects (e.g., a sofa or a kitchen island) and extract them onto a transparent layer. You now have two distinct images: the isolated foreground object and the room with a massive "hole" where the object used to be.
+
+2. Generative Background Inpainting
+Pass the room image (with the hole) into a KSampler paired with an inpainting model. Prompt the AI to fill in the missing floor, walls, or background cabinets. The AI will look at the surrounding room and seamlessly hallucinate the occluded space. You now possess a complete background and a separate, floating foreground object.
+
+3. Multi-Layer Depth Generation
+Generate depth maps for both the newly completed background and the isolated foreground object using Depth Anything V2. Because the background is now a complete, seamless image, you have effectively eliminated the "rubber sheet" stretching effect that ruins deep zooms.
+
+4. Smoothed Architectural Camera Motion
+Real estate videography relies on fluid, heavy camera rigs. Route your layers into your 3D projection node. Instead of a linear Z-axis translation, use an easing mathematical curve (like a Sine or Bezier curve) for your Translation Z parameters. This ensures the camera accelerates slowly into the Dolly push and decelerates smoothly at the end, mimicking professional real estate drone or gimbal footage.
+
+Real Estate Parameter Adjustments
+
+Use this table to adjust your camera parameters to mimic a wide-angle architectural lens doing a deep push.
+
+| Parameter | Real Estate Adjustment | Reason for Change |
+| :--- | :--- | :--- |
+| FOV (Field of View) | 90 to 110 | Architectural photography uses wide-angle lenses to make rooms look spacious. |
+| Translation Z (Motion) | Easing Curve (e.g., ease-in-out) | Prevents the robotic, linear motion. Easing mimics a human operating a physical camera slider. |
+| Depth Warp Strength | 0.7 to 0.9 | Lower the strength slightly. Rooms have hard geometric lines that look terrible if warped; lower strength preserves architectural integrity. |
+| Edge Padding / Outpaint | Enabled | Allows the camera to push deeper without hitting the black edges of the rendering canvas. |
+
+Technical Explanations
+
+Simple Explanation:
+When you zoom far into a regular 3D photo, the computer does not know what the floor looks like underneath the coffee table, so it just stretches the coffee table's pixels to fill the gap, making it look like melting plastic. For real estate, we use AI to digitally "lift" the coffee table, paint the missing hardwood floor underneath it, and put the table back. Now, when the virtual camera flies over the table, it reveals a perfectly realistic floor underneath instead of a stretched mess.
+
+Detailed Explanation:
+The limitation of monocular depth estimation in deep Z-axis translation is the lack of occluded pixel data, leading to severe artifacting along high-contrast depth edges. By integrating Segment Anything Models (SAM) and Latent Diffusion inpainting into the ComfyUI pipeline, we create a multi-planar 2.5D environment. We explicitly synthesize the missing RGB data in the background plate prior to 3D mesh projection. Consequently, as the virtual camera's transformation matrix pushes past the foreground mesh's bounding box, the renderer samples from the synthesized inpainting data rather than interpolating from the foreground edges, preserving structural photorealism even at extreme focal lengths.
+
+Summary
+To achieve a deep, lifelike Dolly push for real estate in ComfyUI, you must move beyond a simple one-click depth warp and utilize Layered Inpainting. By separating the foreground furniture with SAM and using an inpainting model to draw the hidden room behind it, you give the virtual camera actual space to move through. Combining this multi-layered approach with a wider Field of View (FOV) and smoothed easing animations will yield a highly professional, distortion-free real estate video.
