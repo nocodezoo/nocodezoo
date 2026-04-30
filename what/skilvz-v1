@@ -1,0 +1,586 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Activity, Play, Pause, SkipForward, Eye, EyeOff, Settings, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Minus, Zap, Shield, Code, GitBranch, Bug, RefreshCw, TestTube, FileWarning, Layers, Brain, Package, ChevronRight, X, Clock, Filter } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer, AreaChart, Area } from "recharts";
+
+const DIMENSIONS = [
+  { id: "correctness", name: "Correctness", icon: CheckCircle, related: ["completion", "testing"] },
+  { id: "maintainability", name: "Maintainability", icon: Package, related: ["clarity", "modularity"] },
+  { id: "clarity", name: "Clarity", icon: Eye, related: ["maintainability", "simplicity"] },
+  { id: "consistency", name: "Consistency", icon: GitBranch, related: ["maintainability", "modularity"] },
+  { id: "modularity", name: "Modularity", icon: Layers, related: ["maintainability", "consistency"] },
+  { id: "debugging", name: "Debugging Discipline", icon: Bug, related: ["correctness", "errorHandling"] },
+  { id: "refactoring", name: "Refactoring Quality", icon: RefreshCw, related: ["clarity", "simplicity"] },
+  { id: "testing", name: "Testing Mindset", icon: TestTube, related: ["correctness", "completion"] },
+  { id: "errorHandling", name: "Error Handling", icon: Shield, related: ["debugging", "correctness"] },
+  { id: "assumptions", name: "Assumption Quality", icon: Brain, related: ["simplicity", "completion"] },
+  { id: "simplicity", name: "Simplicity", icon: Zap, related: ["clarity", "refactoring"] },
+  { id: "completion", name: "Completion Quality", icon: Code, related: ["correctness", "testing"] },
+];
+
+const PROJECTS = {
+  alpha: { name: "Project Alpha", profile: "healthy", baseRange: [75, 95] },
+  beta: { name: "Project Beta", profile: "moderate", baseRange: [50, 75] },
+  gamma: { name: "Project Gamma", profile: "problematic", baseRange: [25, 55] },
+};
+
+const PRINCIPLES = [
+  "Correctness before cleverness",
+  "Clarity before compression",
+  "Maintainability before shortcuts",
+  "Simple over overengineered",
+  "Patch-precise edits",
+  "Structured reasoning",
+  "Testability awareness",
+  "Consistency with existing patterns",
+];
+
+const EVENTS = [
+  "Agent refactored auth module",
+  "Test coverage improved to 87%",
+  "Detected code duplication in utils",
+  "Improved error handling in API layer",
+  "Simplified state management logic",
+  "Added input validation to forms",
+  "Removed unnecessary abstraction layer",
+  "Fixed race condition in async handler",
+  "Improved naming consistency across modules",
+  "Added comprehensive error boundaries",
+  "Reduced cyclomatic complexity in parser",
+  "Implemented graceful degradation pattern",
+  "Detected missing null checks",
+  "Optimized database query structure",
+  "Added retry logic with exponential backoff",
+];
+
+function generateScore(min, max) {
+  return Math.floor(Math.random() * (max - min) + min);
+}
+
+function generateHistory(base, length = 20) {
+  const history = [];
+  let val = base;
+  for (let i = 0; i < length; i++) {
+    val = Math.max(0, Math.min(100, val + (Math.random() - 0.5) * 10));
+    history.push({ value: Math.round(val) });
+  }
+  return history;
+}
+
+function getScoreColor(score) {
+  if (score >= 80) return "#10b981";
+  if (score >= 60) return "#06b6d4";
+  if (score >= 40) return "#f59e0b";
+  return "#ef4444";
+}
+
+function getSeverity(score) {
+  if (score >= 80) return "Excellent";
+  if (score >= 60) return "Good";
+  if (score >= 40) return "Warning";
+  return "Critical";
+}
+
+function MiniSparkline({ data, color }) {
+  return (
+    <ResponsiveContainer width="100%" height={30}>
+      <AreaChart data={data}>
+        <defs>
+          <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} fill={`url(#grad-${color.replace("#", "")})`} dot={false} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+function RadialGauge({ value, size = 120 }) {
+  const radius = (size - 16) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (value / 100) * circumference;
+  const color = getScoreColor(value);
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="8" strokeDasharray={circumference} strokeDashoffset={circumference - progress} strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.8s ease, stroke 0.8s ease", filter: `drop-shadow(0 0 6px ${color})` }} />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-2xl font-bold text-white">{value}</span>
+        <span className="text-xs text-gray-400">/ 100</span>
+      </div>
+    </div>
+  );
+}
+
+function SkillField({ scores, dimensions, isPlaying }) {
+  const canvasRef = useRef(null);
+  const nodesRef = useRef([]);
+  const animRef = useRef(null);
+  const timeRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width = canvas.offsetWidth * 2;
+    const height = canvas.height = canvas.offsetHeight * 2;
+    ctx.scale(2, 2);
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    const centerX = displayWidth / 2;
+    const centerY = displayHeight / 2;
+
+    if (nodesRef.current.length === 0) {
+      nodesRef.current = dimensions.map((dim, i) => {
+        const angle = (i / dimensions.length) * Math.PI * 2;
+        const baseRadius = Math.min(displayWidth, displayHeight) * 0.3;
+        return {
+          id: dim.id,
+          x: centerX + Math.cos(angle) * baseRadius,
+          y: centerY + Math.sin(angle) * baseRadius,
+          vx: 0,
+          vy: 0,
+          targetX: centerX + Math.cos(angle) * baseRadius,
+          targetY: centerY + Math.sin(angle) * baseRadius,
+          angle,
+          baseRadius,
+          score: 50,
+          size: 6,
+          color: "#06b6d4",
+        };
+      });
+    }
+
+    const animate = () => {
+      if (!isPlaying) {
+        animRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      timeRef.current += 0.016;
+      const t = timeRef.current;
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+      // Grid background
+      ctx.strokeStyle = "rgba(255,255,255,0.02)";
+      ctx.lineWidth = 0.5;
+      for (let x = 0; x < displayWidth; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, displayHeight);
+        ctx.stroke();
+      }
+      for (let y = 0; y < displayHeight; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(displayWidth, y);
+        ctx.stroke();
+      }
+
+      // Update nodes
+      nodesRef.current.forEach((node, i) => {
+        const dim = dimensions[i];
+        const score = scores[dim.id]?.value || 50;
+        node.score = score;
+        node.color = getScoreColor(score);
+        node.size = 4 + (scores[dim.id]?.confidence || 50) / 100 * 8;
+
+        const orbitSpeed = score > 70 ? 0.3 : score > 40 ? 0.6 : 1.2;
+        const jitter = score < 40 ? (Math.random() - 0.5) * 3 : score < 60 ? (Math.random() - 0.5) * 1 : 0;
+        const orbitRadius = node.baseRadius * (1 - score / 300);
+
+        node.targetX = centerX + Math.cos(node.angle + t * orbitSpeed) * orbitRadius;
+        node.targetY = centerY + Math.sin(node.angle + t * orbitSpeed) * orbitRadius;
+
+        const dx = node.targetX - node.x;
+        const dy = node.targetY - node.y;
+        const spring = score > 70 ? 0.08 : 0.04;
+        const damping = score > 70 ? 0.9 : 0.85;
+
+        node.vx = (node.vx + dx * spring) * damping + jitter;
+        node.vy = (node.vy + dy * spring) * damping + jitter;
+        node.x += node.vx;
+        node.y += node.vy;
+      });
+
+      // Draw connections
+      nodesRef.current.forEach((node, i) => {
+        const dim = dimensions[i];
+        dim.related.forEach(relId => {
+          const relIndex = dimensions.findIndex(d => d.id === relId);
+          if (relIndex > i) {
+            const relNode = nodesRef.current[relIndex];
+            const avgScore = (node.score + relNode.score) / 2;
+            const opacity = avgScore / 300;
+            ctx.beginPath();
+            ctx.moveTo(node.x, node.y);
+            ctx.lineTo(relNode.x, relNode.y);
+            ctx.strokeStyle = `rgba(${avgScore > 60 ? "6,182,212" : "245,158,11"},${opacity})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        });
+      });
+
+      // Draw nodes
+      nodesRef.current.forEach((node, i) => {
+        const pulseSize = node.size + Math.sin(t * 3 + i) * (node.score < 40 ? 3 : 1);
+
+        // Outer glow
+        const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, pulseSize * 3);
+        gradient.addColorStop(0, node.color + "40");
+        gradient.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, pulseSize * 3, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Core
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, pulseSize, 0, Math.PI * 2);
+        ctx.fillStyle = node.color;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = node.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Label
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.font = "9px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(dimensions[i].name.split(" ")[0], node.x, node.y + pulseSize + 14);
+      });
+
+      // Center indicator
+      const avgScore = Object.values(scores).reduce((s, v) => s + v.value, 0) / 12;
+      const centerColor = getScoreColor(avgScore);
+      const cGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 20);
+      cGrad.addColorStop(0, centerColor + "60");
+      cGrad.addColorStop(1, "transparent");
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+      ctx.fillStyle = cGrad;
+      ctx.fill();
+
+      animRef.current = requestAnimationFrame(animate);
+    };
+
+    animRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [scores, dimensions, isPlaying]);
+
+  return (
+    <canvas ref={canvasRef} className="w-full h-full" style={{ display: "block" }} />
+  );
+}
+
+function ScoreCard({ dimension, score, onClick }) {
+  const Icon = dimension.icon;
+  const color = getScoreColor(score.value);
+  const severity = getSeverity(score.value);
+
+  return (
+    <div onClick={onClick} className="relative overflow-hidden rounded-xl border border-white/5 p-4 cursor-pointer transition-all duration-300 hover:border-white/20 hover:scale-105" style={{ background: "rgba(255,255,255,0.02)", backdropFilter: "blur(10px)" }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Icon size={14} style={{ color }} />
+          <span className="text-xs font-medium text-gray-300">{dimension.name}</span>
+        </div>
+        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: color + "20", color }}>{severity}</span>
+      </div>
+      <div className="flex items-end justify-between">
+        <div>
+          <span className="text-2xl font-bold" style={{ color }}>{score.value}</span>
+          <span className="text-xs text-gray-500 ml-1">/ 100</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {score.delta > 0 ? <TrendingUp size={12} className="text-green-400" /> : score.delta < 0 ? <TrendingDown size={12} className="text-red-400" /> : <Minus size={12} className="text-gray-500" />}
+          <span className="text-xs" style={{ color: score.delta > 0 ? "#10b981" : score.delta < 0 ? "#ef4444" : "#6b7280" }}>{score.delta > 0 ? "+" : ""}{score.delta}</span>
+        </div>
+      </div>
+      <div className="mt-2 text-xs text-gray-500">Confidence: {score.confidence}%</div>
+      <div className="mt-1 h-8">
+        <MiniSparkline data={score.history} color={color} />
+      </div>
+      <div className="mt-1 text-xs text-gray-600 truncate">{score.explanation}</div>
+    </div>
+  );
+}
+
+export default function AgentSkillObservatory() {
+  const [currentProject, setCurrentProject] = useState("alpha");
+  const [scores, setScores] = useState({});
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isSimulating, setIsSimulating] = useState(true);
+  const [simSpeed, setSimSpeed] = useState(1);
+  const [events, setEvents] = useState([]);
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [timelinePosition, setTimelinePosition] = useState(0);
+  const [activeTab, setActiveTab] = useState("field");
+  const intervalRef = useRef(null);
+
+  const explanations = [
+    "Strong pattern adherence detected",
+    "Minor inconsistency in naming",
+    "Excellent error boundary usage",
+    "Missing null check identified",
+    "Clean separation of concerns",
+    "Unnecessary abstraction detected",
+    "Good test coverage pattern",
+    "Weak validation at boundaries",
+    "Consistent with existing patterns",
+    "Overly complex solution detected",
+    "Clear and readable implementation",
+    "Incomplete error handling path",
+  ];
+
+  const initScores = useCallback((projectId) => {
+    const project = PROJECTS[projectId];
+    const [min, max] = project.baseRange;
+    const newScores = {};
+    DIMENSIONS.forEach((dim, i) => {
+      const value = generateScore(min, max);
+      newScores[dim.id] = {
+        value,
+        confidence: generateScore(60, 95),
+        delta: Math.floor((Math.random() - 0.4) * 10),
+        history: generateHistory(value),
+        explanation: explanations[i],
+        trend: Math.random() > 0.5 ? "up" : Math.random() > 0.5 ? "down" : "stable",
+      };
+    });
+    setScores(newScores);
+  }, []);
+
+  useEffect(() => {
+    initScores(currentProject);
+  }, [currentProject, initScores]);
+
+  useEffect(() => {
+    if (!isSimulating || !isPlaying) {
+      clearInterval(intervalRef.current);
+      return;
+    }
+
+    intervalRef.current = setInterval(() => {
+      setScores(prev => {
+        const updated = { ...prev };
+        const dimToUpdate = DIMENSIONS[Math.floor(Math.random() * DIMENSIONS.length)];
+        const current = updated[dimToUpdate.id];
+        if (!current) return prev;
+
+        const project = PROJECTS[currentProject];
+        const [min, max] = project.baseRange;
+        const change = Math.floor((Math.random() - 0.45) * 8);
+        const newVal = Math.max(0, Math.min(100, current.value + change));
+
+        updated[dimToUpdate.id] = {
+          ...current,
+          value: newVal,
+          delta: change,
+          confidence: Math.max(40, Math.min(99, current.confidence + Math.floor((Math.random() - 0.5) * 5))),
+          history: [...current.history.slice(1), { value: newVal }],
+          explanation: explanations[Math.floor(Math.random() * explanations.length)],
+        };
+        return updated;
+      });
+
+      if (Math.random() > 0.5) {
+        const newEvent = {
+          id: Date.now(),
+          text: EVENTS[Math.floor(Math.random() * EVENTS.length)],
+          time: new Date().toLocaleTimeString(),
+          type: Math.random() > 0.3 ? "info" : Math.random() > 0.5 ? "warning" : "success",
+        };
+        setEvents(prev => [newEvent, ...prev].slice(0, 50));
+      }
+
+      setTimelinePosition(prev => (prev + 1) % 100);
+    }, 2500 / simSpeed);
+
+    return () => clearInterval(intervalRef.current);
+  }, [isSimulating, isPlaying, simSpeed, currentProject]);
+
+  const overallScore = Object.values(scores).length > 0 ? Math.round(Object.values(scores).reduce((s, v) => s + v.value, 0) / 12) : 0;
+  const sortedScores = Object.entries(scores).sort((a, b) => b[1].value - a[1].value);
+  const strengths = sortedScores.slice(0, 3);
+  const deviations = sortedScores.slice(-3).reverse();
+
+  const complianceScores = PRINCIPLES.map((p, i) => ({
+    principle: p,
+    score: Math.max(30, Math.min(98, overallScore + Math.floor((Math.random() - 0.5) * 20))),
+  }));
+
+  return (
+    <div className="min-h-screen text-white font-sans" style={{ background: "#0a0a0f" }}>
+      {/* Header */}
+      <div className="border-b border-white/5 px-6 py-3 flex items-center justify-between" style={{ background: "rgba(10,10,15,0.95)" }}>
+        <div className="flex items-center gap-3">
+          <Activity size={20} className="text-cyan-400" />
+          <h1 className="text-lg font-bold tracking-tight">Agent Skill Observatory</h1>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">LIVE</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <select value={currentProject} onChange={e => setCurrentProject(e.target.value)} className="text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-gray-300 outline-none">
+            {Object.entries(PROJECTS).map(([k, v]) => <option key={k} value={k} className="bg-gray-900">{v.name}</option>)}
+          </select>
+          <button onClick={() => setIsPlaying(!isPlaying)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          </button>
+          <button onClick={() => setShowEvidence(!showEvidence)} className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+            <FileWarning size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-1">
+        <div className={`flex-1 p-4 space-y-4 transition-all ${showEvidence ? "mr-80" : ""}`}>
+          {/* Executive Summary */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="rounded-xl border border-white/5 p-5 flex items-center gap-5" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <RadialGauge value={overallScore} />
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider">Overall Score</div>
+                <div className="text-sm font-medium text-gray-300 mt-1">{getSeverity(overallScore)}</div>
+                <div className="flex items-center gap-1 mt-1">
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: getScoreColor(overallScore) }} />
+                  <span className="text-xs text-gray-500">Active</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/5 p-5" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">Top Strengths</div>
+              {strengths.map(([id, s]) => (
+                <div key={id} className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-gray-400">{DIMENSIONS.find(d => d.id === id)?.name}</span>
+                  <span className="text-xs font-mono" style={{ color: getScoreColor(s.value) }}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-white/5 p-5" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">Top Deviations</div>
+              {deviations.map(([id, s]) => (
+                <div key={id} className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-gray-400">{DIMENSIONS.find(d => d.id === id)?.name}</span>
+                  <span className="text-xs font-mono" style={{ color: getScoreColor(s.value) }}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-white/5 p-5" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">Trend</div>
+              <div className="h-16">
+                <MiniSparkline data={Object.values(scores)[0]?.history || []} color={getScoreColor(overallScore)} />
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-gray-500">Project: {PROJECTS[currentProject].name}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: getScoreColor(overallScore) + "20", color: getScoreColor(overallScore) }}>{PROJECTS[currentProject].profile}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 bg-white/5 rounded-lg p-1 w-fit">
+            {[{ id: "field", label: "Skill Field" }, { id: "cards", label: "Score Cards" }, { id: "compliance", label: "Compliance" }].map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${activeTab === tab.id ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Main Content */}
+          {activeTab === "field" && (
+            <div className="rounded-xl border border-white/5 overflow-hidden" style={{ background: "rgba(255,255,255,0.01)", height: "450px" }}>
+              <SkillField scores={scores} dimensions={DIMENSIONS} isPlaying={isPlaying} />
+            </div>
+          )}
+
+          {activeTab === "cards" && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {DIMENSIONS.map(dim => scores[dim.id] && (
+                <ScoreCard key={dim.id} dimension={dim} score={scores[dim.id]} onClick={() => setShowEvidence(true)} />
+              ))}
+            </div>
+          )}
+
+          {activeTab === "compliance" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {complianceScores.map((item, i) => (
+                <div key={i} className="rounded-xl border border-white/5 p-4 flex items-center justify-between" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full" style={{ background: getScoreColor(item.score) }} />
+                    <span className="text-sm text-gray-300">{item.principle}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${item.score}%`, background: getScoreColor(item.score) }} />
+                    </div>
+                    <span className="text-xs font-mono" style={{ color: getScoreColor(item.score) }}>{item.score}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="rounded-xl border border-white/5 p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Clock size={12} className="text-gray-500" />
+                <span className="text-xs text-gray-500">Timeline</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setSimSpeed(Math.max(0.5, simSpeed - 0.5))} className="text-xs px-2 py-0.5 rounded bg-white/5 text-gray-400 hover:text-white transition-colors">-</button>
+                <span className="text-xs text-gray-500">{simSpeed}x</span>
+                <button onClick={() => setSimSpeed(Math.min(3, simSpeed + 0.5))} className="text-xs px-2 py-0.5 rounded bg-white/5 text-gray-400 hover:text-white transition-colors">+</button>
+              </div>
+            </div>
+            <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${timelinePosition}%`, background: "linear-gradient(90deg, #06b6d4, #10b981)" }} />
+            </div>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {events.slice(0, 6).map(ev => (
+                <div key={ev.id} className="flex-shrink-0 text-xs px-2.5 py-1 rounded-lg border border-white/5 text-gray-400" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <span className="text-gray-600 mr-1.5">{ev.time}</span>
+                  {ev.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Evidence Panel */}
+        {showEvidence && (
+          <div className="fixed right-0 top-0 h-full w-80 border-l border-white/5 overflow-y-auto z-50" style={{ background: "rgba(10,10,15,0.98)", backdropFilter: "blur(20px)" }}>
+            <div className="p-4 border-b border-white/5 flex items-center justify-between sticky top-0" style={{ background: "rgba(10,10,15,0.95)" }}>
+              <span className="text-sm font-medium">Evidence Feed</span>
+              <button onClick={() => setShowEvidence(false)} className="p-1 rounded hover:bg-white/10 transition-colors"><X size={14} /></button>
+            </div>
+            <div className="p-3 space-y-2">
+              {events.map(ev => (
+                <div key={ev.id} className="rounded-lg border border-white/5 p-3" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: ev.type === "success" ? "#10b981" : ev.type === "warning" ? "#f59e0b" : "#06b6d4" }} />
+                    <span className="text-xs text-gray-500">{ev.time}</span>
+                  </div>
+                  <p className="text-xs text-gray-300">{ev.text}</p>
+                  <div className="mt-2 flex gap-1">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      {DIMENSIONS[Math.floor(Math.random() * DIMENSIONS.length)].name.split(" ")[0]}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {events.length === 0 && <p className="text-xs text-gray-600 text-center py-8">Waiting for events...</p>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
