@@ -1,0 +1,131 @@
+Great question! Here's a comprehensive breakdown of the **SVD-XT configuration** to replicate this cinematic drone dolly push-in effect:
+
+---
+
+## 🎬 SVD-XT Program Configuration
+
+### Model Selection
+```
+Model: stabilityai/stable-video-diffusion-img2vid-xt
+Variant: fp16
+Frames: 25 (SVD-XT's max — gives you ~4-5 sec at 6fps or ~3 sec at 8fps)
+```
+
+---
+
+### Core Generation Parameters
+
+```python
+# Core SVD-XT Settings
+num_frames           = 25
+num_inference_steps  = 25        # Higher = better quality, slower (try 30-50 for best)
+decode_chunk_size    = 8         # Lower if VRAM limited (4 for 8GB GPUs)
+fps                  = 7         # Target FPS (6-8 for smooth slow motion feel)
+motion_bucket_id     = 40        # KEY PARAMETER — controls motion intensity
+                                 # 40 = slow, smooth drone-like glide
+                                 # (default is 127 — way too fast/jittery)
+noise_aug_strength   = 0.02      # LOW value = stays very faithful to input image
+                                 # 0.02-0.05 for realistic room fidelity
+min_guidance_scale   = 1.0
+max_guidance_scale   = 3.0       # Keep low (2.5-3.5) for photorealism
+seed                 = [your chosen seed for reproducibility]
+```
+
+---
+
+### The Most Critical Parameters Explained
+
+| Parameter | Value Used | Why |
+|---|---|---|
+| `motion_bucket_id` | **40** | This is the #1 lever. Low value = slow cinematic glide. High = chaotic shake |
+| `noise_aug_strength` | **0.02** | Keeps room details faithful to your input photo |
+| `fps` | **7** | Paired with 25 frames gives ~3.5s — matches your target |
+| `max_guidance_scale` | **3.0** | Photorealistic, not over-stylized |
+| `num_inference_steps` | **30–50** | More steps = smoother parallax motion |
+
+---
+
+### Input Image Preparation
+
+This is **just as important** as the parameters:
+
+```
+Resolution:    1024x576  (SVD-XT's native widescreen resolution)
+               OR 1024x1024 then crop to 16:9
+
+Format:        PNG or high-quality JPG
+Preprocessing: Slight perspective warp toward the back of the room
+               (simulate the drone's starting POV — slightly lower 
+               angle, pointing inward toward the hutch)
+```
+
+> 💡 **Pro tip:** Before feeding the image into SVD-XT, apply a **subtle forward-perspective transform** in Photoshop/GIMP — push the vanishing point slightly deeper into the room. This gives SVD-XT a "motion direction hint" and dramatically improves the dolly-push feel.
+
+---
+
+### Python Code Skeleton (Diffusers)
+
+```python
+import torch
+from diffusers import StableVideoDiffusionPipeline
+from diffusers.utils import load_image, export_to_video
+
+pipe = StableVideoDiffusionPipeline.from_pretrained(
+    "stabilityai/stable-video-diffusion-img2vid-xt",
+    torch_dtype=torch.float16,
+    variant="fp16"
+)
+pipe.enable_model_cpu_offload()   # Use if VRAM < 16GB
+pipe.unet.enable_forward_chunking()
+
+# Load and resize your dining room image
+image = load_image("dining_room.jpg")
+image = image.resize((1024, 576))
+
+generator = torch.manual_seed(42)  # Fix seed for reproducibility
+
+frames = pipe(
+    image,
+    num_frames=25,
+    num_inference_steps=30,
+    decode_chunk_size=8,
+    motion_bucket_id=40,        # SLOW cinematic motion
+    noise_aug_strength=0.02,    # High fidelity to input
+    min_guidance_scale=1.0,
+    max_guidance_scale=3.0,
+    fps=7,
+    generator=generator,
+).frames[0]
+
+export_to_video(frames, "drone_dining_room.mp4", fps=7)
+```
+
+---
+
+### Post-Processing to Match the Final Look
+
+Once SVD-XT generates the raw frames, apply this in **DaVinci Resolve / Premiere / FFmpeg**:
+
+```
+1. Frame interpolation:  RIFE x2 or x4 (smooths motion from 7fps → 14/28fps)
+2. Speed:                Slight slow-motion retime (85% speed)
+3. Color grade:          Warm shadows, lifted blacks, slight golden cast
+                         (matches the brass chandelier warmth)
+4. Sharpening:           Light output sharpening (0.3-0.5)
+5. Stabilization:        Warp Stabilizer at 0-5% (keeps the organic drone drift)
+```
+
+---
+
+### VRAM Requirements
+
+| GPU VRAM | Settings |
+|---|---|
+| **8 GB** | `decode_chunk_size=4`, `enable_model_cpu_offload()` |
+| **12 GB** | `decode_chunk_size=6`, standard settings |
+| **16 GB+** | Full settings, no offloading needed |
+| **24 GB+** | Can increase `num_inference_steps` to 50 comfortably |
+
+---
+
+The **single biggest factor** in getting that slow, smooth drone glide is keeping `motion_bucket_id` between **30–50**. Anything above 80 will introduce camera shake and chaotic motion that ruins the cinematic feel. Pair that with a well-composed input image and the post-processing interpolation step, and you'll land very close to what you see above.
