@@ -1,0 +1,106 @@
+Here is the step-by-step guide to setting up your M5 Mac to run **Wan 2.1 (Image-to-Video)** locally using ComfyUI and Apple's Metal Performance Shaders (MPS). 
+
+This guide assumes you have at least 32GB of Unified Memory. If you have 16GB, you will need to download the 1.3B version of the model instead of the 14B version mentioned below.
+
+---
+
+### Phase 1: Install Prerequisites
+
+First, we need to install the foundational tools required to run Python environments on your Mac.
+
+**Step 1: Install Homebrew**
+If you don't already have it, open your Terminal and paste this command:
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+
+**Step 2: Install Python and Git**
+Once Homebrew is installed, run:
+`brew install python@3.11 git`
+*(Note: Python 3.11 is currently the most stable version for these AI workflows.)*
+
+---
+
+### Phase 2: Install ComfyUI
+
+ComfyUI is the node-based backend we will use. It natively supports Apple Silicon GPUs.
+
+**Step 3: Clone the Repository**
+In your Terminal, navigate to where you want to install ComfyUI (e.g., your Documents folder) and run:
+`git clone https://github.com/comfyanonymous/ComfyUI.git`
+`cd ComfyUI`
+
+**Step 4: Create a Virtual Environment**
+Create an isolated environment so we don't mess up your system Python:
+`python3.11 -m venv venv`
+`source venv/bin/activate`
+
+**Step 5: Install PyTorch for Apple Silicon**
+This is crucial. You must install the version of PyTorch compiled for Apple's Metal framework:
+`pip install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu`
+*(Don't let the "cpu" URL fool you; this includes the `mps` backend for Mac GPUs.)*
+
+**Step 6: Install ComfyUI Requirements**
+`pip install -r requirements.txt`
+
+---
+
+### Phase 3: Install the Wan 2.1 Custom Nodes
+
+ComfyUI needs specific code to understand the Wan model architecture.
+
+**Step 7: Install the Wan Video Nodes**
+Navigate into the custom nodes folder:
+`cd custom_nodes`
+Clone the specific wrapper for Wan:
+`git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git`
+Navigate into it and install its requirements:
+`cd ComfyUI-WanVideoWrapper`
+`pip install -r requirements.txt`
+Return to the main ComfyUI directory:
+`cd ../..`
+
+---
+
+### Phase 4: Download the Models (The Heavy Lifting)
+
+You will need to download the model weights and place them in the correct folders. These files are large (10GB - 30GB).
+
+**Step 8: Download the Text Encoders**
+Wan uses specific text encoders to understand your prompt. Go to HuggingFace (you don't need an account) and download:
+1.  **umt5_xxl_fp8**: Place this file in `ComfyUI/models/text_encoders/`
+2.  **clip_g**: Place this file in `ComfyUI/models/text_encoders/`
+
+**Step 9: Download the Wan 2.1 I2V Model (Quantized)**
+To fit the massive 14B model into Mac memory, we use an FP8 (8-bit) quantized version. 
+1.  Search HuggingFace for: `Kijai/Wan-I2V-14B-fp8`
+2.  Download the `.safetensors` file.
+3.  Place it in: `ComfyUI/models/diffusion_models/`
+
+**Step 10: Download the VAE**
+1.  Search HuggingFace for the Wan VAE (usually named something like `wan_vae.safetensors`).
+2.  Place it in: `ComfyUI/models/vae/`
+
+---
+
+### Phase 5: Run and Generate
+
+**Step 11: Launch ComfyUI**
+Make sure you are in the main `ComfyUI` folder in your terminal and your virtual environment is active (you should see `(venv)` in your prompt). Run:
+`python main.py --force-fp16`
+*(The `--force-fp16` flag helps optimize memory usage on Macs).*
+
+Your browser will automatically open to `http://127.0.0.1:8188`.
+
+**Step 12: Load the Workflow**
+1.  Go to the GitHub page where you downloaded `ComfyUI-WanVideoWrapper`. 
+2.  Look for the "Examples" or "Workflows" folder. 
+3.  Download the `wan_image_to_video_workflow.json`.
+4.  Drag and drop that JSON file directly into the ComfyUI browser window. 
+
+**Step 13: Generate Your Video**
+1.  **Load Image Node:** Click "Choose File" and upload your dining room picture.
+2.  **Prompt Node:** Enter your camera instruction: *"Cinematic slow dolly push-in through a traditional dining room, low camera angle, smooth forward motion revealing wooden beams, chandelier, and dining table, photorealistic interior, warm lighting."*
+3.  **Generate:** Click the "Queue Prompt" button on the floating menu.
+
+Watch the terminal window; it will show you the progress. Generating a 5-second clip on an M5 Mac using the 14B model will likely take between 15 and 35 minutes depending on your specific chip configuration. 
+
+Let me know if you run into any errors during installation!
