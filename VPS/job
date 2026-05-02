@@ -1,0 +1,620 @@
+
+
+CapCut’s effect library is large, dynamic, and version-dependent, so there usually isn’t one fixed public master list that stays accurate across mobile vs desktop, free vs Pro, and region-specific builds.
+
+I checked current CapCut sources and confirmed two useful things:
+
+CapCut is actively promoting AI effects and frequently rotating new/trending effects
+CapCut’s official current help content also highlights trending transition families like velocity, beat sync, glitch/digital distortion, and cinematic fade/zoom — which are related, but not the same as video effects
+
+So the most honest and useful answer is this: below is a comprehensive practical list of CapCut video effect types and common effect families you can expect to find, rather than a claim that every single preset name is identical in every installation.
+
+What’s available in CapCut: comprehensive effect categories
+
+1. Blur & focus effects
+Used to soften, isolate, or stylize footage.
+
+Common CapCut-style blur effects include:
+
+Gaussian blur**
+Motion blur**
+Directional blur**
+Zoom blur**
+Radial blur**
+Lens blur**
+Soft focus**
+Dreamy blur**
+Background blur**
+Edge blur**
+Bokeh-style blur**
+Defocus / out-of-focus looks**
+
+Best for:
+
+Portrait clips
+Cinematic intros
+Highlighting a subject
+Dreamy or romantic edits
+
+2. Glitch & digital distortion effects
+These simulate broken signal, digital noise, or cyber-style visuals.
+
+Common types include:
+
+RGB split**
+Chromatic aberration**
+Digital glitch**
+Signal distortion**
+Scanline distortion**
+TV glitch**
+Datamosh-style looks**
+Pixel shift**
+Block distortion**
+Wave distortion**
+Jitter / shake glitch**
+Noise interference**
+Static / TV noise**
+Digital tearing**
+Neon glitch**
+
+Best for:
+
+Gaming edits
+Beat-sync content
+Cyberpunk visuals
+Fast reels and TikToks
+
+3. Retro, VHS, film, and analog effects
+These recreate older camera and tape formats.
+
+Common types include:
+
+VHS**
+Vintage film**
+8mm film**
+16mm film**
+Old movie grain**
+Film dust**
+Film burn**
+Light leak**
+Tape noise**
+Camcorder look**
+CRT / old TV**
+Retro fade**
+Sepia vintage**
+Polaroid-style coloring**
+Lo-fi analog**
+Scratches and dust**
+Frame flicker**
+Projector effect**
+
+Best for:
+
+Nostalgia edits
+Memory montages
+Travel videos
+Mood-heavy storytelling
+
+4. Lighting, flash, and exposure effects
+These simulate camera flashes, overexposure, flicker, and dramatic light shifts.
+
+Common types include:
+
+Flash**
+Strobe**
+Exposure pulse**
+Brightness flicker**
+Light sweep**
+Glow flash**
+Lens flash**
+White flash transition-style effect**
+Color flash**
+Overexposed flare**
+Light bloom**
+Pulse light**
+Party flash**
+Club light**
+Stage-light effects**
+
+Best for:
+
+Music edits
+Photo-dump style videos
+Fast cuts
+Trend edits
+
+5. Color stylization effects
+These remap or exaggerate colors for mood or branding.
+
+Common types include:
+
+Black & white**
+Monochrome tint**
+Duotone**
+Warm tone**
+Cool tone**
+Neon color shift**
+Teal & orange cinematic**
+Pastel wash**
+High saturation**
+Low saturation / faded**
+Color isolate**
+Split toning**
+Posterized color**
+HDR-like contrast**
+Muted film color**
+Dream pastel**
+Vivid pop**
+
+Best for:
+
+Lifestyle content
+Product videos
+Mood edits
+Brand-consistent reels
+
+6. Lens & optical effects
+These imitate real camera lens behavior or stylized optics.
+
+Common types include:
+
+Lens flare**
+Halo glow**
+Prism effect**
+Refraction**
+Fisheye**
+Wide-angle distortion**
+Barrel distortion**
+Vignette**
+Kaleidoscope**
+Mirror reflection**
+Multiple reflection**
+Glass effect**
+Water lens**
+Crystal / prism split**
+Zoom lens pulse**
+
+Best for:
+
+Fashion edits
+Music videos
+Creative intros
+Surreal content
+
+7. Motion & energy effects
+These intensify movement and make cuts feel more dynamic.
+
+Common types include:
+
+Shake**
+Camera shake**
+Vibration**
+Velocity pulse**
+Echo / trail**
+Ghosting**
+Speed lines**
+Motion streaks**
+Afterimage**
+Zoom punch**
+Bounce**
+Spin distortion**
+Whip effect**
+Rush / push effect**
+Dynamic frame pulse**
+Beat-reactive motion looks**
+
+Best for:
+
+Sports edits
+Action scenes
+Dance edits
+Anime-style montages
+
+8. Sparkle, glow, and beauty-style overlay effects
+These add polish, shine, or dreamy softness.
+
+Common types include:
+
+Glow**
+Soft glow**
+Bloom**
+Sparkles**
+Star glint**
+Shimmer**
+Fairy dust**
+Angel glow**
+Diamond sparkle**
+Gloss effect**
+Beauty blur**
+Dream haze**
+Romantic glow**
+Heavenly light**
+Soft skin-style diffusion**
+
+Best for:
+
+Beauty content
+Wedding edits
+Soft aesthetic reels
+Romantic montages
+
+9. Particle, atmosphere, and overlay effects
+These place animated visual elements over your footage.
+
+Common types include:
+
+Dust particles**
+Floating particles**
+Snow**
+Rain**
+Fog**
+Mist**
+Smoke**
+Cloud overlay**
+Ash / embers**
+Fire sparks**
+Bubbles**
+Confetti**
+Petals / falling flowers**
+Leaves**
+Stars / night sparkle**
+Light particles**
+Glitter rain**
+
+Best for:
+
+Seasonal edits
+Fantasy edits
+Romantic content
+Event videos
+
+10. Weather & environmental effects
+These are more literal atmospheric simulations.
+
+Common types include:
+
+Rainfall**
+Heavy rain**
+Snowfall**
+Blizzard-style snow**
+Fog bank**
+Thunder / lightning flash**
+Sun rays**
+Wind-blown particles**
+Sand / dust storm**
+Heat shimmer**
+Underwater shimmer**
+Water ripple**
+Storm atmosphere**
+
+Best for:
+
+Storytelling scenes
+Dramatic intros
+Music videos
+Mood-setting clips
+
+11. Frame, border, and screen effects
+These change the presentation of the image inside a stylized frame.
+
+Common types include:
+
+Film frame**
+Camera HUD**
+Viewfinder**
+Retro border**
+Polaroid frame**
+TV frame**
+Phone screen overlay**
+Split screen**
+Picture-in-picture style effect**
+Rounded frame**
+Shadow frame**
+Floating card effect**
+Windowed frame**
+Freeze-frame panel look**
+
+Best for:
+
+Commentary videos
+Photo montages
+Mock-camera footage
+Social media collage edits
+
+12. Mirror, duplicate, and geometry effects
+These manipulate image layout and symmetry.
+
+Common types include:
+
+Mirror**
+Horizontal flip mirror**
+Vertical reflection**
+Multi-clone**
+Grid duplication**
+Split mirror**
+Kaleidoscope**
+Symmetry**
+Tunnel effect**
+Tile repeat**
+Multi-panel geometric layout**
+Prism duplication**
+
+Best for:
+
+EDM edits
+Fashion clips
+Experimental visuals
+Abstract content
+
+13. 3D and perspective effects
+These give footage more depth or artificial camera movement.
+
+Common types include:
+
+3D zoom**
+Parallax-style depth**
+3D rotate**
+Perspective tilt**
+Push-in depth effect**
+Pop-out look**
+Floating subject illusion**
+Depth warp**
+3D shake**
+Tilt perspective**
+Pseudo-3D photo/video motion**
+
+Best for:
+
+Photo animation
+Dramatic reveals
+Cinematic reels
+Trend edits
+
+14. AI-style and smart effects
+CapCut increasingly pushes AI-driven effects that transform footage automatically.
+
+Common families include:
+
+AI stylization**
+Cartoon/anime-style conversion**
+Portrait enhancement**
+Auto background stylization**
+AI glow / beauty**
+AI cutout + effect combos**
+AI art looks**
+AI motion embellishment**
+AI relighting**
+AI aesthetic filters/effects**
+Template-linked AI effects**
+
+These are the most likely to change often, especially in 2026.
+
+Best for:
+
+Social content
+Trend edits
+Creator templates
+Fast one-tap transformations
+
+15. Cinematic effects
+These aim for drama, moody lighting, and film-like polish.
+
+Common types include:
+
+Letterbox / cinematic framing**
+Film grain**
+Moody contrast**
+Teal-orange look**
+Subtle vignette**
+Light leak cinema**
+Lens breathing style**
+Dust and projector look**
+Dream cinema glow**
+Slow dramatic blur**
+Desaturated movie look**
+Noir / dark tone**
+
+Best for:
+
+Short films
+Travel montages
+Brand ads
+Emotional edits
+
+16. Music-video / beat-sync effects
+These are often used in short-form edits that hit on the beat.
+
+Common types include:
+
+Beat flash**
+Beat shake**
+Beat zoom**
+Pulse glow**
+Rhythm strobe**
+Bass vibration**
+Quick RGB split**
+Flicker cut effect**
+Light hit**
+Sound-reactive pulse**
+Rapid blur pulse**
+Motion echo on beats**
+
+Best for:
+
+Reels
+TikTok edits
+Dance videos
+Performance clips
+
+17. Texture and noise effects
+These add grit, grit overlays, or stylized image roughness.
+
+Common types include:
+
+Film grain**
+Static noise**
+Dust texture**
+Paper texture**
+Canvas texture**
+Halftone**
+Pixel texture**
+Glitter texture**
+Crushed blacks / rough texture**
+Scratched film**
+Ink / paint texture**
+Screen noise**
+
+Best for:
+
+Editorial visuals
+Vintage looks
+Streetwear content
+Graphic-style edits
+
+18. Abstract and surreal effects
+These are more experimental or artistic.
+
+Common types include:
+
+Liquid distortion**
+Wave warp**
+Heat map style**
+Psychedelic color shift**
+Dream smear**
+Fractal-like patterns**
+Melt effect**
+Ripple warp**
+Tunnel warp**
+Swirl**
+Echo dreamscape**
+Surreal mirror**
+Acid-color look**
+Glowing aura distortions**
+
+Best for:
+
+Experimental reels
+Music visuals
+Art edits
+Festival content
+
+Effects CapCut users often confuse with video effects
+
+These may appear elsewhere in the app or in nearby menus:
+
+| Feature type | What it is | Not exactly the same as video effects |
+|---|---|---|
+| Filters | Overall color/style presets | More like global look adjustments |
+| Transitions | Animation between clips | Applied between clips, not over a clip |
+| Animations | In/out/combo motion | Move the clip itself |
+| Adjustments | Brightness, contrast, HSL, etc. | Editing controls, not effect presets |
+| Body effects | Face/body tracking and stylization | Sometimes separate from standard video effects |
+| Templates | Prebuilt effect stacks | Not individual manual effects |
+
+What current CapCut sources suggest right now
+
+From the current sources I checked:
+
+CapCut is actively surfacing latest free AI effects
+CapCut’s official help content highlights trending motion language around:
+  Velocity
+  Beat sync
+  Glitch / digital distortion
+  Cinematic fade / zoom
+
+That lines up with what creators are currently seeing: CapCut is leaning heavily into AI, music-sync, cinematic, and digital/glitch styles.
+
+The most likely top-level effect groups you’ll see inside CapCut
+Depending on your platform, effects are often organized into broad browsing groups similar to:
+
+Trending**
+Basic**
+Blur**
+Lens**
+Retro**
+Glitch**
+Party**
+Nature**
+Frame**
+Distortion**
+Light**
+Mood / Atmosphere**
+3D**
+AI / Smart**
+Cinematic**
+
+The exact names of those groups can vary.
+
+What I was able to complete, and what remains uncertain
+
+Completed
+I gathered current CapCut-related information and confirmed that:
+  AI effects are being actively promoted now
+  Glitch, beat-sync, velocity, and cinematic visual styles are currently emphasized in CapCut’s ecosystem
+I compiled a broad, organized, comprehensive practical list of the kinds of video effects available in CapCut
+
+Not fully achieved
+I did not obtain a verified, official, version-specific master inventory of every single CapCut preset name
+That’s mainly because CapCut’s effect catalog can change by:
+  App version
+  Desktop vs mobile
+  Free vs Pro
+  Region
+  Template rollouts and trend rotations
+
+What still needs to be done for a truly exact list
+To build an exact preset-by-preset list, I’d need one of these from you:
+
+A screenshot of your CapCut effects panel
+Confirmation of CapCut mobile or desktop
+Your OS: iPhone, Android, Windows, or Mac
+Whether you want:
+  Free effects only
+  Pro effects too
+  Video effects only
+  Or video effects + body effects + transitions + filters
+
+Fastest way to see your exact full effect library in CapCut
+
+If you want the literal current list in your app:
+
+Open CapCut
+Add any clip to the timeline
+Open Effects
+Choose Video Effects
+Browse each category
+If available, use the search bar
+Note that some items may show:
+   Pro
+   New
+   Trending
+   Template
+   AI
+
+That will always be more precise than any public list.
+
+Bottom line
+
+CapCut offers a very wide range of effects across these main families:
+
+Blur**
+Glitch**
+Retro/VHS**
+Lighting**
+Color stylization**
+Lens/optical**
+Motion/energy**
+Glow/sparkle**
+Particles/weather**
+Frames/borders**
+Mirror/geometry**
+3D/perspective**
+AI effects**
+Cinematic looks**
+Beat-sync/music-video effects**
+Texture/noise**
+Abstract/surreal effects**
+
+If your goal is precision, the missing piece is your specific CapCut version and device, because the exact preset list changes.
+
+Would you like me to continue by turning this into a clean checklist of CapCut effects by category, or should I proceed to make you a more exact desktop/mobile-specific list if you tell me which device and CapCut version you’re using?
