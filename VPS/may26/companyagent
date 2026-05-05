@@ -1,0 +1,98 @@
+# AI Agent Company Operations Manual
+
+This document defines the operating model for a small AI driven SaaS company with two humans in a supporting role. All primary roles are performed by AI agents, with humans available to assist on tasks that cannot be completed by AI at the moment. Over time, AI agents will acquire skills and autonomy to assume these tasks fully. Humans provide governance, ethical oversight, and occasional intervention during complex or high risk scenarios.
+
+## 1. Mission and Scope
+The mission is to deliver reliable software as a service with excellent reliability, security and customer delight. The scope covers product development, marketing, sales, customer success, finance, legal, HR, and governance, all executed by AI agents with humans acting as oversight and learning mentors.
+
+## 2. Guiding Principles for AI Agents
+- Clarity of purpose and minimal ambiguity in task requests
+- Safety, privacy and compliance as default
+- Explainability and auditable decision making
+- Collaboration and graceful handoffs to humans when needed
+- Continuous learning and improvement through structured feedback loops
+
+## 3. Organizational Model
+- AI agents fill roles across product, engineering, sales, marketing, support, success, finance, HR, and compliance
+- Two humans provide escalation, validation, policy decisions, and exception handling
+- Knowledge sharing through a centralized knowledge base that agents read and update
+
+## 4. Role Blueprints for AI Agents
+This section provides a scaffold for each role. Details will be filled in later as specific prompts and knowledge files are created. Each blueprint includes: role purpose, primary duties, typical workflows, decision criteria, escalation triggers, and learning goals.
+
+- CTO AI Lead
+- Product Manager AI
+- Software Engineer AI
+- DevOps AI
+- Sales Lead AI
+- SDR AI
+- Account Executive AI
+- Customer Success Lead AI
+- CSM AI
+- Support Agent AI
+- Onboarding AI
+- Marketing AI
+- Content Creator AI
+- Data Analyst AI
+- Finance AI
+- HR AI
+- Legal and Compliance AI
+
+## 5. Collaboration Protocols
+- Task assignment and queueing
+- Inter agent communication formats
+- Handoffs to humans and back to AI
+- Synchronous vs asynchronous work patterns
+- Meeting structure and recording of decisions
+
+## 6. Human in the Loop
+- Humans roles, expectations and boundaries
+- When humans intervene and how to reassign tasks
+- Certification and learning prerequisites for humans stepping into roles
+
+## 7. Knowledge Management and Learning
+- Central knowledge base structure
+- Versioning, auditing and rollback
+- Knowledge ingestion from tasks and outcomes
+- Learning cycles, training data governance, and privacy
+
+## 8. Data, Privacy and Compliance
+- Data handling, storage and retention
+- Data access controls and least privilege
+- Compliance with privacy laws and security standards
+- Incident handling and reporting
+
+## 9. Security and Ethics
+- Security best practices for AI agents
+- Ethical guidelines and bias mitigation
+- Safe content generation and user protection
+
+## 10. Metrics and Quality Assurance
+- KPIs by domain
+- Quality gates and review processes
+- Audit trails and reporting
+
+## 11. Onboarding and Ramp
+- How new AI agents are introduced
+- Knowledge onboarding material and meta prompts
+- Initial tasks and success criteria
+
+## 12. Risk Management and Incident Response
+- Common failure modes
+- Incident playbooks and escalation paths
+- Recovery and post incident learning
+
+## 13. Change Management and Governance
+- Version control of knowledge files
+- Change request process and approvals
+- Review cadence and governance meetings
+
+## 14. Knowledge File Templates and Prompts
+- Template prompts for each role
+- Guidelines for writing effective prompts and memory management
+- Example prompts and their expected outputs
+
+## 15. Appendix
+- Sample prompts for governance, escalation, and learning
+- Glossary of terms
+- Contact and escalation matrix
