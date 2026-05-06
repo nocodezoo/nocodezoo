@@ -1,0 +1,266 @@
+# Reel Estate → ComfyUI: Complete Feature Replication Guide
+
+Based on my research of tryreelestate.com, here is every feature they offer, mapped to exactly what you can and cannot do with LTX Video + what you need to add to ComfyUI to achieve full parity.
+
+---
+
+## 🗂️ Complete Feature List from Reel Estate
+
+Reel Estate's core feature set breaks down into **6 functional pillars**:
+
+1. Image-to-Video clip generation (with cinematic motion)
+2. AI Virtual Staging (furnishing empty rooms)
+3. Photo Effects (Twilight, Winter, Christmas, Halloween, etc.)
+4. Restage & Refine (multiple versions of same photo)
+5. Video Assembly (timeline, clip ordering, duration control)
+6. Export & Watermarking (MP4, 720p/1080p, portrait/landscape, custom watermark, background music)
+
+---
+
+## ✅ What LTX Video Already Covers
+
+**LTX Video (LTX-Video by Lightricks)** is a strong image-to-video model. Here's what it natively handles:
+
+| Reel Estate Feature | LTX Coverage | Notes |
+|---|---|---|
+| Image → animated video clip | ✅ Full | Core strength of LTX — smooth, cinematic motion from still photos |
+| Cinematic camera motion | ✅ Good | Pan, zoom, push, pull via prompt conditioning or motion guidance nodes |
+| Portrait & Landscape format | ✅ Full | Control via resolution settings in the KSampler/LTX node (e.g., 768x1360 vs 1360x768) |
+| Clip reuse (generate once, reuse) | ✅ Full | Once rendered in ComfyUI, the MP4 clip is yours forever |
+| Multi-image batch processing | ✅ Full | Loop nodes in ComfyUI can batch all listing photos through LTX |
+| HD output (1080p) | ✅ Full | LTX supports up to 1216x704 natively; upscale workflow handles 1080p |
+
+---
+
+## ❌ What LTX Video Does NOT Cover (and What to Add)
+
+This is where you need to build additional workflows into ComfyUI. Here is every gap, with the exact solution for each:
+
+---
+
+### 1. 🛋️ AI Virtual Staging (One-Click Room Furnishing)
+**What Reel Estate does:** Takes an empty room photo and furnishes it in 13 styles (Modern, Farmhouse, Minimalist, Scandinavian, etc.)
+
+**LTX can do this?** ❌ No — LTX is a video model, not an image inpainting/generation model.
+
+**What you need in ComfyUI:**
+
+- **Model:** `SDXL 1.0` or `Flux.1-dev` (best quality for interior staging) as your base
+- **Workflow type:** `Image-to-Image` + `Inpainting` workflow
+- **Key nodes to add:**
+  - `VAE Encode` → `KSampler` (img2img mode, denoise 0.55–0.75)
+  - `ControlNet` with the **Depth** preprocessor (`Depth-Anything` or `MiDaS`) — this preserves room geometry/structure while regenerating the interior
+  - `ControlNet` with **Canny Edge** as secondary control to preserve walls, windows, architectural lines
+  - A **style LoRA** per design style (you'd train or download staging LoRAs for Modern, Farmhouse, etc.) — or use detailed text prompts per style
+- **Prompt strategy:** Use a strong positive prompt like *"furnished living room, modern style, warm lighting, photorealistic, high-end interior design"* + negative prompt removing empty/bare walls
+- **Style switching:** Build a **workflow with a dropdown/text switch node** (use `CR Text` or `ImpactPack` selector nodes) that swaps the style prompt and LoRA for each of the 13 styles
+- **Recommended custom nodes:** `ComfyUI-Impact-Pack`, `ComfyUI-ControlNet-Aux`, `was-node-suite-comfyui`
+
+---
+
+### 2. 🌆 Photo Effects (Twilight, Winter, Christmas, Halloween, etc.)
+**What Reel Estate does:** Transforms a daytime exterior photo into a twilight/dusk shot, winter scene, holiday-themed version, etc.
+
+**LTX can do this?** ❌ No — again, this is image transformation, not video.
+
+**What you need in ComfyUI:**
+
+- **Model:** `Flux.1-dev` or `SDXL` with img2img workflow
+- **Twilight Effect:**
+  - Use img2img at denoise ~0.60–0.70
+  - Prompt: *"twilight exterior, golden hour sky, purple dusk, warm lights on inside windows, photorealistic real estate photography"*
+  - Add **IC-Light** node for relighting — this is the most realistic method for sky/lighting replacement without destroying the house structure
+  - Alternatively use **InstructPix2Pix** model with prompt: *"make it twilight/dusk"*
+- **Sky Replacement specifically:**
+  - Use `ComfyUI-segment-anything` (SAM) to mask the sky region
+  - Inpaint only the sky with a twilight/night sky image using `InpaintModelConditioning` node
+- **Seasonal Effects (Winter/Christmas):**
+  - img2img with denoise 0.5–0.65
+  - Prompts like *"snow covered lawn, winter, christmas lights, frost on windows"*
+  - Use ControlNet Depth to preserve house structure
+- **Holiday overlays (Halloween):**
+  - Combination of img2img + inpainting specific areas (lawn, porch) with carved pumpkins, fall leaves, etc.
+- **Workflow tip:** Build one master "Effects" workflow with a **style selector** (use `CR Select Image` or a primitive string switch) that routes to the correct prompt + denoise combination per effect type
+- **Recommended custom nodes:** `ComfyUI_segment_anything`, `ComfyUI-IC-Light`, `comfyui-inpaint-nodes`
+
+---
+
+### 3. 🔁 Restage & Refine (Multiple Versions / Version Comparison)
+**What Reel Estate does:** Generates multiple staged versions of the same room so you can pick the best one.
+
+**LTX can do this?** ❌ Not relevant — this is an image workflow.
+
+**What you need in ComfyUI:**
+
+- This is straightforward with a **batch seeding workflow**
+- Use a `Batch Seed` or `CR Seed to List` node to generate 4–6 variants from the same image with slightly different seeds
+- Add a `Image Batch` → `Image Grid` node to display all variants side by side for comparison
+- The `was-node-suite` `WAS_Image_Grid` node creates a contact sheet of all variants automatically
+- For style variants (not just seed variants): use a **Loop workflow** that iterates through a list of style prompts/LoRAs on the same input image
+- **Recommended custom nodes:** `ComfyUI-Custom-Scripts` (has seed control), `was-node-suite-comfyui`, `ComfyUI-Impact-Pack`
+
+---
+
+### 4. 🎬 Video Assembly & Timeline (Clip Ordering, Duration Control)
+**What Reel Estate does:** Lets you arrange clips in order, set duration per clip (e.g., 3.0s each), set total video length.
+
+**LTX can do this?** ⚠️ Partially — LTX generates clips but has no native assembly/sequencing.
+
+**What you need in ComfyUI:**
+
+- **Clip duration control:** Set the `num_frames` parameter in the LTX node directly (at 24fps: 72 frames = 3s, 120 frames = 5s, etc.)
+- **Clip sequencing / assembly:** ComfyUI does NOT have a native video editor timeline — you need:
+  - **Option A (within ComfyUI):** Use `VHS (Video Helper Suite)` custom node — it has `VHS_VideoCombine` which can concatenate multiple video clips in sequence. Chain multiple LTX outputs → `VHS_VideoCombine` with sequential ordering
+  - **Option B (external, easiest):** After generating all clips in ComfyUI, assemble in **FFmpeg** (free command-line tool) or **DaVinci Resolve** (free) — this gives you full timeline control
+  - **Option C:** Use `ComfyUI-VideoHelperSuite`'s batch mode to process all images and stitch them: each image → LTX clip → concatenate
+- **Transition effects between clips:** LTX doesn't generate transitions. Use `FFmpeg` with crossfade filter (`xfade`) between clips, or add a **transition frame** workflow that blends the last frame of clip N with the first frame of clip N+1 and runs a short LTX generation on that blend
+- **Recommended custom nodes:** `ComfyUI-VideoHelperSuite` (absolutely essential — install this first)
+
+---
+
+### 5. 🎵 Background Music Addition
+**What Reel Estate does:** Automatically adds background music to the final video.
+
+**LTX can do this?** ❌ No — LTX is purely visual.
+
+**What you need in ComfyUI:**
+
+- **ComfyUI has no native audio mixing** — this must be handled post-export
+- **Best workflow:**
+  - Export the silent MP4 from ComfyUI via `VHS_VideoCombine`
+  - Use **FFmpeg** to mux audio: `ffmpeg -i video.mp4 -i music.mp3 -shortest -c:v copy -c:a aac output.mp4`
+  - Build a **Python wrapper script** that auto-runs FFmpeg after every ComfyUI export if you want this automated
+- **For AI-generated music** (avoid copyright issues): Use `MusicGen` (Meta's open-source model) locally or via a ComfyUI node — `ComfyUI-AudioScheduler` and `comfyui-sound-lab` are early-stage nodes that can integrate audio AI
+- **Royalty-free music library approach:** Keep a folder of licensed tracks, and the FFmpeg script randomly selects one and mixes it at a set volume level (-18dB under video)
+- **Recommended:** `ComfyUI-VideoHelperSuite` also has some audio attachment capabilities in newer versions
+
+---
+
+### 6. 💧 Watermark / Custom Branding Overlay
+**What Reel Estate does:** Adds a watermark (their logo or your custom logo) to exported videos, with an option to remove.
+
+**LTX can do this?** ❌ No — post-processing feature.
+
+**What you need in ComfyUI:**
+
+- Use `VHS_VideoCombine` with a **PIL/OpenCV overlay** using a custom node, OR
+- Use **FFmpeg overlay filter** post-export: `ffmpeg -i video.mp4 -i logo.png -filter_complex "overlay=W-w-10:H-h-10" output.mp4` (places logo in bottom-right corner)
+- For **text watermarks** (agent name, phone number): `ffmpeg -i video.mp4 -vf "drawtext=text='John Smith Realty':fontsize=24:fontcolor=white:x=10:y=10" output.mp4`
+- **Within ComfyUI:** The `ImageComposite` node + `LoadImage` (logo PNG) + `ImageBlend` nodes can overlay a logo frame-by-frame before the video is assembled — this is the fully-in-ComfyUI approach but is slower
+
+---
+
+### 7. 📐 Portrait vs Landscape Format (Social Media vs MLS)
+**What Reel Estate does:** Exports in both 16:9 (landscape, for MLS/listing sites) and 9:16 (portrait, for Instagram Reels/TikTok).
+
+**LTX can do this?** ✅ Yes, with configuration.
+
+**What you need in ComfyUI:**
+
+- LTX natively supports different resolutions — set `width` and `height` in the `LTX Video` sampler node
+  - **16:9 landscape:** 1280×720 or 1920×1080 (after upscale)
+  - **9:16 portrait:** 720×1280 or 1080×1920 (after upscale)
+  - **1:1 square:** 1024×1024 (for Instagram grid posts)
+- Build **two parallel branches** in your workflow — one for landscape output and one for portrait — or use a resolution selector primitive at the top of your workflow
+- For portrait format: the source photos are landscape (standard real estate photos), so you need a **smart crop/reframe** step — use the `ImageCrop` node to extract the most interesting vertical portion of the image before feeding into LTX
+
+---
+
+### 8. 📤 HD Export (720p / 1080p)
+**What Reel Estate does:** Basic plan gets 720p, Agent/Pro plans get 1080p.
+
+**LTX can do this?** ✅ Yes, with upscaling workflow.
+
+**What you need in ComfyUI:**
+
+- LTX's native max resolution is around **1216×704** (≈720p range)
+- For true **1080p (1920×1080):** Add a **video upscaling node** after LTX generation
+  - Use `ESRGAN` or `RealESRGAN` upscale model (4x) on each frame, then reassemble
+  - `ComfyUI-VideoHelperSuite` can split video → upscale frames → recombine
+  - Alternatively use **RIFE** (Real-time Intermediate Flow Estimation) for frame interpolation + upscale
+  - `ComfyUI_ESRGAN` custom node handles this in-workflow
+- **Recommended models for upscaling video frames:** `4x-UltraSharp`, `4x_NMKD-Siax_200k`, or `RealESRGAN_x4plus`
+- **Recommended custom nodes:** `ComfyUI-VideoHelperSuite`, `ComfyUI-ESRGAN`, `ComfyUI-Frame-Interpolation`
+
+---
+
+### 9. 📋 Caption / Text Overlays on Video
+**What Reel Estate does:** Mentions AI-powered captions as part of video creation (property address, bed/bath count, price, agent info).
+
+**LTX can do this?** ❌ No.
+
+**What you need in ComfyUI:**
+
+- Use `FFmpeg` `drawtext` filter for static text overlays with fade-in/out
+- Or use **Python + Pillow** to burn text onto individual frames before assembly
+- For **animated text captions** (slide-in, fade): Use `MoviePy` in a Python post-processing script, or `Remotion` (JavaScript-based) if you want templated video captions
+- **Within ComfyUI:** The `ImageDraw` nodes in `was-node-suite` can add text to frames — pair with a `VHS_VideoCombine` to re-assemble captioned frames into video
+
+---
+
+## 📊 Master Summary Table
+
+| Feature | LTX Video | Additional Tool Needed | Complexity |
+|---|---|---|---|
+| Image → Cinematic Video Clip | ✅ Native | None | Already done |
+| Camera Motion (pan/zoom/push) | ✅ Native | Motion prompt nodes | Low |
+| Portrait + Landscape format | ✅ Native | Resolution config | Low |
+| 720p Export | ✅ Native | VHS node | Low |
+| 1080p Export | ⚠️ Partial | ESRGAN upscale nodes | Medium |
+| Clip Duration Control | ✅ Native | num_frames parameter | Low |
+| Clip Sequencing / Assembly | ❌ No | VideoHelperSuite + FFmpeg | Medium |
+| Clip Reuse (export once) | ✅ Native | File management | Low |
+| AI Virtual Staging | ❌ No | SDXL/Flux + ControlNet Depth + LoRAs | High |
+| 13 Interior Style Variants | ❌ No | Style LoRAs + prompt switcher | High |
+| Restage / Multiple Versions | ❌ No | Batch seed workflow | Medium |
+| Twilight Effect | ❌ No | IC-Light + img2img + SAM masking | High |
+| Seasonal / Holiday Effects | ❌ No | img2img + ControlNet + inpainting | Medium |
+| Background Music | ❌ No | FFmpeg audio mux (post-export) | Low |
+| Custom Watermark / Logo | ❌ No | FFmpeg overlay or ComfyUI ImageBlend | Low |
+| Text Captions / Property Info | ❌ No | FFmpeg drawtext or Pillow | Medium |
+| Smart Crop for Portrait | ❌ No | ImageCrop node | Low |
+| Batch / Multi-photo processing | ✅ Native | Loop nodes | Low |
+
+---
+
+## 🔧 Priority Build Order (Recommended)
+
+Since you already have LTX working, here's the order I'd recommend building out the remaining features:
+
+**Phase 1 — Quick wins (1-2 days each):**
+1. Install `ComfyUI-VideoHelperSuite` → enables clip sequencing + export
+2. Set up FFmpeg post-processing → music + watermark overlay (1 script handles both)
+3. Build the portrait/landscape dual-resolution workflow with smart crop
+
+**Phase 2 — Medium effort (3-5 days each):**
+4. Build the ESRGAN upscale workflow for 1080p output
+5. Build the batch seed "multiple versions" workflow
+6. Add text caption/overlay pipeline via Pillow script
+
+**Phase 3 — High effort (1-2 weeks each):**
+7. Build the AI Staging workflow (SDXL/Flux + ControlNet Depth + Canny)
+8. Build the Photo Effects workflow (IC-Light + SAM sky masking for twilight)
+9. Create 13 style LoRA library or fine-tune staging prompts per style
+
+---
+
+## 🧩 Essential Custom Node Pack List
+
+Here's every custom node package you'll need installed in ComfyUI to cover all features:
+
+- **`ComfyUI-VideoHelperSuite`** — clip assembly, video I/O (absolutely essential)
+- **`ComfyUI-ControlNet-Aux`** — Depth, Canny, Normal preprocessors for staging
+- **`ComfyUI-Impact-Pack`** — advanced workflow control, selectors, loops
+- **`ComfyUI_segment_anything`** — SAM-based masking for sky/room isolation
+- **`ComfyUI-IC-Light`** — realistic relighting for twilight effects
+- **`was-node-suite-comfyui`** — text overlays, image grids, batch utilities
+- **`ComfyUI-ESRGAN`** — video frame upscaling to 1080p
+- **`ComfyUI-Frame-Interpolation`** — RIFE frame interpolation for smooth clips
+- **`ComfyUI-Custom-Scripts`** — seed management, primitive controls
+- **`comfyui-inpaint-nodes`** — enhanced inpainting for staging and effects
+
+---
+
+The short answer is: **LTX Video handles the core video generation beautifully**, but roughly **half of Reel Estate's feature set is image processing** (staging, effects, refinement) that needs a completely separate SDXL/Flux img2img pipeline alongside it. The good news is all of it is achievable in ComfyUI — it's just a matter of building the workflows in phases.
+
+Would you like me to help you design the specific ComfyUI workflow graph (node-by-node) for any of these features, starting with whichever phase you want to tackle first?
