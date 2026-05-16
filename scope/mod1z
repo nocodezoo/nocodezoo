@@ -1,0 +1,777 @@
+
+PMA² Spatiotemporal Tiling Engine
+=================================
+3D latent tensor tiling with raised-cosine boundary blending,
+optimized for large video diffusion models on 16GB Apple Silicon.
+
+Handles 720p video latents (90x160 spatial, variable temporal frames)
+with configurable overlap and coherence injection between tiles.
+"""
+
+import math
+import numpy as np
+from dataclasses import dataclass, field
+from typing import Iterator, Tuple, List, Optional, Dict, Any
+from enum import Enum
+
+try:
+    import mlx.core as mx
+    HAS_MLX = True
+except ImportError:
+    HAS_MLX = False
+
+
+# ============================================================
+# Constants for M5 Apple Silicon
+# ============================================================
+M5_MEMORY_BANDWIDTH_GBS = 273.0
+M5_UNIFIED_RAM_GB = 16.0
+M5_USABLE_RAM_GB = 12.0  # After system/OS overhead
+MAX_ACTIVATION_MEMORY_MB = 600  # Budget for activations during tiling
+LATENT_CHANNELS = 16  # Typical DiT latent channels
+LATENT_DTYPE_BYTES = 2  # float16
+
+
+class BlendMode(Enum):
+    """Blending strategies for tile overlaps."""
+    RAISED_COSINE = "raised_cosine"
+    LINEAR = "linear"
+    GAUSSIAN = "gaussian"
+
+
+@dataclass
+class TileSpec:
+    """Specification for a single tile within the 3D latent volume."""
+    spatial_h: int
+    spatial_w: int
+    temporal: int
+    overlap_h: int
+    overlap_w: int
+    overlap_t: int
+    blend_mode: BlendMode = BlendMode.RAISED_COSINE
+
+    @property
+    def effective_h(self) -> int:
+        return self.spatial_h - self.overlap_h
+
+    @property
+    def effective_w(self) -> int:
+        return self.spatial_w - self.overlap_w
+
+    @property
+    def effective_t(self) -> int:
+        return self.temporal - self.overlap_t
+
+    @property
+    def tile_memory_mb(self) -> float:
+        """Memory for one tile in MB (channels * spatial * temporal * dtype)."""
+        elements = LATENT_CHANNELS * self.spatial_h * self.spatial_w * self.temporal
+        return (elements * LATENT_DTYPE_BYTES) / (1024 * 1024)
+
+
+@dataclass
+class TileCoordinate:
+    """Position of a tile within the full latent volume."""
+    t_start: int
+    t_end: int
+    h_start: int
+    h_end: int
+    w_start: int
+    w_end: int
+    tile_idx_t: int
+    tile_idx_h: int
+    tile_idx_w: int
+
+    @property
+    def shape(self) -> Tuple[int, int, int]:
+        return (self.t_end - self.t_start, self.h_end - self.h_start, self.w_end - self.w_start)
+
+
+@dataclass
+class TilingConfig:
+    """Full configuration for the spatiotemporal tiling system."""
+    # Full latent dimensions (for 720p: 90h x 160w, variable frames)
+    full_height: int = 90
+    full_width: int = 160
+    full_temporal: int = 40  # ~5 seconds at 8fps in latent space
+
+    # Tile dimensions
+    tile_height: int = 48
+    tile_width: int = 48
+    tile_temporal: int = 12
+
+    # Overlap (must be even for symmetric blending)
+    overlap_height: int = 8
+    overlap_width: int = 8
+    overlap_temporal: int = 4
+
+    # Blending
+    blend_mode: BlendMode = BlendMode.RAISED_COSINE
+
+    # Coherence injection
+    coherence_strength: float = 0.15
+    coherence_channels: int = 4  # Number of channels for coherence features
+
+    # Memory constraints
+    max_concurrent_tiles: int = 2  # For double buffering tiles
+    channels: int = LATENT_CHANNELS
+
+    def validate(self) -> None:
+        """Validate configuration against memory constraints."""
+        tile_spec = self.to_tile_spec()
+        concurrent_memory = tile_spec.tile_memory_mb * self.max_concurrent_tiles
+        assert concurrent_memory < MAX_ACTIVATION_MEMORY_MB, (
+            f"Concurrent tile memory {concurrent_memory:.1f}MB exceeds budget "
+            f"{MAX_ACTIVATION_MEMORY_MB}MB"
+        )
+        assert self.overlap_height % 2 == 0, "Overlap height must be even"
+        assert self.overlap_width % 2 == 0, "Overlap width must be even"
+        assert self.overlap_temporal % 2 == 0, "Overlap temporal must be even"
+        assert self.tile_height > self.overlap_height, "Tile must be larger than overlap"
+        assert self.tile_width > self.overlap_width, "Tile must be larger than overlap"
+        assert self.tile_temporal > self.overlap_temporal, "Tile must be larger than overlap"
+
+    def to_tile_spec(self) -> TileSpec:
+        return TileSpec(
+            spatial_h=self.tile_height,
+            spatial_w=self.tile_width,
+            temporal=self.tile_temporal,
+            overlap_h=self.overlap_height,
+            overlap_w=self.overlap_width,
+            overlap_t=self.overlap_temporal,
+            blend_mode=self.blend_mode,
+        )
+
+    @property
+    def num_tiles(self) -> Tuple[int, int, int]:
+        """Number of tiles in (t, h, w) dimensions."""
+        eff_t = self.tile_temporal - self.overlap_temporal
+        eff_h = self.tile_height - self.overlap_height
+        eff_w = self.tile_width - self.overlap_width
+        n_t = max(1, math.ceil((self.full_temporal - self.overlap_temporal) / eff_t))
+        n_h = max(1, math.ceil((self.full_height - self.overlap_height) / eff_h))
+        n_w = max(1, math.ceil((self.full_width - self.overlap_width) / eff_w))
+        return (n_t, n_h, n_w)
+
+    @property
+    def total_tiles(self) -> int:
+        n_t, n_h, n_w = self.num_tiles
+        return n_t * n_h * n_w
+
+
+class BlendWindowGenerator:
+    """Generates blending windows for tile overlap regions."""
+
+    @staticmethod
+    def raised_cosine_1d(length: int) -> np.ndarray:
+        """Generate a 1D raised-cosine window [0, 1] over `length` samples."""
+        if length <= 0:
+            return np.array([], dtype=np.float32)
+        t = np.linspace(0, math.pi, length, dtype=np.float32)
+        return (1.0 - np.cos(t)) / 2.0
+
+    @staticmethod
+    def linear_1d(length: int) -> np.ndarray:
+        """Generate a 1D linear ramp [0, 1] over `length` samples."""
+        if length <= 0:
+            return np.array([], dtype=np.float32)
+        return np.linspace(0, 1, length, dtype=np.float32)
+
+    @staticmethod
+    def gaussian_1d(length: int, sigma_ratio: float = 0.3) -> np.ndarray:
+        """Generate a 1D Gaussian-based window [0, 1]."""
+        if length <= 0:
+            return np.array([], dtype=np.float32)
+        x = np.linspace(-1, 1, length, dtype=np.float32)
+        sigma = sigma_ratio
+        window = np.exp(-0.5 * (x / sigma) ** 2)
+        window = (window - window.min()) / (window.max() - window.min())
+        return window
+
+    @classmethod
+    def get_1d_window(cls, length: int, mode: BlendMode) -> np.ndarray:
+        """Get 1D blending window for the specified mode."""
+        if mode == BlendMode.RAISED_COSINE:
+            return cls.raised_cosine_1d(length)
+        elif mode == BlendMode.LINEAR:
+            return cls.linear_1d(length)
+        elif mode == BlendMode.GAUSSIAN:
+            return cls.gaussian_1d(length)
+        else:
+            raise ValueError(f"Unknown blend mode: {mode}")
+
+    @classmethod
+    def build_3d_blend_mask(
+        cls,
+        tile_shape: Tuple[int, int, int],
+        overlap: Tuple[int, int, int],
+        position: Tuple[bool, bool, bool, bool, bool, bool],
+        mode: BlendMode = BlendMode.RAISED_COSINE,
+    ) -> np.ndarray:
+        """
+        Build a 3D blending mask for a tile.
+
+        Args:
+            tile_shape: (T, H, W) shape of the tile
+            overlap: (overlap_t, overlap_h, overlap_w)
+            position: (has_prev_t, has_next_t, has_prev_h, has_next_h, has_prev_w, has_next_w)
+            mode: Blending mode to use
+
+        Returns:
+            3D float32 mask of shape tile_shape with values in [0, 1]
+        """
+        T, H, W = tile_shape
+        ot, oh, ow = overlap
+        has_prev_t, has_next_t, has_prev_h, has_next_h, has_prev_w, has_next_w = position
+
+        mask = np.ones((T, H, W), dtype=np.float32)
+
+        # Temporal blending
+        if has_prev_t and ot > 0:
+            ramp = cls.get_1d_window(ot, mode)
+            mask[:ot, :, :] *= ramp[:, np.newaxis, np.newaxis]
+        if has_next_t and ot > 0:
+            ramp = cls.get_1d_window(ot, mode)
+            mask[-ot:, :, :] *= ramp[::-1, np.newaxis, np.newaxis]
+
+        # Height blending
+        if has_prev_h and oh > 0:
+            ramp = cls.get_1d_window(oh, mode)
+            mask[:, :oh, :] *= ramp[np.newaxis, :, np.newaxis]
+        if has_next_h and oh > 0:
+            ramp = cls.get_1d_window(oh, mode)
+            mask[:, -oh:, :] *= ramp[np.newaxis, ::-1, np.newaxis]
+
+        # Width blending
+        if has_prev_w and ow > 0:
+            ramp = cls.get_1d_window(ow, mode)
+            mask[:, :, :ow] *= ramp[np.newaxis, np.newaxis, :]
+        if has_next_w and ow > 0:
+            ramp = cls.get_1d_window(ow, mode)
+            mask[:, :, -ow:] *= ramp[np.newaxis, np.newaxis, ::-1]
+
+        return mask
+
+
+class CoherenceInjector:
+    """
+    Injects coherence features between adjacent tiles to maintain
+    temporal and spatial consistency across tile boundaries.
+    """
+
+    def __init__(self, strength: float = 0.15, feature_channels: int = 4):
+        self.strength = strength
+        self.feature_channels = feature_channels
+        self._border_cache: Dict[str, np.ndarray] = {}
+
+    def extract_border_features(
+        self,
+        tile_data: np.ndarray,
+        direction: str,
+        overlap: int,
+    ) -> np.ndarray:
+        """
+        Extract border features from a processed tile for injection into neighbors.
+
+        Args:
+            tile_data: (C, T, H, W) tile tensor
+            direction: One of 'right', 'left', 'down', 'up', 'next_t', 'prev_t'
+            overlap: Number of overlap pixels/frames
+
+        Returns:
+            Border feature array for coherence injection
+        """
+        C, T, H, W = tile_data.shape
+        half_overlap = max(1, overlap // 2)
+
+        if direction == 'right':
+            features = tile_data[:self.feature_channels, :, :, -half_overlap:]
+        elif direction == 'left':
+            features = tile_data[:self.feature_channels, :, :, :half_overlap]
+        elif direction == 'down':
+            features = tile_data[:self.feature_channels, :, -half_overlap:, :]
+        elif direction == 'up':
+            features = tile_data[:self.feature_channels, :, :half_overlap, :]
+        elif direction == 'next_t':
+            features = tile_data[:self.feature_channels, -half_overlap:, :, :]
+        elif direction == 'prev_t':
+            features = tile_data[:self.feature_channels, :half_overlap, :, :]
+        else:
+            raise ValueError(f"Unknown direction: {direction}")
+
+        return features.copy()
+
+    def inject_coherence(
+        self,
+        tile_data: np.ndarray,
+        neighbor_features: Optional[np.ndarray],
+        direction: str,
+        overlap: int,
+    ) -> np.ndarray:
+        """
+        Inject coherence features from a neighbor into the current tile's overlap region.
+
+        Args:
+            tile_data: (C, T, H, W) current tile tensor (modified in place)
+            neighbor_features: Features from neighboring tile (or None if no neighbor)
+            direction: Direction the neighbor is relative to this tile
+            overlap: Overlap size
+
+        Returns:
+            Modified tile data with coherence injected
+        """
+        if neighbor_features is None:
+            return tile_data
+
+        C, T, H, W = tile_data.shape
+        half_overlap = max(1, overlap // 2)
+        fc = self.feature_channels
+
+        # Create a soft injection mask (stronger at boundary, fading inward)
+        ramp = BlendWindowGenerator.raised_cosine_1d(half_overlap)
+        inv_ramp = 1.0 - ramp  # Fades from 1 at border to 0 inward
+
+        result = tile_data.copy()
+
+        if direction == 'left' and neighbor_features.shape[-1] == half_overlap:
+            weight = inv_ramp[np.newaxis, np.newaxis, np.newaxis, :] * self.strength
+            result[:fc, :, :, :half_overlap] = (
+                result[:fc, :, :, :half_overlap] * (1.0 - weight) +
+                neighbor_features * weight
+            )
+        elif direction == 'right' and neighbor_features.shape[-1] == half_overlap:
+            weight = ramp[np.newaxis, np.newaxis, np.newaxis, :] * self.strength
+            result[:fc, :, :, -half_overlap:] = (
+                result[:fc, :, :, -half_overlap:] * (1.0 - weight) +
+                neighbor_features * weight
+            )
+        elif direction == 'up' and neighbor_features.shape[-2] == half_overlap:
+            weight = inv_ramp[np.newaxis, np.newaxis, :, np.newaxis] * self.strength
+            result[:fc, :, :half_overlap, :] = (
+                result[:fc, :, :half_overlap, :] * (1.0 - weight) +
+                neighbor_features * weight
+            )
+        elif direction == 'down' and neighbor_features.shape[-2] == half_overlap:
+            weight = ramp[np.newaxis, np.newaxis, :, np.newaxis] * self.strength
+            result[:fc, :, -half_overlap:, :] = (
+                result[:fc, :, -half_overlap:, :] * (1.0 - weight) +
+                neighbor_features * weight
+            )
+        elif direction == 'prev_t' and neighbor_features.shape[1] == half_overlap:
+            weight = inv_ramp[np.newaxis, :, np.newaxis, np.newaxis] * self.strength
+            result[:fc, :half_overlap, :, :] = (
+                result[:fc, :half_overlap, :, :] * (1.0 - weight) +
+                neighbor_features * weight
+            )
+        elif direction == 'next_t' and neighbor_features.shape[1] == half_overlap:
+            weight = ramp[np.newaxis, :, np.newaxis, np.newaxis] * self.strength
+            result[:fc, -half_overlap:, :, :] = (
+                result[:fc, -half_overlap:, :, :] * (1.0 - weight) +
+                neighbor_features * weight
+            )
+
+        return result
+
+    def cache_border(self, key: str, features: np.ndarray) -> None:
+        """Cache border features for later retrieval by adjacent tiles."""
+        self._border_cache[key] = features
+
+    def get_cached_border(self, key: str) -> Optional[np.ndarray]:
+        """Retrieve cached border features."""
+        return self._border_cache.get(key)
+
+    def clear_cache(self) -> None:
+        """Clear all cached border features."""
+        self._border_cache.clear()
+
+
+class SpatiotemporalTilingEngine:
+    """
+    Main tiling engine for 3D latent tensors.
+    Handles tile decomposition, iteration, blending, and coherence.
+    """
+
+    def __init__(self, config: TilingConfig):
+        config.validate()
+        self.config = config
+        self.tile_spec = config.to_tile_spec()
+        self.blend_gen = BlendWindowGenerator()
+        self.coherence = CoherenceInjector(
+            strength=config.coherence_strength,
+            feature_channels=config.coherence_channels,
+        )
+        self._blend_mask_cache: Dict[str, np.ndarray] = {}
+
+    def compute_tile_grid(self) -> List[TileCoordinate]:
+        """
+        Compute all tile coordinates for the full latent volume.
+
+        Returns:
+            List of TileCoordinate objects describing each tile's position.
+        """
+        cfg = self.config
+        spec = self.tile_spec
+        tiles = []
+
+        n_t, n_h, n_w = cfg.num_tiles
+
+        for it in range(n_t):
+            t_start = it * spec.effective_t
+            t_end = min(t_start + cfg.tile_temporal, cfg.full_temporal)
+            # Adjust start if we'd go past the end
+            if t_end == cfg.full_temporal and t_end - t_start < cfg.tile_temporal:
+                t_start = max(0, t_end - cfg.tile_temporal)
+
+            for ih in range(n_h):
+                h_start = ih * spec.effective_h
+                h_end = min(h_start + cfg.tile_height, cfg.full_height)
+                if h_end == cfg.full_height and h_end - h_start < cfg.tile_height:
+                    h_start = max(0, h_end - cfg.tile_height)
+
+                for iw in range(n_w):
+                    w_start = iw * spec.effective_w
+                    w_end = min(w_start + cfg.tile_width, cfg.full_width)
+                    if w_end == cfg.full_width and w_end - w_start < cfg.tile_width:
+                        w_start = max(0, w_end - cfg.tile_width)
+
+                    tiles.append(TileCoordinate(
+                        t_start=t_start, t_end=t_end,
+                        h_start=h_start, h_end=h_end,
+                        w_start=w_start, w_end=w_end,
+                        tile_idx_t=it, tile_idx_h=ih, tile_idx_w=iw,
+                    ))
+
+        return tiles
+
+    def get_blend_mask(self, coord: TileCoordinate) -> np.ndarray:
+        """
+        Get or compute the blending mask for a tile at the given coordinate.
+        Masks are cached for reuse.
+        """
+        n_t, n_h, n_w = self.config.num_tiles
+        has_prev_t = coord.tile_idx_t > 0
+        has_next_t = coord.tile_idx_t < n_t - 1
+        has_prev_h = coord.tile_idx_h > 0
+        has_next_h = coord.tile_idx_h < n_h - 1
+        has_prev_w = coord.tile_idx_w > 0
+        has_next_w = coord.tile_idx_w < n_w - 1
+
+        cache_key = f"{has_prev_t}{has_next_t}{has_prev_h}{has_next_h}{has_prev_w}{has_next_w}_{coord.shape}"
+
+        if cache_key not in self._blend_mask_cache:
+            self._blend_mask_cache[cache_key] = BlendWindowGenerator.build_3d_blend_mask(
+                tile_shape=coord.shape,
+                overlap=(self.config.overlap_temporal, self.config.overlap_height, self.config.overlap_width),
+                position=(has_prev_t, has_next_t, has_prev_h, has_next_h, has_prev_w, has_next_w),
+                mode=self.config.blend_mode,
+            )
+
+        return self._blend_mask_cache[cache_key]
+
+    def tile_iterator(
+        self,
+        latent: np.ndarray,
+    ) -> Iterator[Tuple[TileCoordinate, np.ndarray, np.ndarray]]:
+        """
+        Memory-efficient iterator that yields one tile at a time.
+
+        Args:
+            latent: Full latent tensor of shape (C, T, H, W)
+
+        Yields:
+            Tuples of (coordinate, tile_data, blend_mask)
+        """
+        assert latent.shape == (
+            self.config.channels,
+            self.config.full_temporal,
+            self.config.full_height,
+            self.config.full_width,
+        ), f"Latent shape mismatch: {latent.shape}"
+
+        grid = self.compute_tile_grid()
+
+        for coord in grid:
+            # Extract tile (view where possible, copy only if needed)
+            tile_data = latent[
+                :,
+                coord.t_start:coord.t_end,
+                coord.h_start:coord.h_end,
+                coord.w_start:coord.w_end,
+            ].copy()
+
+            blend_mask = self.get_blend_mask(coord)
+
+            yield coord, tile_data, blend_mask
+
+    def scatter_tile(
+        self,
+        output: np.ndarray,
+        weight_accumulator: np.ndarray,
+        coord: TileCoordinate,
+        tile_result: np.ndarray,
+        blend_mask: np.ndarray,
+    ) -> None:
+        """
+        Scatter a processed tile back into the output buffer with blending.
+
+        Args:
+            output: Full output tensor (C, T, H, W), accumulated weighted results
+            weight_accumulator: Weight tensor (1, T, H, W) for normalization
+            coord: Tile coordinate
+            tile_result: Processed tile data (C, T, H, W)
+            blend_mask: 3D blend mask (T, H, W)
+        """
+        mask_expanded = blend_mask[np.newaxis, :, :, :]  # (1, T, H, W)
+
+        output[
+            :,
+            coord.t_start:coord.t_end,
+            coord.h_start:coord.h_end,
+            coord.w_start:coord.w_end,
+        ] += tile_result * mask_expanded
+
+        weight_accumulator[
+            :,
+            coord.t_start:coord.t_end,
+            coord.h_start:coord.h_end,
+            coord.w_start:coord.w_end,
+        ] += mask_expanded
+
+    def process_full_latent(
+        self,
+        latent: np.ndarray,
+        tile_processor,
+    ) -> np.ndarray:
+        """
+        Process a full latent tensor tile-by-tile with blending and coherence.
+
+        Args:
+            latent: Input latent (C, T, H, W)
+            tile_processor: Callable(tile_data, coord) -> processed_tile
+
+        Returns:
+            Fully processed and blended output tensor (C, T, H, W)
+        """
+        C, T, H, W = latent.shape
+        output = np.zeros_like(latent)
+        weights = np.zeros((1, T, H, W), dtype=np.float32)
+
+        self.coherence.clear_cache()
+        grid = self.compute_tile_grid()
+        n_t, n_h, n_w = self.config.num_tiles
+
+        for coord in grid:
+            tile_data = latent[
+                :, coord.t_start:coord.t_end,
+                coord.h_start:coord.h_end,
+                coord.w_start:coord.w_end,
+            ].copy()
+
+            # Inject coherence from previously processed neighbors
+            if coord.tile_idx_w > 0:
+                key = f"right_{coord.tile_idx_t}_{coord.tile_idx_h}_{coord.tile_idx_w - 1}"
+                features = self.coherence.get_cached_border(key)
+                tile_data = self.coherence.inject_coherence(
+                    tile_data, features, 'left', self.config.overlap_width
+                )
+
+            if coord.tile_idx_h > 0:
+                key = f"down_{coord.tile_idx_t}_{coord.tile_idx_h - 1}_{coord.tile_idx_w}"
+                features = self.coherence.get_cached_border(key)
+                tile_data = self.coherence.inject_coherence(
+                    tile_data, features, 'up', self.config.overlap_height
+                )
+
+            if coord.tile_idx_t > 0:
+                key = f"next_t_{coord.tile_idx_t - 1}_{coord.tile_idx_h}_{coord.tile_idx_w}"
+                features = self.coherence.get_cached_border(key)
+                tile_data = self.coherence.inject_coherence(
+                    tile_data, features, 'prev_t', self.config.overlap_temporal
+                )
+
+            # Process tile
+            processed = tile_processor(tile_data, coord)
+
+            # Cache border features for subsequent tiles
+            self.coherence.cache_border(
+                f"right_{coord.tile_idx_t}_{coord.tile_idx_h}_{coord.tile_idx_w}",
+                self.coherence.extract_border_features(processed, 'right', self.config.overlap_width)
+            )
+            self.coherence.cache_border(
+                f"down_{coord.tile_idx_t}_{coord.tile_idx_h}_{coord.tile_idx_w}",
+                self.coherence.extract_border_features(processed, 'down', self.config.overlap_height)
+            )
+            self.coherence.cache_border(
+                f"next_t_{coord.tile_idx_t}_{coord.tile_idx_h}_{coord.tile_idx_w}",
+                self.coherence.extract_border_features(processed, 'next_t', self.config.overlap_temporal)
+            )
+
+            # Scatter with blending
+            blend_mask = self.get_blend_mask(coord)
+            self.scatter_tile(output, weights, coord, processed, blend_mask)
+
+        # Normalize by accumulated weights
+        weights = np.maximum(weights, 1e-8)
+        output /= weights
+
+        return output
+
+    def estimate_memory_usage(self) -> Dict[str, float]:
+        """Estimate memory usage for the tiling process in MB."""
+        C = self.config.channels
+        T = self.config.full_temporal
+        H = self.config.full_height
+        W = self.config.full_width
+
+        full_latent_mb = (C * T * H * W * LATENT_DTYPE_BYTES) / (1024 * 1024)
+        output_mb = full_latent_mb
+        weights_mb = (T * H * W * 4) / (1024 * 1024)  # float32
+        tile_mb = self.tile_spec.tile_memory_mb
+        coherence_cache_mb = tile_mb * 0.1 * 6  # Rough estimate for border caches
+
+        return {
+            "input_latent_mb": full_latent_mb,
+            "output_buffer_mb": output_mb,
+            "weight_accumulator_mb": weights_mb,
+            "single_tile_mb": tile_mb,
+            "coherence_cache_mb": coherence_cache_mb,
+            "total_estimated_mb": full_latent_mb + output_mb + weights_mb + tile_mb * 2 + coherence_cache_mb,
+            "total_tiles": self.config.total_tiles,
+        }
+
+
+# ============================================================
+# MLX-accelerated variant (uses Metal GPU on Apple Silicon)
+# ============================================================
+
+class MLXTilingEngine(SpatiotemporalTilingEngine):
+    """MLX-accelerated tiling engine for Apple Silicon GPU."""
+
+    def __init__(self, config: TilingConfig):
+        if not HAS_MLX:
+            raise RuntimeError("MLX not available. Install with: pip install mlx")
+        super().__init__(config)
+
+    def tile_iterator_mlx(
+        self,
+        latent: "mx.array",
+    ) -> Iterator[Tuple[TileCoordinate, "mx.array", "mx.array"]]:
+        """
+        MLX-native tile iterator yielding mx.array tiles.
+
+        Args:
+            latent: MLX array of shape (C, T, H, W)
+
+        Yields:
+            (coordinate, tile_data_mlx, blend_mask_mlx)
+        """
+        grid = self.compute_tile_grid()
+
+        for coord in grid:
+            tile_data = latent[
+                :,
+                coord.t_start:coord.t_end,
+                coord.h_start:coord.h_end,
+                coord.w_start:coord.w_end,
+            ]
+            # Force evaluation to limit memory
+            mx.eval(tile_data)
+
+            blend_mask_np = self.get_blend_mask(coord)
+            blend_mask_mlx = mx.array(blend_mask_np)
+
+            yield coord, tile_data, blend_mask_mlx
+
+    def scatter_tile_mlx(
+        self,
+        output: "mx.array",
+        weights: "mx.array",
+        coord: TileCoordinate,
+        tile_result: "mx.array",
+        blend_mask: "mx.array",
+    ) -> Tuple["mx.array", "mx.array"]:
+        """Scatter tile into output using MLX operations (returns new arrays)."""
+        mask_expanded = mx.expand_dims(blend_mask, axis=0)
+
+        # MLX doesn't support in-place slice assignment; use index_put equivalent
+        # For now, accumulate via numpy conversion (MLX scatter is limited)
+        output_np = np.array(output)
+        weights_np = np.array(weights)
+        tile_np = np.array(tile_result)
+        mask_np = np.array(mask_expanded)
+
+        output_np[
+            :, coord.t_start:coord.t_end,
+            coord.h_start:coord.h_end,
+            coord.w_start:coord.w_end,
+        ] += tile_np * mask_np
+
+        weights_np[
+            :, coord.t_start:coord.t_end,
+            coord.h_start:coord.h_end,
+            coord.w_start:coord.w_end,
+        ] += mask_np
+
+        return mx.array(output_np), mx.array(weights_np)
+
+
+# ============================================================
+# Convenience factory
+# ============================================================
+
+def create_720p_tiling_config(
+    num_frames: int = 40,
+    tile_size: int = 48,
+    overlap: int = 8,
+    temporal_tile: int = 12,
+    temporal_overlap: int = 4,
+) -> TilingConfig:
+    """
+    Create a tiling config optimized for 720p video latents.
+    720p in latent space (8x downsampled): 90h x 160w
+    """
+    return TilingConfig(
+        full_height=90,
+        full_width=160,
+        full_temporal=num_frames,
+        tile_height=tile_size,
+        tile_width=tile_size,
+        tile_temporal=temporal_tile,
+        overlap_height=overlap,
+        overlap_width=overlap,
+        overlap_temporal=temporal_overlap,
+    )
+
+
+if __name__ == "__main__":
+    # Demo: create config and show tiling stats
+    config = create_720p_tiling_config(num_frames=40)
+    engine = SpatiotemporalTilingEngine(config)
+
+    print("=== PMA² Spatiotemporal Tiling Engine ===")
+    print(f"Full latent: {config.channels}x{config.full_temporal}x{config.full_height}x{config.full_width}")
+    print(f"Tile size: {config.tile_temporal}x{config.tile_height}x{config.tile_width}")
+    print(f"Overlap: {config.overlap_temporal}x{config.overlap_height}x{config.overlap_width}")
+    print(f"Grid: {config.num_tiles} = {config.total_tiles} total tiles")
+    print()
+
+    mem = engine.estimate_memory_usage()
+    for k, v in mem.items():
+        if "mb" in k:
+            print(f"  {k}: {v:.2f} MB")
+        else:
+            print(f"  {k}: {v}")
+
+    # Test with dummy latent
+    print("\nRunning test with dummy latent...")
+    dummy_latent = np.random.randn(
+        config.channels, config.full_temporal, config.full_height, config.full_width
+    ).astype(np.float32)
+
+    def identity_processor(tile, coord):
+        return tile
+
+    result = engine.process_full_latent(dummy_latent, identity_processor)
+    error = np.abs(result - dummy_latent).max()
+    print(f"Identity pass-through max error: {error:.8f}")
+    print("PASS" if error < 1e-5 else "FAIL")
