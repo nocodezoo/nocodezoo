@@ -1,0 +1,76 @@
+PMA² Feasibility Analysis — My Own Math
+
+Pillar 1: Layer-Sequential Streaming
+
+Model size: 22B params × 1 byte (W8) or mixed = 22GB on disk, ~11-14GB at W4-W6 average.
+
+Per-block size: 22B / 56 blocks = 393M params/block. At W4 average: 196MB/block. At W6: 295MB. Your 200MB claim implies aggressive W3-W4 on early blocks, W6 on late — checks out with asymmetric quant.
+
+NVMe transfer time per block: 200MB / 7.4 GB/s = 27ms
+
+Compute time per block: A single DiT block on M5 (assuming 18 TFLOPS effective FP16, or 36 TOPS INT8). One block processes 32K tokens (tiled) with hidden dim 3072 for a 22B/56-block model. Rough FLOPs per block ≈ 2 × 32K × 3072² × 2 (attn + FFN) ≈ 12 GFLOPs. At 18 TFLOPS: 0.7ms.
+
+Wait — that's too fast. Let me recalculate. For a 22B model with 56 blocks, each block has 393M params. The FLOPs per token per block ≈ 2× params = 786M FLOPs/token. At 32K tokens: 786M × 32K = ~25 TFLOPs per block.
+
+At 18 TFLOPS effective throughput: 25T / 18T = ~1.4 seconds per block.
+
+NVMe prefetch: 27ms. Compute: 1400ms. NVMe is 50× faster than compute. Double-buffering trivially hides I/O. ✅
+
+Active weight memory: 200MB current + 200MB prefetched = ~400MB worst case.
+
+Pillar 2: Spatiotemporal Latent Tiling
+
+Full latent at 720p, 49 frames: Latent space at 8× compression = 90×160 spatial, temporal 4× = 12 frames. Shape: [12, 90, 160, 16ch] = 3.3M elements per channel... total tokens for attention = 12 × 90 × 160 = 172,800 tokens (you said 216K — close, depends on exact compression ratios).
+
+Full attention memory: O(n²) attention map at FP16 = 172K² × 2 bytes = ~56GB. Obviously impossible.
+
+Tiled at 32K tokens: 32K² × 2 bytes = 2GB per attention map. Still large — but with chunked/flash attention within the tile, this drops to O(n) streaming = just the Q/K/V activations: 32K × 3072 × 3 × 2 bytes ≈ ~590MB. ✅
+
+With your raised-cosine overlap (16-pixel / 4-frame overlap): adds ~15-20% redundant compute but keeps boundary artifacts invisible. Acceptable trade.
+
+Pillar 3: Sequential CFG
+
+Standard CFG: 2× forward passes simultaneously = 2× activation memory. At 600MB tiled activations, that's 1.2GB.
+
+Sequential approach: Run unconditional pass, store compressed residual. Your 60MB residual claim: if the output per block is 32K × 3072 × FP16 = 196MB, compressed at 3.3× via delta sparsification/quantization to INT4 sparse = ~30-60MB. ✅
+
+Total CFG overhead: 60MB residual + sequential time penalty (~2× wall time per step, but memory stays flat).
+
+Total Memory Budget
+
+| Component | MB |
+|---|---|
+| Active weights (current block) | 200 |
+| Prefetch buffer (next block) | 200 |
+| Tiled activations (Q/K/V + intermediates) | 600 |
+| CFG residual compressed | 60 |
+| Latent tensors (full, FP16) | 53 |
+| VAE decoder (loaded after DiT evicted) | 400 |
+| OS + MLX runtime + misc | ~800 |
+| Total | ~2.3GB active + 800 OS |
+
+Peak: 3.1GB. On a 16GB machine with 14.5GB usable: massive headroom. You could even tile less aggressively.
+
+Wall-Clock Estimate
+
+56 blocks × 1.4s compute = 78s per denoising step
+30 steps × 2 (sequential CFG) = 60 passes × 78s = 4,680s ≈ 78 minutes
+
+That's... slow. But functional on hardware that theoretically can't load the model at all. For reference, this is a 22B model doing 720p video on a laptop with 16GB RAM.
+
+Optimizations that reduce this:
+W3A6 early blocks are faster (fewer effective FLOPs via sparse/low-bit matmul): maybe 40% speedup on first 30 blocks
+M5's Neural Engine for quantized ops could push effective throughput higher
+Tile parallelism: process 2 tiles concurrently if memory allows
+
+Realistic optimized estimate: 35-50 minutes for 49 frames at 720p, 30 steps.
+
+Verdict
+
+Yes, this works. The math confirms all three pillars are sound:
+
+NVMe is ~50× faster than per-block compute — I/O is completely hidden
+Tiling reduces O(n²) attention from 56GB to ~600MB with bounded quality loss
+Sequential CFG adds wall-clock time but keeps memory flat at ~60MB overhead
+
+The only real cost is wall time. You're trading ~50min generation time for the ability to run a model that needs 22GB+ VRAM on a 16GB laptop. That's a legitimate engineering tradeoff, not a hack. The architecture is memory-correct and compute-bound (the ideal state for streaming systems).
