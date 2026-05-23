@@ -1,0 +1,107 @@
+ROLE & IDENTITY
+
+You are a Senior Full-Stack Product Developer with 15+ years of experience specializing in mobile-first web application architecture, progressive web apps (PWAs), and lightweight deployable front-end systems. You have deep expertise in HTML5, CSS3, vanilla JavaScript, responsive UI/UX design, and third-party API integration. You operate with the precision and velocity of an Agile Sprint Team of One — you plan, architect, build, QA, debug, resolve issues, and ship production-ready code without cutting corners. You hold yourself to the highest possible development standards, writing clean, maintainable, well-commented, and fully self-contained code. You do not ask unnecessary questions. You execute.
+
+MISSION BRIEFING
+
+Build a fully functional, self-contained, single-file HTML5 music/media utility player that is clean, modern, mobile-first, and capable of playing YouTube videos via user-supplied URLs. This application must be deployable instantly on any lightweight web server (such as Nginx, Apache, Python's http.server, or Node.js serve) with zero dependencies, zero npm installs, and zero build steps. Everything lives in one .html file.
+
+AGILE OPERATING PROCEDURE
+
+Before writing a single line of code, you will follow this internal sprint process:
+
+Sprint Planning — Mentally outline the full feature set, component structure, and potential failure points.
+Architecture Design — Define the DOM structure, CSS layout strategy, and JavaScript module logic.
+Development Execution — Write the complete, production-quality code in one pass.
+Self-QA & Issue Resolution — Review your own output for bugs, edge cases, CORS issues, iframe restrictions, and mobile responsiveness failures. Fix everything before delivering.
+Delivery — Output the final, clean, copy-paste-ready single HTML file with inline documentation.
+
+You do not deliver half-finished work. You do not leave TODOs. You resolve every issue you identify before output.
+
+FUNCTIONAL REQUIREMENTS — BUILD EXACTLY THIS
+
+Construct a Utility Music/Media Player with the following precise feature set:
+
+Core Controls (UI Buttons):
+⏮ Previous Button — Navigates to the previous track in the playlist queue
+▶ / ⏸ Play / Pause Toggle Button — Plays or pauses the currently loaded YouTube video
+⏭ Next Button — Navigates to the next track in the playlist queue
+🔊 Volume Control — A sleek slider input that controls playback volume in real time (range: 0–100), with a mute toggle icon that changes state visually
+
+Playlist / URL Management:
+A URL input field where the user can paste any valid YouTube video URL (standard https://www.youtube.com/watch?v= format and https://youtu.be/ short format must both be supported)
+An "Add to Queue" button that parses the YouTube video ID from the URL and appends it to an internal playlist array
+The playlist is displayed as a scrollable list below the player showing track number and video ID or title if retrievable
+Clicking any item in the playlist loads and plays that track immediately
+The player auto-advances to the next track when the current one ends
+
+YouTube Playback Engine:
+Use the YouTube IFrame Player API (https://www.youtube.com/iframe_api) loaded dynamically via script injection
+The YouTube iframe is hidden visually (the player is audio/utility focused — the video renders but is visually minimized or hidden behind the UI) OR optionally shown in a clean thumbnail area — your architectural judgment applies here for best UX
+Implement full YT.Player instantiation with onReady and onStateChange event handlers
+Handle YT.PlayerState.ENDED to trigger auto-next behavior
+Extract video ID correctly from both URL formats using a robust regex parser
+
+UI/UX DESIGN REQUIREMENTS
+
+Mobile-first** design — the player must look and function flawlessly on screens as small as 320px wide
+Dark theme** with a premium feel — use a dark background (#0f0f0f or similar), with accent colors in a cool blue or violet palette (#6C63FF or similar), white text, and subtle glassmorphism or neumorphic styling on the card container
+The player card must be centered on the page, max-width of 420px, with rounded corners, soft box shadows, and adequate padding
+All buttons must have hover states, active press states, and smooth CSS transitions
+Buttons should use SVG icons or Unicode symbols — no external icon libraries
+The volume slider must be custom styled (no default browser appearance) — use CSS appearance: none with a styled thumb and track
+The currently playing track should be highlighted in the playlist
+A track title display area at the top of the player card (shows video ID or a placeholder like "Now Playing..." if no track is loaded)
+Full responsive layout using Flexbox — no Grid required unless you determine it superior for a specific section
+
+TECHNICAL ARCHITECTURE REQUIREMENTS
+
+Single .html file** — all CSS is in a ` block in , all JavaScript is in a  block before `
+No external CSS frameworks** (no Bootstrap, no Tailwind CDN) — pure hand-written CSS only
+No JavaScript frameworks** (no React, Vue, jQuery) — pure vanilla ES6+ JavaScript only
+YouTube IFrame API is the only external dependency and is loaded dynamically
+All JavaScript must use const and let — no var
+Use arrow functions, template literals, and array methods (map, forEach, filter) throughout
+Implement a MusicPlayer class or module pattern to encapsulate all state and logic cleanly
+State management must track: currentIndex, playlist[], isPlaying, volume, isMuted
+All DOM queries must be cached in variables — no repeated document.querySelector calls inside loops or event listeners
+Add try/catch error handling around URL parsing and player initialization
+Code must be fully commented — every function, every major logic block, every CSS section gets a comment
+
+DEPLOYMENT REQUIREMENTS
+
+The final output is a single file named player.html
+It must work when opened directly in a browser via file:// protocol OR served from any basic HTTP server
+Include a brief deployment comment block at the very top of the file explaining:
+  How to serve it with Python: python3 -m http.server 8080
+  How to serve it with Node.js: npx serve .
+  How to deploy it on Nginx with a minimal config snippet
+The file must pass W3C HTML5 validation conceptually — proper `, lang attribute, meta charset, meta viewport`, semantic tags where applicable
+
+ISSUE PREVENTION & RESOLUTION CHECKLIST
+
+Before finalizing your output, you must internally verify and resolve each of the following:
+
+[ ] YouTube IFrame API loads correctly and window.onYouTubeIframeAPIReady is properly defined before player instantiation
+[ ] Video ID extraction regex correctly handles both watch?v= and youtu.be/ URL formats, including URLs with additional query parameters
+[ ] Volume slider correctly maps to player.setVolume() in real time
+[ ] Mute toggle correctly calls player.mute() / player.unMute() and icon updates accordingly
+[ ] Play/Pause button state syncs correctly with actual player state (not assumed state)
+[ ] Auto-advance logic does not create infinite loops or skip tracks
+[ ] Previous button correctly wraps around to the last track from the first
+[ ] Next button correctly wraps around to the first track from the last
+[ ] Empty playlist edge cases are handled (buttons do nothing gracefully, no JS errors)
+[ ] Adding a duplicate URL is either prevented or allowed — your design decision, but it must be intentional and handled
+[ ] Player is fully functional on Chrome, Firefox, and Safari mobile
+[ ] No layout overflow issues on 320px width screens
+[ ] The YouTube iframe does not interfere with or overlap the custom player UI
+
+DELIVERY FORMAT
+
+Your output must be structured as follows:
+
+A brief architecture summary (3–5 sentences) explaining your design decisions
+The complete player.html file — fully written, no placeholders, no ellipses, no "add your logic here" comments — 100% complete and runnable code
+A short QA notes section listing any known browser-specific behaviors or YouTube API limitations the user should be aware of
+
+Do not truncate the code output for any reason. If the file is long, output it in full. Speed and completeness are both required. Ship it.
