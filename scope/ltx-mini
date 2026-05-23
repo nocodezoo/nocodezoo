@@ -1,0 +1,129 @@
+Autonomous AI Agent Instruction Brief: LTX Video Model Distillation Pipeline
+
+🎯 Objective
+
+Your task is to distill a production-optimized video generation model tailored exclusively for Ken Burns-style motion on real estate interior/exterior images. The goal is to reduce generation time from 5–7 minutes per video down to 15–30 seconds, without sacrificing motion quality.
+
+📦 What You're Working With
+
+The user has an existing LTX Video model (likely LTX-Video by Lightricks) that currently handles general-purpose video generation. It is powerful but bloated for this specific task because it carries capacity for thousands of motion types the user will never need.
+
+The user's actual workload is extremely narrow:
+
+Input:** Static real estate photos (home interiors and exteriors)
+Motion style:** Ken Burns — slow pan left-to-right, subtle zoom in, cinematic dolly push
+Prompt template is almost always identical** with minor wording variations
+Batch processing** — many images, same motion, over and over
+
+This repetition is exactly what makes distillation so powerful here. You are not building a general model. You are building a specialist.
+
+🧠 Core Concepts You Must Understand Before Acting
+
+What is Distillation?
+Distillation is the process of training a smaller, faster model to replicate the behavior of a larger, slower model — but only for a specific subset of tasks. The large model is called the teacher, the smaller one is the student. The student doesn't need to know everything the teacher knows — only what the user actually uses.
+
+What is LoRA?
+LoRA (Low-Rank Adaptation) is a fine-tuning technique that doesn't retrain the full model. Instead, it attaches small trainable adapter layers on top of the frozen base model. This means:
+Significantly less compute needed
+Far less training data required
+The result is a small .safetensors or .pt file that modifies the base model's behavior at inference time
+You can swap LoRA adapters in and out without changing the base model
+
+What is Quantization?
+Quantization reduces the numerical precision of the model's weights. By default, most models run in FP16 (16-bit floats). Quantizing to INT8 or INT4 means the model uses 8-bit or 4-bit integers instead, which dramatically reduces memory usage and speeds up inference on compatible hardware.
+
+🔁 The Full Pipeline — Step by Step
+
+Phase 1: Dataset Creation
+
+Your first job is to build the training dataset. The user needs to generate their best 100–200 Ken Burns videos using their current full LTX model before any fine-tuning begins.
+
+For each video, you must log and store:
+The exact input image path
+The exact prompt used
+The output video file path
+Any generation parameters used (steps, CFG scale, seed if relevant)
+
+Store these as structured pairs — ideally a dataset.json or dataset.csv where each row is one {prompt, input_image, output_video} triplet. This is your ground-truth dataset. Quality matters more than quantity here — only include outputs the user considers visually good.
+
+Minimum viable dataset: 50 pairs. Ideal: 100–200 pairs.
+
+Phase 2: LoRA Fine-Tuning
+
+Once the dataset exists, you will fine-tune the LTX model using LoRA. Here's what that means operationally:
+
+You will use a LoRA training script compatible with LTX-Video. The most relevant open-source options are:
+diffusers library by HuggingFace (has LoRA training support for video diffusion models)
+kohya_ss trainer (widely used for LoRA on diffusion models)
+Custom training scripts from the LTX-Video GitHub repo if they provide one
+
+Key training configuration parameters the agent should set:
+rank (LoRA rank): Start with r=16 or r=32 — higher rank = more expressive but slower
+learning_rate: Typically 1e-4 to 5e-5 for video LoRA
+epochs: 10–30 epochs on a dataset this size
+batch_size: As large as VRAM allows (typically 1–2 for video)
+target_modules: Attention layers (q_proj, v_proj, k_proj, out_proj)
+
+The output of this phase is a LoRA checkpoint file — a small adapter (~50–500MB) that encodes the user's specific Ken Burns motion style.
+
+Phase 3: Quantization
+
+Critical rule: Quantize AFTER fine-tuning, never before. Quantizing before training degrades the gradients and produces a poor LoRA.
+
+Once the LoRA is trained and validated, apply quantization to the base model + LoRA combination using one of these tools:
+bitsandbytes library (easiest, integrates with diffusers)
+llm.int8() or nf4 via HuggingFace transformers/diffusers load_in_4bit=True flags
+GGUF format conversion for CPU/hybrid inference if needed
+
+Target precision: INT4 (NF4) for maximum speed, or INT8 if the user notices quality degradation with INT4.
+
+Expected outcome by method:
+
+| Method | Speed Gain | Quality Impact |
+|---|---|---|
+| Base LTX (no changes) | 1x (baseline) | Full quality |
+| INT8 quantization only | ~2x faster | Minimal loss |
+| INT4 quantization only | ~3–4x faster | Minor loss |
+| LoRA fine-tuned + INT4 | 5–10x faster | Preserved for narrow task |
+| Smaller base model swap | Up to 10x faster | Moderate tradeoff |
+
+Phase 4: Validation
+
+Before deploying into the user's automation pipeline, run a validation pass:
+
+Take 10 images NOT in the training set
+Run them through the new distilled model (LoRA + INT4)
+Compare output quality and motion style to the original full model outputs
+Measure actual inference time
+Report results back to the user with side-by-side comparisons
+
+If motion quality is degraded, the agent should first try increasing LoRA rank or switching from INT4 to INT8 before any other changes.
+
+Phase 5: Pipeline Integration
+
+Once validated, the distilled model replaces the full LTX model in the user's batch processing workflow. The inference call should:
+
+Load the base LTX model in INT4
+Attach the trained LoRA adapter
+Accept a folder of input images
+Loop through each image, apply the standard Ken Burns prompt, save output video
+Log completion with timestamps
+
+⚠️ Key Constraints the Agent Must Respect
+
+Never quantize before fine-tuning** — always fine-tune first, quantize second
+Only use high-quality video outputs** for the training dataset — garbage in, garbage out
+Do not change the prompt template** during dataset collection — consistency is what makes the LoRA work
+Keep the original full model intact** — the LoRA is an addition, not a replacement of the base weights
+Validate on unseen images** before declaring the pipeline production-ready
+
+✅ Summary Checklist for the Agent
+
+[ ] Generate 100–200 best Ken Burns videos using the current full LTX model
+[ ] Log all prompts, input images, and output video paths into a structured dataset file
+[ ] Run LoRA fine-tuning using a diffusers-compatible training script with r=16 or r=32
+[ ] Validate LoRA quality on held-out images
+[ ] Apply INT4 quantization (NF4) to the base model post fine-tuning
+[ ] Re-validate speed and quality
+[ ] Integrate into batch automation pipeline
+[ ] Report final inference time and sample outputs to user for approval
