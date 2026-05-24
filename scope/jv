@@ -1,0 +1,669 @@
+# TASK_DIARY_SKILL
+### Agent Skill Definition · Version 1.0.0
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Why This Skill Exists](#why-this-skill-exists)
+3. [Diary Structure](#diary-structure)
+4. [Entry Schema](#entry-schema)
+5. [Tracked Entry Categories](#tracked-entry-categories)
+6. [Validity & Staleness Rules](#validity--staleness-rules)
+7. [Diary Lookup Rules (Pre-Execution)](#diary-lookup-rules-pre-execution)
+8. [Diary Write Rules (Post-Execution)](#diary-write-rules-post-execution)
+9. [Decision Logic](#decision-logic)
+10. [Example Diary Entries](#example-diary-entries)
+11. [Self-Reflection Protocol](#self-reflection-protocol)
+12. [Agent Behavior Imperatives](#agent-behavior-imperatives)
+13. [Integration Notes for Codex PMF](#integration-notes-for-codex-pmf)
+
+---
+
+## Overview
+
+**Skill ID:** `TASK_DIARY_SKILL`
+**Type:** Session Memory · Execution Cache · State Tracker
+**Scope:** Single agent session (persists across message turns within the same conversation)
+**Compatible Agents:** General-purpose task agents, DevOps agents, Codex PMF agents, CLI orchestration agents
+
+`TASK_DIARY_SKILL` gives an AI agent a structured, in-session memory layer — referred to as the **Task Diary** — that records every meaningful action taken, every system state observed, and every outcome produced during a conversation session. The diary acts as a living cache of verified facts about the environment, eliminating the need to re-run commands whose results are already known and still valid.
+
+---
+
+## Why This Skill Exists
+
+Without session memory, an agent operating across multiple turns suffers from several critical failure patterns:
+
+| Failure Pattern | Description | Consequence |
+|---|---|---|
+| **Redundant Execution** | Re-running a command already executed this session | Wasted time, duplicate side effects (e.g., double installs) |
+| **State Blindness** | Not knowing which steps have already succeeded | Re-attempting finished work, breaking idempotency |
+| **Conflicting Actions** | Running a command that contradicts an already-known environment state | Environment corruption, version conflicts |
+| **Error Amnesia** | Forgetting an error that already occurred and re-triggering it | Infinite loops, cascading failures |
+| **Dependency Fog** | Re-resolving dependency trees already resolved | Slow execution, potential version drift between checks |
+
+`TASK_DIARY_SKILL` eliminates all five patterns by mandating a **lookup-before-execute** discipline and a **write-after-execute** discipline enforced at the agent behavior level.
+
+---
+
+## Diary Structure
+
+The Task Diary is maintained as a **markdown table** appended to the agent's working context. It is initiated on the first executed action of a session and updated after every subsequent action.
+
+### Master Diary Table
+
+The summary table provides a fast-scan index of all diary entries. It is always placed at the top of the diary block.
+
+```markdown
+## 📓 TASK DIARY — Session Cache
+
+| entry_id | timestamp | category | command_or_action | outcome_status | follow_up_required |
+|---|---|---|---|---|---|
+| TDE-001 | T+0m | SYSTEM_CHECK | df -h / | SUCCESS | NO |
+| TDE-002 | T+2m | DEPENDENCY_CHECK | npm list react | SUCCESS | NO |
+| TDE-003 | T+4m | INSTALL_ATTEMPT | npm install --legacy-peer-deps | FAIL | YES |
+```
+
+### Full Entry Block
+
+Each entry in the master table has a corresponding **full entry block** below the table. Entry blocks are written in a fenced code section using the schema defined in the next section.
+
+```
+---
+### TDE-001 · SYSTEM_CHECK · SUCCESS
+
+- **entry_id:** TDE-001
+- **timestamp:** T+0m
+- **category:** SYSTEM_CHECK
+- **command_or_action:** `df -h /`
+- **outcome_status:** SUCCESS
+- **summary:** Root filesystem has 42GB available out of 120GB total. Sufficient space for all planned operations.
+- **raw_output_snippet:** `Filesystem /dev/sda1 — Size: 120G, Used: 78G, Avail: 42G, Use%: 65%`
+- **dependencies_noted:** none
+- **version_info:** none
+- **follow_up_required:** NO
+- **staleness_ttl:** 10 steps
+- **valid_until_step:** 11
+---
+```
+
+---
+
+## Entry Schema
+
+Every Task Diary Entry (TDE) must conform to the following schema. All fields are **required** unless marked optional.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `entry_id` | String | ✅ | Sequential identifier. Format: `TDE-NNN` (e.g., `TDE-007`) |
+| `timestamp` | String | ✅ | Relative session time. Format: `T+Xm` (minutes elapsed) or `T+Xs` (seconds) |
+| `category` | Enum | ✅ | One of the defined category values (see Categories section) |
+| `command_or_action` | String | ✅ | The exact command run, API call made, or action taken. Quote shell commands in backticks. |
+| `outcome_status` | Enum | ✅ | One of: `SUCCESS`, `FAIL`, `PARTIAL`, `SKIPPED`, `PENDING` |
+| `summary` | String | ✅ | A human-readable 1–3 sentence summary of what happened and what it means for the session |
+| `raw_output_snippet` | String | ✅ | The most relevant portion of actual command output, error message, or API response. Truncate to ≤5 lines. |
+| `dependencies_noted` | String | Optional | Any dependency names, versions, or conflicts surfaced by this action |
+| `version_info` | String | Optional | Any version numbers discovered (language runtimes, packages, tools, OS) |
+| `follow_up_required` | Boolean + Note | ✅ | `YES — [reason]` or `NO`. If YES, describe what follow-up is needed. |
+| `staleness_ttl` | Integer or `STABLE` | ✅ | Number of agent steps after which this entry should be re-validated, or `STABLE` if the finding does not expire |
+| `valid_until_step` | Integer or `STABLE` | ✅ | The absolute step number at which this entry expires. Computed as: `current_step + staleness_ttl` |
+
+### Outcome Status Definitions
+
+| Status | Meaning |
+|---|---|
+| `SUCCESS` | The command completed without errors and produced the expected result |
+| `FAIL` | The command completed but produced an error or unacceptable result |
+| `PARTIAL` | The command completed but only partially achieved its goal (e.g., 3 of 5 packages installed) |
+| `SKIPPED` | The action was deliberately not executed because a prior diary entry made it unnecessary |
+| `PENDING` | The action was initiated but its result is not yet confirmed (e.g., async process) |
+
+---
+
+## Tracked Entry Categories
+
+The agent must assign one of the following canonical category values to every diary entry.
+
+### `SYSTEM_CHECK`
+Observations about the host environment's current state.
+
+**Includes:**
+- Disk space checks (`df -h`, `du -sh`)
+- Memory availability (`free -h`, `vm_stat`)
+- CPU load (`top`, `uptime`)
+- Upload/download file size measurements (`ls -lh`, `wc -c`, `stat`)
+- Filesystem permissions checks
+- Environment variable inspection (`echo $VAR`, `printenv`)
+- Network interface status (`ip addr`, `ifconfig`)
+
+**Staleness:** High. Most system checks become stale after 5–15 agent steps because the environment changes during the session.
+
+---
+
+### `DEPENDENCY_CHECK`
+Observations about what packages, libraries, or modules are currently installed or resolvable.
+
+**Includes:**
+- Package listing commands (`npm list`, `pip list`, `gem list`, `apt list --installed`)
+- Lock file inspection (`package-lock.json`, `Pipfile.lock`, `poetry.lock`)
+- Dependency tree resolution (`npm ls --all`, `pip check`)
+- Peer dependency conflict detection
+- Import resolution checks
+
+**Staleness:** Low-to-medium. A dependency check is valid until an install or uninstall action is performed.
+
+---
+
+### `INSTALL_ATTEMPT`
+Records of any attempt to install, upgrade, remove, or modify packages or dependencies.
+
+**Includes:**
+- `npm install`, `npm ci`, `yarn add`, `pip install`, `pip install -r requirements.txt`
+- `apt-get install`, `brew install`, `cargo add`
+- `pip uninstall`, `npm uninstall`
+- Any use of flags like `--force`, `--legacy-peer-deps`, `--no-cache`
+
+**Staleness:** Stable if `SUCCESS`. Must be re-attempted if `FAIL`. `PARTIAL` requires targeted follow-up.
+
+---
+
+### `VERSION_FINDING`
+Discovered version or compatibility information about any tool, runtime, or package.
+
+**Includes:**
+- `node --version`, `python --version`, `go version`, `rustc --version`
+- `npm --version`, `pip --version`
+- Runtime compatibility matrix results
+- OS version discovery (`uname -a`, `lsb_release -a`, `sw_vers`)
+- Engine field verification from `package.json` or `pyproject.toml`
+
+**Staleness:** Stable. Runtime versions do not change during a session unless an upgrade action is performed.
+
+---
+
+### `COMMAND_OUTPUT`
+General-purpose capture of command results that don't fit other categories but are important to cache.
+
+**Includes:**
+- File content inspection (`cat`, `head`, `tail`)
+- Directory structure snapshots (`ls -la`, `tree`)
+- Git status or log queries (`git status`, `git log --oneline`)
+- Build outputs (`make`, `cargo build`, `tsc`)
+- Test run results (`pytest`, `jest`, `go test`)
+- Linting results (`eslint`, `flake8`, `golangci-lint`)
+
+**Staleness:** Variable. Tag each entry with the appropriate TTL based on how likely the output is to change.
+
+---
+
+### `PORT_CHECK`
+Observations about network port availability or service status.
+
+**Includes:**
+- `lsof -i :PORT`, `netstat -tuln`, `ss -tlnp`
+- `curl localhost:PORT`, `nc -zv host port`
+- Process listening on port discovery
+
+**Staleness:** Medium. Port status can change if services start or stop. TTL: 5–8 steps.
+
+---
+
+### `ERROR_ENCOUNTERED`
+A dedicated category for failures, exceptions, and unexpected outputs that must be remembered to avoid re-triggering.
+
+**Includes:**
+- Shell command exit codes ≠ 0
+- Package manager conflict errors
+- Permission denied errors
+- Network timeout or DNS failures
+- Compilation or build errors
+- Import errors or missing module failures
+
+**Staleness:** Stable unless the underlying cause is addressed. An error entry should only be superseded by a `SUCCESS` entry for the same action.
+
+---
+
+### `FILE_SIZE_CHECK`
+Observations about file or directory sizes relevant to upload limits, bundle sizes, storage quotas, or transfer planning.
+
+**Includes:**
+- `ls -lh filename`, `du -sh ./directory`, `stat filename`
+- Bundle size analysis (`webpack-bundle-analyzer`, `size-limit`)
+- Compressed archive size checks
+
+**Staleness:** Medium. Valid until the file is modified. TTL: 8–12 steps.
+
+---
+
+### `UPLOAD_CHECK`
+Records of upload operations, upload size validations, or pre-upload feasibility assessments.
+
+**Includes:**
+- File size vs. upload limit comparisons
+- Multipart upload planning
+- S3/GCS/Azure Blob pre-signed URL generation
+- API payload size validation
+- Actual upload command results (`curl -T`, `aws s3 cp`, `gsutil cp`)
+
+**Staleness:** Stable once `SUCCESS`. A failed upload should be retried only after diagnosing the cause.
+
+---
+
+## Validity & Staleness Rules
+
+The agent must evaluate the staleness of any diary entry before using it as a cached answer.
+
+### Staleness TTL Reference Table
+
+| Category | Default TTL (steps) | Notes |
+|---|---|---|
+| `SYSTEM_CHECK` — disk space | 10 steps | Disk usage changes as files are written |
+| `SYSTEM_CHECK` — memory | 5 steps | Memory is highly volatile |
+| `SYSTEM_CHECK` — env vars | STABLE | Env vars don't change mid-session unless explicitly set |
+| `DEPENDENCY_CHECK` | Until next install | Invalidated by any `INSTALL_ATTEMPT` entry |
+| `INSTALL_ATTEMPT` (SUCCESS) | STABLE | A successful install does not need to be re-run |
+| `INSTALL_ATTEMPT` (FAIL) | 1 step | Should be retried with a different strategy |
+| `VERSION_FINDING` | STABLE | Runtime versions are fixed for the session |
+| `COMMAND_OUTPUT` | 8 steps | General heuristic; adjust per command type |
+| `PORT_CHECK` | 6 steps | Services can start/stop |
+| `ERROR_ENCOUNTERED` | STABLE until resolved | Errors persist until a corrective action succeeds |
+| `FILE_SIZE_CHECK` | Until file modification | Invalidated if the file is written to |
+| `UPLOAD_CHECK` (SUCCESS) | STABLE | A completed upload is a permanent fact |
+| `UPLOAD_CHECK` (FAIL) | 1 step | Retry after diagnosis |
+
+### Staleness Evaluation Pseudocode
+
+```
+FUNCTION is_entry_valid(entry, current_step):
+  IF entry.staleness_ttl == STABLE:
+    RETURN TRUE
+
+  IF entry.outcome_status == FAIL:
+    RETURN FALSE  // FAIL entries are never used as a cache hit; they must be retried
+
+  IF current_step > entry.valid_until_step:
+    RETURN FALSE  // Entry has expired
+
+  IF entry.category == DEPENDENCY_CHECK:
+    IF any entry in diary WHERE category == INSTALL_ATTEMPT
+       AND entry.timestamp > this_entry.timestamp:
+      RETURN FALSE  // A later install invalidates dependency checks
+
+  RETURN TRUE
+```
+
+---
+
+## Diary Lookup Rules (Pre-Execution)
+
+**Before executing any command or performing any action, the agent MUST:**
+
+1. **Scan the master diary table** for any entry where `command_or_action` matches or semantically overlaps with the intended action.
+
+2. **Evaluate validity** of the matched entry using the staleness rules defined above.
+
+3. **Apply the following decision matrix:**
+
+| Diary Entry Found? | Entry Valid? | Outcome Status of Entry | Agent Action |
+|---|---|---|---|
+| NO | — | — | Execute the command. Write diary entry after. |
+| YES | YES | `SUCCESS` | Return cached summary. Write `SKIPPED` entry referencing original TDE ID. |
+| YES | YES | `PARTIAL` | Execute only the incomplete portion. Write new entry. |
+| YES | YES | `FAIL` | Do NOT re-execute immediately. Report the known failure. Propose a new strategy first. |
+| YES | YES | `SKIPPED` | Follow the reference chain to the original entry and apply its outcome. |
+| YES | NO (stale) | Any | Re-execute the command. Write a new diary entry. Mark old entry as `SUPERSEDED`. |
+| YES | YES | `PENDING` | Wait or check on the pending action's status first. Do not duplicate. |
+
+4. **Never silently skip a lookup.** The agent must log its lookup decision — even when it concludes no matching entry exists.
+
+---
+
+## Diary Write Rules (Post-Execution)
+
+**After executing any command or action, the agent MUST:**
+
+1. **Immediately write a new full entry block** to the diary before proceeding to the next step.
+
+2. **Assign the next sequential `entry_id`** in the TDE-NNN series.
+
+3. **Record the actual timestamp** relative to session start.
+
+4. **Capture raw output** — never paraphrase the output in place of recording it. The `raw_output_snippet` field must contain actual output text.
+
+5. **Classify the outcome honestly.** Do not record `SUCCESS` if the command produced warnings that indicate partial failure. Use `PARTIAL` when appropriate.
+
+6. **Set `staleness_ttl` and `valid_until_step`** based on the category rules defined in the Validity section.
+
+7. **Update the master diary table** by appending the new row.
+
+8. **If a new entry supersedes an older entry**, annotate the older entry's block with `<!-- SUPERSEDED by TDE-NNN -->`.
+
+9. **If `follow_up_required` is YES**, add the follow-up item to the agent's active task queue before moving on.
+
+---
+
+## Decision Logic
+
+The complete lookup-and-execute decision flow is defined below as a formal agent policy.
+
+```
+PROCEDURE execute_with_diary(intended_action):
+
+  // PHASE 1: LOOKUP
+  matching_entry = diary.find(command_or_action ~= intended_action)
+
+  IF matching_entry EXISTS:
+    IF is_entry_valid(matching_entry, current_step):
+
+      IF matching_entry.outcome_status == SUCCESS:
+        LOG "[DIARY HIT] TDE-{id}: Skipping '{action}' — already succeeded at T+{time}."
+        LOG "Cached summary: {matching_entry.summary}"
+        write_diary_entry(
+          category = matching_entry.category,
+          command_or_action = intended_action,
+          outcome_status = SKIPPED,
+          summary = "Skipped — valid cache hit from " + matching_entry.entry_id,
+          follow_up_required = NO
+        )
+        RETURN matching_entry.summary
+
+      IF matching_entry.outcome_status == FAIL:
+        LOG "[DIARY BLOCK] TDE-{id}: Will NOT re-execute '{action}' — recorded failure exists."
+        LOG "Known failure: {matching_entry.summary}"
+        LOG "Proposing alternative strategy before retrying."
+        RETURN propose_alternative(matching_entry)
+
+      IF matching_entry.outcome_status == PARTIAL:
+        LOG "[DIARY PARTIAL] TDE-{id}: Prior attempt was partial. Executing remaining portion only."
+        // Continue to execution with scoped action
+
+    ELSE:
+      LOG "[DIARY STALE] TDE-{id}: Entry exists but is stale. Re-executing."
+      mark_entry_superseded(matching_entry)
+      // Continue to execution
+
+  ELSE:
+    LOG "[DIARY MISS] No diary entry found for '{action}'. Executing fresh."
+
+  // PHASE 2: EXECUTE
+  result = execute(intended_action)
+
+  // PHASE 3: WRITE
+  write_diary_entry(
+    category = classify(intended_action),
+    command_or_action = intended_action,
+    outcome_status = evaluate(result),
+    summary = summarize(result),
+    raw_output_snippet = result.output[:5_lines],
+    dependencies_noted = extract_dependencies(result),
+    version_info = extract_versions(result),
+    follow_up_required = assess_follow_up(result),
+    staleness_ttl = lookup_ttl(category),
+    valid_until_step = current_step + staleness_ttl
+  )
+
+  RETURN result
+```
+
+---
+
+## Example Diary Entries
+
+The following are fully populated example diary entries demonstrating correct formatting and content for common scenarios.
+
+---
+
+### Example 1 — Disk Space Check
+
+```
+---
+### TDE-001 · SYSTEM_CHECK · SUCCESS
+
+- **entry_id:** TDE-001
+- **timestamp:** T+0m
+- **category:** SYSTEM_CHECK
+- **command_or_action:** `df -h /`
+- **outcome_status:** SUCCESS
+- **summary:** Root partition has 42.3 GB available out of 120 GB total (65% used). Available space is sufficient for all planned build and install operations this session. No cleanup required before proceeding.
+- **raw_output_snippet:** `Filesystem: /dev/sda1 | Size: 120G | Used: 77.7G | Avail: 42.3G | Use%: 65% | Mounted: /`
+- **dependencies_noted:** none
+- **version_info:** none
+- **follow_up_required:** NO
+- **staleness_ttl:** 10 steps
+- **valid_until_step:** 11
+---
+```
+
+---
+
+### Example 2 — npm Install Attempt with Peer Dependency Conflict
+
+```
+---
+### TDE-002 · INSTALL_ATTEMPT · FAIL
+
+- **entry_id:** TDE-002
+- **timestamp:** T+3m
+- **category:** INSTALL_ATTEMPT
+- **command_or_action:** `npm install`
+- **outcome_status:** FAIL
+- **summary:** npm install failed due to unresolvable peer dependency conflict. Package `react-scripts@5.0.1` requires `react@>=18.0.0` but the project's `package.json` pins `react` at `^17.0.2`. npm exited with code 1. No node_modules were installed.
+- **raw_output_snippet:** `npm ERR! code ERESOLVE` / `npm ERR! ERESOLVE unable to resolve dependency tree` / `npm ERR! peer react@">=18.0.0" from react-scripts@5.0.1` / `npm ERR! Conflicting peer dependency: react@18.3.1` / `npm ERR! Fix the upstream dependency conflict, or retry with --force or --legacy-peer-deps`
+- **dependencies_noted:** react@^17.0.2 (pinned), react-scripts@5.0.1 (requires react>=18), conflict between react@17 and react@18
+- **version_info:** npm: 9.8.1, node: 20.11.0
+- **follow_up_required:** YES — Decide between: (a) upgrading react to ^18.0.0, (b) downgrading react-scripts to 4.x, or (c) retrying with --legacy-peer-deps flag. Confirm with user before proceeding.
+- **staleness_ttl:** STABLE until corrective action is taken
+- **valid_until_step:** STABLE
+---
+```
+
+---
+
+### Example 3 — Python Dependency Resolution Failure
+
+```
+---
+### TDE-003 · INSTALL_ATTEMPT · FAIL
+
+- **entry_id:** TDE-003
+- **timestamp:** T+7m
+- **category:** INSTALL_ATTEMPT
+- **command_or_action:** `pip install -r requirements.txt`
+- **outcome_status:** FAIL
+- **summary:** pip failed to resolve the dependency tree for requirements.txt. Conflict detected between `httpx==0.23.3` and `httpcore>=0.16.0,<0.17.0` — the installed httpcore is 0.18.0 which falls outside the pinned range. Installation aborted with no packages modified.
+- **raw_output_snippet:** `ERROR: Cannot install -r requirements.txt (line 4) because these package versions have conflicting dependencies.` / `The conflict is caused by: httpx 0.23.3 depends on httpcore>=0.16.0,<0.17.0` / `httpcore 0.18.0 is already installed` / `To fix this you could try to... (pip's resolution output truncated)`
+- **dependencies_noted:** httpx==0.23.3, httpcore==0.18.0 (installed), httpcore>=0.16.0,<0.17.0 (required by httpx)
+- **version_info:** python: 3.11.4, pip: 23.2.1
+- **follow_up_required:** YES — Options: (a) pin `httpcore==0.16.3` in requirements.txt, (b) upgrade `httpx` to a version compatible with httpcore 0.18.x, (c) use a virtual environment to isolate. Check PyPI compatibility matrix before proceeding.
+- **staleness_ttl:** STABLE until requirements.txt is modified
+- **valid_until_step:** STABLE
+---
+```
+
+---
+
+### Example 4 — Upload Size Check
+
+```
+---
+### TDE-004 · UPLOAD_CHECK · SUCCESS
+
+- **entry_id:** TDE-004
+- **timestamp:** T+10m
+- **category:** UPLOAD_CHECK
+- **command_or_action:** `du -sh ./dist && ls -lh ./dist/bundle.js`
+- **outcome_status:** SUCCESS
+- **summary:** The dist directory is 4.2 MB total. The primary bundle file bundle.js is 3.8 MB. The target upload endpoint has a 10 MB limit, so the upload is feasible without compression or chunking. Gzip compression is still recommended to reduce transfer time.
+- **raw_output_snippet:** `4.2M ./dist` / `-rw-r--r-- 1 user group 3.8M May 24 09:41 ./dist/bundle.js`
+- **dependencies_noted:** none
+- **version_info:** none
+- **follow_up_required:** NO — Upload can proceed. Consider adding gzip header to upload command.
+- **staleness_ttl:** 12 steps (invalidated if bundle is rebuilt)
+- **valid_until_step:** 22
+---
+```
+
+---
+
+### Example 5 — Port Availability Check
+
+```
+---
+### TDE-005 · PORT_CHECK · SUCCESS
+
+- **entry_id:** TDE-005
+- **timestamp:** T+12m
+- **category:** PORT_CHECK
+- **command_or_action:** `lsof -i :3000`
+- **outcome_status:** SUCCESS
+- **summary:** Port 3000 is currently free. No process is bound to it. The development server can be started on port 3000 without conflict. If port status is needed again after step 18, re-check as this entry will be stale.
+- **raw_output_snippet:** (no output — lsof returned empty, confirming port is available)
+- **dependencies_noted:** none
+- **version_info:** none
+- **follow_up_required:** NO
+- **staleness_ttl:** 6 steps
+- **valid_until_step:** 18
+---
+```
+
+---
+
+## Self-Reflection Protocol
+
+At the **start of every new message turn**, before processing user input, the agent MUST execute the following self-reflection sequence:
+
+```
+PROCEDURE session_turn_start_reflection():
+
+  STEP 1 — DIARY PRESENCE CHECK
+  IF task_diary DOES NOT EXIST:
+    Initialize empty diary with master table header.
+    LOG "[DIARY INIT] Task diary initialized. Session step counter set to 1."
+    RETURN
+
+  STEP 2 — STALENESS SWEEP
+  FOR EACH entry IN task_diary:
+    IF entry.staleness_ttl != STABLE:
+      IF current_step > entry.valid_until_step:
+        entry.status = STALE
+        LOG "[DIARY SWEEP] TDE-{id} marked STALE at step {current_step}."
+
+  STEP 3 — PENDING ACTION CHECK
+  pending_entries = diary.filter(outcome_status == PENDING)
+  IF pending_entries IS NOT EMPTY:
+    LOG "[DIARY PENDING] {count} actions are in PENDING state. Resolve before new work."
+    LIST all pending entries with their entry_ids and commands.
+
+  STEP 4 — FOLLOW-UP REVIEW
+  follow_up_entries = diary.filter(follow_up_required == YES)
+  IF follow_up_entries IS NOT EMPTY:
+    LOG "[DIARY FOLLOW-UP] {count} entries require follow-up:"
+    FOR EACH entry IN follow_up_entries:
+      LOG "  → TDE-{id} [{category}]: {follow_up_note}"
+
+  STEP 5 — CONTEXT SUMMARY
+  LOG "[DIARY SUMMARY] Session has {total} entries:"
+  LOG "  SUCCESS: {count} | FAIL: {count} | PARTIAL: {count} | SKIPPED: {count} | PENDING: {count}"
+  LOG "  Active errors requiring attention: {error_count}"
+  LOG "  Stale entries needing re-check: {stale_count}"
+
+  STEP 6 — READY
+  LOG "[DIARY READY] Self-reflection complete. Proceeding to process user message."
+```
+
+The self-reflection output should be surfaced to the user as a brief session status block at the start of each response when the diary contains entries, formatted as:
+
+```markdown
+> 📓 **Diary Status** (Step {N}) — {SUCCESS_COUNT} succeeded · {FAIL_COUNT} failed · {STALE_COUNT} stale · {FOLLOWUP_COUNT} need follow-up
+```
+
+---
+
+## Agent Behavior Imperatives
+
+The following rules are written as binding imperatives. The agent MUST treat these as non-negotiable behavioral constraints, not suggestions.
+
+### Core Rules
+
+- **NEVER execute a command without first consulting the diary.** No exceptions. Even commands that seem trivially fast (like `echo` or `ls`) must be checked.
+
+- **ALWAYS write a diary entry after every execution.** The diary is only valuable if it is complete. Partial diaries are dangerous because the agent may falsely conclude that an action was not taken.
+
+- **NEVER overwrite a diary entry.** Entries are immutable. If a situation changes, write a new entry and annotate the old one as SUPERSEDED.
+
+- **NEVER treat a FAIL entry as evidence that a task is impossible.** A FAIL entry means the first strategy failed. It is the agent's responsibility to propose a new strategy and document the reasoning before retrying.
+
+- **ALWAYS include `raw_output_snippet` with actual output text.** Summaries alone are insufficient for debugging. The raw snippet enables the user and the agent to independently verify the summary's accuracy.
+
+- **NEVER allow a `PENDING` entry to be ignored on subsequent turns.** Pending entries represent unresolved state. They must be resolved before the session can be considered clean.
+
+### Efficiency Rules
+
+- **Prefer cache hits over execution.** If a valid diary entry exists for an action, use it. Performing unnecessary re-execution wastes time and risks side effects.
+
+- **Batch related system checks at session start.** When beginning a complex task, perform all relevant system checks (disk, memory, versions, ports) upfront and write diary entries for each. This front-loads the cost of discovery.
+
+- **Do not check the same version twice.** Once a runtime version is recorded with `STABLE` TTL, it must never be re-queried unless the user explicitly states that an upgrade occurred.
+
+### Communication Rules
+
+- **Always tell the user when a diary cache hit occurs.** Do not silently skip commands. Inform the user: *"I already checked this at step N — here is what was found."*
+
+- **Always tell the user when an entry is stale and being re-executed.** Say: *"My previous check from step N is now stale. Re-running to get a fresh result."*
+
+- **Surface follow-up requirements immediately.** If `follow_up_required` is YES, raise it in the same message — do not defer until the user asks.
+
+### Integrity Rules
+
+- **Do not infer outcomes.** If a command was not run, do not write an entry with a guessed status. Write no entry and execute the command.
+
+- **Do not hallucinate diary entries.** All entries must correspond to actions actually taken during the session. Fabricating diary entries undermines the entire skill.
+
+- **Honor the staleness model.** A STABLE entry does not mean "probably still valid." It means "this category of information does not expire within a normal session." Do not mark volatile data as STABLE to avoid re-checking.
+
+---
+
+## Integration Notes for Codex PMF
+
+When `TASK_DIARY_SKILL` is used within a **Codex PMF** (Project Management Framework) agent context, the following additional integration rules apply:
+
+### Diary Placement
+
+The Task Diary should be stored as a named memory block within the Codex PMF context store under the key `task_diary_session`. It should be re-injected into the agent's working context at the start of each turn as part of the PMF context reconstruction step.
+
+### PMF Task Lifecycle Mapping
+
+| PMF Task State | Diary Entry Mapping |
+|---|---|
+| Task created | No diary entry yet |
+| Task executing | Write `PENDING` entry at start |
+| Task completed successfully | Supersede PENDING with `SUCCESS` entry |
+| Task failed | Supersede PENDING with `FAIL` entry |
+| Task skipped (blocked by diary) | Write `SKIPPED` entry with reference to blocking TDE |
+
+### Conflict Resolution with PMF Task Queue
+
+If the PMF task queue contains a task that the diary records as already `SUCCESS`, the agent must:
+1. Mark the PMF task as `COMPLETED (DIARY VERIFIED)`.
+2. Attach the relevant TDE entry as evidence.
+3. Move to the next task without execution.
+
+### Diary Handoff Between Sub-Agents
+
+In multi-agent Codex PMF pipelines where a parent agent delegates to sub-agents, the parent agent MUST:
+- Pass the full Task Diary to the sub-agent as context.
+- Instruct the sub-agent to continue appending entries to the same diary using sequential TDE IDs.
+- Merge the sub-agent's diary entries back into the parent diary on task completion.
+
+### Session Reset Triggers
+
+The Task Diary should be cleared and re-initialized only when:
+- The user explicitly requests a fresh session or environment reset.
+- The agent detects that the execution environment has fundamentally changed (e.g., a container restart, a new VM, a different working directory confirmed by git root change).
+- A PMF project phase boundary is crossed and the new phase operates on a completely different codebase or environment.
+
+---
+
+*End of TASK_DIARY_SKILL v1.0.0*
