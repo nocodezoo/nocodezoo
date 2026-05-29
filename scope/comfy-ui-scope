@@ -1,0 +1,718 @@
+The **best way** to do this for real estate is **not** to jump straight from a still image into a full hallucinated video.
+
+What usually looks most professional is a **2-stage workflow**:
+
+1. **Estimate depth** from the still image with **Depth Anything / Depth Anything V2**
+2. **Render a subtle 2.5D camera move** from that depth map  
+   - *push-in*
+   - *pan / tilt*
+   - *parallax*
+   - *Ken Burns*
+3. **Optionally refine** the result with an image-to-video model at **very low motion strength** if you want a more “alive” look
+
+For **real estate**, this matters a lot. If motion is too strong, you get:
+- bending walls
+- breathing furniture
+- warped windows
+- melting lines
+- weird ceiling/floor geometry
+
+The winning look is usually **subtle camera motion + strong depth cleanup + mild refinement**.
+
+---
+
+## Recommended approach
+
+Use this general pipeline in ComfyUI:
+
+- **Load Image**
+- **Resize / crop to final aspect**
+- **Depth Anything V2**
+- **Depth normalization / remap**
+- **Depth blur / smoothing**
+- **2.5D parallax / depth warp / 3D photo render**
+- **Hole fill / disocclusion fix**
+- **Frame export**
+- **Optional video refinement**
+- **Combine frames to MP4**
+
+If your goal is **listing videos**, this is the safest setup:
+
+- **Duration:** 4–6 seconds per shot
+- **FPS:** 24
+- **Resolution:** 1536×864 or 1920×1080
+- **Camera motion:** very small
+- **Lens feel / FOV:** 40–55 degrees
+- **Depth smoothing:** moderate
+- **Inpaint hole fill:** enabled
+
+---
+
+## What to install in ComfyUI
+
+You’ll want these categories of nodes:
+
+- **Depth Anything / Depth Anything V2 node**
+- **Video output / frame combine nodes**  
+  usually from something like **Video Helper Suite**
+- **A depth-warp / 2.5D / 3D-photo style node pack**
+- **Optional inpainting / masking tools**
+- **Optional image-to-video model nodes** if you want extra realism
+
+### Practical note
+There is **no single universal ComfyUI workflow JSON** that works on every machine, because:
+
+- custom node names differ
+- node packs differ
+- model names differ
+- some graphs use different 2.5D nodes for the same job
+
+So the safest thing is:
+
+- build the graph once in ComfyUI
+- confirm it runs
+- then export the workflow JSON from your install
+
+Still, I can absolutely give you a **very solid starting template** and the **parameter values** you should use.
+
+---
+
+## Best workflow for real estate
+
+### A. Input preparation
+Use an image that is:
+
+- corrected for vertical perspective
+- sharp
+- not too noisy
+- free of motion blur
+- preferably without people walking through the shot
+
+If possible:
+- straighten walls
+- fix lens distortion first
+- crop to **16:9**
+- keep windows from clipping too hard
+
+### B. Depth generation
+With **Depth Anything V2**:
+
+- Use the highest-quality model you can run
+- Prefer a larger model if VRAM allows
+- Generate a depth map
+- Normalize it
+- Slightly blur/smooth it
+
+This is very important because raw depth often creates:
+- jagged edges around furniture
+- cutout-looking objects
+- ugly parallax around lamps, chairs, and railings
+
+### C. 2.5D render
+This is where the 3D effect comes from.
+
+Use the image + depth map to simulate camera motion:
+- **push in**
+- **slight pan**
+- **slight tilt**
+- **subtle orbit** only if the room is simple
+
+For interiors, keep it gentle:
+- **X translation:** 0.01–0.03
+- **Y translation:** 0.003–0.015
+- **Z push-in:** 0.02–0.06
+- **Yaw / pitch rotation:** tiny, usually under 1 degree
+
+### D. Hole fill / disocclusion
+Whenever you move a fake 3D camera, hidden areas get exposed.
+
+You need:
+- edge padding
+- disocclusion fill
+- inpainting or content fill if the node supports it
+
+Without this, you’ll get:
+- black gaps
+- smeared walls
+- stretched corners
+- torn furniture edges
+
+### E. Optional realism refinement
+If you want it to feel more like a “real camera shot,” take the rendered frames or the first/last keyframes into an **image-to-video** model.
+
+But keep it **very constrained**:
+- low denoise / low transform strength
+- low motion
+- preserve composition
+- negative prompt against bending/warping
+
+For real estate, the refinement step should add:
+- subtle light movement
+- tiny natural micro-motion
+- smoother temporal feel
+
+It should **not** redesign the room.
+
+---
+
+## Recommended settings for real-estate shots
+
+Here are good safe presets.
+
+### 1. Straight push-in
+Best for:
+- living rooms
+- kitchens
+- bedroom hero shots
+
+```json
+{
+  "preset_name": "real_estate_push_in",
+  "frames": 144,
+  "fps": 24,
+  "resolution": {
+    "width": 1536,
+    "height": 864
+  },
+  "depth": {
+    "model": "depth_anything_v2_large",
+    "normalize": true,
+    "invert": false,
+    "near_clip": 0.05,
+    "far_clip": 0.95,
+    "gamma": 1.0,
+    "blur_radius": 5
+  },
+  "camera": {
+    "motion_type": "push_in",
+    "tx_start": 0.0,
+    "tx_end": 0.0,
+    "ty_start": 0.0,
+    "ty_end": -0.004,
+    "tz_start": 0.0,
+    "tz_end": 0.045,
+    "rx_start": 0.0,
+    "rx_end": 0.0,
+    "ry_start": 0.0,
+    "ry_end": 0.25,
+    "rz_start": 0.0,
+    "rz_end": 0.0,
+    "ease": "in_out"
+  },
+  "render": {
+    "fov_degrees": 48,
+    "hole_fill": "edge_pad",
+    "hole_expand_px": 16,
+    "depth_smoothing": 5,
+    "antialias": true
+  },
+  "output": {
+    "format": "mp4",
+    "crf": 17,
+    "pix_fmt": "yuv420p"
+  }
+}
+```
+
+---
+
+### 2. Ken Burns pan + push
+Best for:
+- wide rooms
+- open-plan spaces
+- exteriors
+
+```json
+{
+  "preset_name": "real_estate_ken_burns",
+  "frames": 144,
+  "fps": 24,
+  "resolution": {
+    "width": 1536,
+    "height": 864
+  },
+  "depth": {
+    "model": "depth_anything_v2_large",
+    "normalize": true,
+    "invert": false,
+    "near_clip": 0.06,
+    "far_clip": 0.94,
+    "gamma": 1.03,
+    "blur_radius": 4
+  },
+  "camera": {
+    "motion_type": "ken_burns",
+    "tx_start": -0.015,
+    "tx_end": 0.018,
+    "ty_start": 0.004,
+    "ty_end": -0.006,
+    "tz_start": 0.0,
+    "tz_end": 0.035,
+    "rx_start": 0.0,
+    "rx_end": 0.2,
+    "ry_start": -0.25,
+    "ry_end": 0.35,
+    "rz_start": 0.0,
+    "rz_end": 0.0,
+    "ease": "in_out"
+  },
+  "render": {
+    "fov_degrees": 46,
+    "hole_fill": "edge_pad",
+    "hole_expand_px": 18,
+    "depth_smoothing": 4,
+    "antialias": true
+  },
+  "output": {
+    "format": "mp4",
+    "crf": 17,
+    "pix_fmt": "yuv420p"
+  }
+}
+```
+
+---
+
+### 3. Exterior drone-like drift
+Best for:
+- front elevation
+- balcony views
+- backyard / pool
+
+```json
+{
+  "preset_name": "real_estate_exterior_drift",
+  "frames": 120,
+  "fps": 24,
+  "resolution": {
+    "width": 1536,
+    "height": 864
+  },
+  "depth": {
+    "model": "depth_anything_v2_large",
+    "normalize": true,
+    "invert": false,
+    "near_clip": 0.04,
+    "far_clip": 0.96,
+    "gamma": 0.98,
+    "blur_radius": 3
+  },
+  "camera": {
+    "motion_type": "drift",
+    "tx_start": -0.02,
+    "tx_end": 0.02,
+    "ty_start": 0.0,
+    "ty_end": -0.003,
+    "tz_start": 0.0,
+    "tz_end": 0.02,
+    "rx_start": 0.0,
+    "rx_end": 0.15,
+    "ry_start": -0.2,
+    "ry_end": 0.2,
+    "rz_start": 0.0,
+    "rz_end": 0.0,
+    "ease": "linear"
+  },
+  "render": {
+    "fov_degrees": 52,
+    "hole_fill": "edge_pad",
+    "hole_expand_px": 12,
+    "depth_smoothing": 3,
+    "antialias": true
+  },
+  "output": {
+    "format": "mp4",
+    "crf": 18,
+    "pix_fmt": "yuv420p"
+  }
+}
+```
+
+---
+
+## ComfyUI API-style JSON template
+
+This is the part that matters most.
+
+A ComfyUI **API prompt JSON** usually looks like this shape:
+
+```json
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "living_room.jpg"
+    }
+  },
+  "2": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ],
+      "width": 1536,
+      "height": 864,
+      "upscale_method": "lanczos"
+    }
+  },
+  "3": {
+    "class_type": "DepthAnythingV2",
+    "inputs": {
+      "image": [
+        "2",
+        0
+      ],
+      "model": "vitl",
+      "resolution": 1024,
+      "invert": false
+    }
+  },
+  "4": {
+    "class_type": "DepthNormalize",
+    "inputs": {
+      "depth": [
+        "3",
+        0
+      ],
+      "near_clip": 0.05,
+      "far_clip": 0.95,
+      "gamma": 1.0
+    }
+  },
+  "5": {
+    "class_type": "DepthBlur",
+    "inputs": {
+      "depth": [
+        "4",
+        0
+      ],
+      "radius": 5
+    }
+  },
+  "6": {
+    "class_type": "CameraPath",
+    "inputs": {
+      "frames": 144,
+      "fps": 24,
+      "tx_start": 0.0,
+      "tx_end": 0.018,
+      "ty_start": 0.0,
+      "ty_end": -0.006,
+      "tz_start": 0.0,
+      "tz_end": 0.045,
+      "rx_start": 0.0,
+      "rx_end": 0.0,
+      "ry_start": 0.0,
+      "ry_end": 0.35,
+      "rz_start": 0.0,
+      "rz_end": 0.0,
+      "ease": "in_out"
+    }
+  },
+  "7": {
+    "class_type": "DepthWarpFrames",
+    "inputs": {
+      "image": [
+        "2",
+        0
+      ],
+      "depth": [
+        "5",
+        0
+      ],
+      "camera": [
+        "6",
+        0
+      ],
+      "fov_degrees": 48,
+      "hole_fill": "edge_pad",
+      "hole_expand_px": 16,
+      "antialias": true
+    }
+  },
+  "8": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": [
+        "7",
+        0
+      ],
+      "frame_rate": 24,
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 17,
+      "filename_prefix": "real_estate_parallax"
+    }
+  }
+}
+```
+
+### Important
+That JSON is a **template**, not a guaranteed drop-in workflow.
+
+Why? Because your actual `class_type` names may be different, for example:
+
+- `DepthAnythingV2` might have a slightly different node name
+- `DepthNormalize` may be part of another node pack
+- `CameraPath` / `DepthWarpFrames` names vary a lot between node packs
+- `VHS_VideoCombine` depends on the video helper package you use
+
+So the right workflow is:
+
+- use this as the **structure**
+- create the graph in ComfyUI
+- export your **real node names**
+- then keep the same parameter strategy
+
+---
+
+## If you want a more “realistic video” look
+
+After you generate the 2.5D parallax clip, you can pass it into a video generation/refinement stage.
+
+Use it **very lightly**.
+
+### Recommended refinement settings
+- **Strength / denoise:** `0.15–0.30`
+- **CFG:** low to medium
+- **Steps:** 8–16
+- **Motion:** low
+- **Prompt:** describe the room accurately
+- **Negative prompt:** strongly protect structure
+
+### Example refinement preset
+
+```json
+{
+  "video_refine": {
+    "enabled": true,
+    "model_family": "image_to_video",
+    "strength": 0.22,
+    "steps": 12,
+    "cfg": 2.5,
+    "motion_level": 30,
+    "preserve_composition": true,
+    "prompt": "luxury real estate interior, stable architecture, realistic natural lighting, subtle cinematic camera motion, clean lines, high-end materials, professional listing video",
+    "negative_prompt": "warped walls, bending lines, flicker, morphing furniture, unstable windows, breathing architecture, deformed room, stretched textures, melting objects, shaky camera"
+  }
+}
+```
+
+### Best use case
+This works best when the 2.5D motion is already doing most of the work.
+
+The video model should only add:
+- temporal smoothness
+- tiny realism
+- a bit of natural light behavior
+
+It should **not** invent new room geometry.
+
+---
+
+## Settings that usually work best
+
+For **interior real estate**, start here:
+
+| Setting | Good starting value |
+|---|---:|
+| Width × Height | 1536 × 864 |
+| FPS | 24 |
+| Frames | 120–144 |
+| Depth blur radius | 4–6 |
+| Near clip | 0.05 |
+| Far clip | 0.95 |
+| FOV | 46–50 |
+| Z push-in | 0.03–0.05 |
+| X pan | 0.01–0.02 |
+| Y tilt | 0.003–0.008 |
+| Hole expand | 12–18 px |
+| Video refine strength | 0.18–0.25 |
+
+---
+
+## What makes real estate footage look good
+
+There are a few tricks that matter more than people expect.
+
+### Keep motion small
+Real estate shots should feel like:
+- slider move
+- gimbal drift
+- slow dolly in
+
+Not:
+- drone whip
+- orbit shot
+- aggressive zoom
+
+### Protect straight lines
+Architecture breaks fast when the model gets too creative.
+
+Use:
+- gentle depth smoothing
+- low video strength
+- minimal rotation
+- careful hole filling
+
+### Respect foreground/background separation
+Parallax only looks good when:
+- sofas separate from walls
+- tables separate from floors
+- lamps separate from windows
+- door frames have clean edge depth
+
+If depth edges are bad, fix depth before rendering motion.
+
+### Use multiple short shots
+A property video looks better with:
+- 4-second kitchen push-in
+- 5-second living room pan
+- 4-second bedroom drift
+- 3-second bathroom detail move
+
+instead of one long shot.
+
+---
+
+## Common problems and how to fix them
+
+### 1. Walls bend or “breathe”
+Cause:
+- too much camera motion
+- too much video refinement
+- weak depth smoothing
+
+Fix:
+- lower `tz_end`
+- lower yaw/rotation
+- increase depth blur
+- reduce video strength
+
+---
+
+### 2. Furniture edges smear
+Cause:
+- rough depth boundaries
+- disocclusion gaps
+
+Fix:
+- blur / soften depth map
+- expand hole fill
+- reduce X/Y motion
+- add mask cleanup if available
+
+---
+
+### 3. Windows look broken
+Cause:
+- bright reflections confuse depth
+- background outside the window gets warped
+
+Fix:
+- reduce motion
+- manually remap window depth if possible
+- use conservative hole fill
+- avoid strong sideways camera drift
+
+---
+
+### 4. Clip looks fake / “AI-ish”
+Cause:
+- overcooked motion
+- too much hallucination in refinement
+- too much prompt influence
+
+Fix:
+- rely more on 2.5D render
+- lower refine strength
+- simplify prompt
+- use stronger negative prompt
+
+---
+
+## Best shot recipes for real estate
+
+### Interior hero shot
+- slow push-in
+- tiny right pan
+- no roll
+- little or no orbit
+
+### Kitchen
+- lateral slide + tiny push
+- emphasize island / counters as foreground depth
+
+### Bedroom
+- slightly softer move
+- shallow parallax
+- gentle downward tilt
+
+### Exterior
+- sideways drift
+- tiny push
+- slightly wider FOV
+
+### Bathroom
+- very conservative
+- avoid strong parallax because mirrors and fixtures break easily
+
+---
+
+## The easiest way to build it in ComfyUI
+
+If you want the shortest path:
+
+1. **Load the property image**
+2. **Resize to 16:9**
+3. **Run Depth Anything V2**
+4. **Normalize + blur depth**
+5. **Use a depth warp / 2.5D node to animate camera**
+6. **Enable hole fill**
+7. **Export 120–144 frames at 24 fps**
+8. **Combine to MP4**
+9. **Optionally refine with image-to-video at low strength**
+
+That gets you:
+- 3D effect
+- parallax
+- Ken Burns feel
+- smooth real-estate-style movement
+
+---
+
+## My honest recommendation
+
+For **real estate**, your best quality-to-effort setup is:
+
+- **Depth Anything V2**
+- **2.5D parallax render**
+- **very subtle camera path**
+- **optional low-strength video refinement**
+
+If you try to skip the 2.5D stage and go straight to “make a realistic video from one image,” the result often looks more cinematic at first glance but less trustworthy for listings.
+
+For property marketing, **trustworthy geometry beats flashy motion**.
+
+---
+
+## Bottom line
+
+Use **Depth Anything V2** to generate a clean depth map, then build a **2.5D camera-move workflow** in ComfyUI with:
+
+- normalized depth
+- depth smoothing
+- subtle push-in / pan / tilt
+- hole filling
+- short 4–6 second clips
+- optional low-strength video refinement
+
+The JSON I gave above is the **right starting structure**, but the exact importable ComfyUI workflow JSON will depend on the **specific custom nodes installed on your machine**.
+
+If you want, I can do either of these next:
+
+1. give you a **more exact ComfyUI graph layout** node-by-node  
+2. give you a **full import-style workflow JSON template** for a specific stack, like:
+   - **Depth Anything V2 + 2.5D parallax only**
+   - **Depth Anything V2 + parallax + video refinement**
