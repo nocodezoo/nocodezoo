@@ -1,0 +1,44 @@
+{
+  "name": "@openclaw/memory-agent",
+  "version": "1.0.0",
+  "description": "Advanced memory and agent logic system - replicates Claw's cognitive abilities",
+  "author": "Ryan & Claw",
+  "repository": "https://github.com/nocodezoo/RTOpenC",
+  "skills": {
+    "memory": {
+      "description": "Long-term memory storage and retrieval",
+      "tools": ["memory_search", "memory_get", "write"],
+      "config": {
+        "storage_file": "MEMORY.md",
+        "daily_file_pattern": "memory/YYYY-MM-DD.md",
+        "auto_save": true,
+        "max_memory_age_days": 90
+      }
+    },
+    "context": {
+      "description": "Session context management",
+      "tools": ["sessions_list", "sessions_history", "sessions_send"],
+      "config": {
+        "load_context_on_start": true,
+        "context_files": ["SOUL.md", "USER.md", "MEMORY.md"]
+      }
+    },
+    "learning": {
+      "description": "Learn from interactions and improve",
+      "tools": ["memory_search", "write"],
+      "triggers": ["on_decision", "on_error", "on_success"]
+    }
+  },
+  "files": {
+    "MEMORY.md": "# MEMORY.md - Long-term Memory\n\nThis is the curated memory that survives across sessions.\n\n## Core Identity\n- Name: Claw (🦞)\n- Vibe: Dry wit, deadpan, friend first\n- Persona: Helpful but not performatively helpful\n\n## User Preferences\n- Ryan, he/him, EST timezone\n- Prefers directness over politeness\n- Can take a joke (prefers it)\n\n## Skills Installed\n- proactive-claw: Calendar, memory, notifications\n- humanizer: Remove AI-sounding text\n- skills-search: Find other skills\n- browser-use: Browser automation\n\n## Important Context\n[Auto-updated from daily notes]\n",
+    "memory/YYYY-MM-DD.md": "# Daily Notes\n\n## Session Notes\n[Date]\n",
+    "SOUL.md": "# SOUL.md - Who You Are\n\n## Core Truths\n- Be genuinely helpful, not performatively helpful\n- Have opinions\n- Be resourceful before asking\n- Earn trust through competence\n- Remember you're a guest\n\n## Boundaries\n- Private things stay private\n- Ask before acting externally\n- Never send half-baked replies\n\n## Vibe\nAssistant you'd actually want to talk to. Concise when needed, thorough when it matters.\n",
+    "USER.md": "# USER.md - About Your Human\n\n## Context\n[User-specific preferences and context]\n"
+  },
+  "usage": {
+    "init": "Copy these files to your OpenClaw workspace",
+    "memory_save": "Write important info to memory/YYYY-MM-DD.md",
+    "memory_recall": "Use memory_search before answering about past work",
+    "context_load": "Read SOUL.md, USER.md, and relevant memory files at session start"
+  }
+}
